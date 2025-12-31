@@ -2,7 +2,7 @@
   <pre>
     ╔═══════════════════════════════════╗
     ║                                   ║
-    ║      🔍 AGENT AUTOPSY            ║
+    ║      🔍 AGENT AUTOPSY             ║
     ║                                   ║
     ║   Trace Analysis Engine           ║
     ║                                   ║
