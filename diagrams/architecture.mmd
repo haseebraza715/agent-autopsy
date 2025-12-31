@@ -1,53 +1,45 @@
-graph TB
-    Start([User]) --> CLI[CLI]
+graph LR
+    %% Entry
+    User([User]) --> CLI[CLI]
     Config[Config] --> CLI
-    
+
+    %% Ingestion
     CLI --> Parse[Parse Trace]
     Parse --> Format{Format}
-    Format -->|4 Formats| Parser[Parser]
+    Format --> Parser[Parser]
     Parser --> Normalize[Normalize]
-    
-    Normalize --> Schema[Schema]
-    Schema --> PreAnalysis[Pre-Analysis]
-    
+
+    %% Pre-analysis
+    Normalize --> PreAnalysis[Pre-Analysis]
     PreAnalysis --> Patterns[Patterns]
-    PreAnalysis --> Validator[Validator]
-    PreAnalysis --> Builder[Builder]
-    
     Patterns --> Signals[Signals]
-    Validator --> Signals
-    Builder --> Signals
-    
+
+    %% Decision
     Signals --> Decision{Mode?}
+
+    %% Deterministic path
     Decision -->|No LLM| Det[Deterministic]
+
+    %% LLM path
     Decision -->|LLM| LLM[LLM Agent]
-    
-    LLM --> Tools[Tools]
     LLM --> API[OpenRouter]
-    Tools --> LLM
     API --> LLM
-    
+
+    %% Output
     LLM --> Result[Result]
     Det --> Result
-    
     Result --> Report[Report]
     Signals --> Artifacts[Artifacts]
-    
+
     %% Styling
     classDef entry fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef ingestion fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef schema fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    classDef preanalysis fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    classDef process fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
     classDef analysis fill:#fce4ec,stroke:#c2185b,stroke-width:2px
     classDef output fill:#e0f2f1,stroke:#00695c,stroke-width:2px
-    classDef config fill:#f5f5f5,stroke:#616161,stroke-width:2px
     classDef decision fill:#ffebee,stroke:#d32f2f,stroke-width:3px
-    
-    class Start,CLI entry
-    class Parse,Format,Parser,Normalize ingestion
-    class Schema schema
-    class PreAnalysis,Patterns,Validator,Builder,Signals preanalysis
-    class Decision,LLM,Det,Tools,API,Result analysis
-    class Report,Artifacts output
-    class Config config
+
+    class User,CLI,Config entry
+    class Parse,Format,Parser,Normalize,PreAnalysis,Patterns,Signals process
     class Decision decision
+    class Det,LLM,API,Result analysis
+    class Report,Artifacts output
