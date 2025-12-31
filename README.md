@@ -1,4 +1,4 @@
-# 🔍 Agent Autopsy
+# Agent Autopsy
 
 > **Intelligent trace analysis for AI agents** — Automatically detect failures, loops, and issues in your agent execution traces.
 
@@ -6,18 +6,18 @@
 
 ---
 
-## ✨ Features
+## Features
 
-- 🔄 **Multi-Format Support** — Parse traces from LangGraph, LangChain, OpenTelemetry, and generic JSON
-- 🎯 **Pattern Detection** — Automatically detect loops, error cascades, hallucinated tools, and more
-- ✅ **Contract Validation** — Validate tool usage against defined schemas
-- 🤖 **LLM Analysis** — AI-powered root cause analysis with event citations
-- 📊 **Report Generation** — Structured markdown reports with actionable recommendations
-- 🛠️ **Artifact Generation** — Code patches for retry policies, loop guards, and fixes
+- **Multi-Format Support** — Parse traces from LangGraph, LangChain, OpenTelemetry, and generic JSON
+- **Pattern Detection** — Automatically detect loops, error cascades, hallucinated tools, and more
+- **Contract Validation** — Validate tool usage against defined schemas
+- **LLM Analysis** — AI-powered root cause analysis with event citations
+- **Report Generation** — Structured markdown reports with actionable recommendations
+- **Artifact Generation** — Code patches for retry policies, loop guards, and fixes
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install dependencies
@@ -33,7 +33,7 @@ python -m src.cli analyze trace.json
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 - **[Architecture](docs/architecture.md)** — System overview and components
 - **[Quick Start](docs/quickstart.md)** — Installation and basic usage
@@ -44,7 +44,7 @@ python -m src.cli analyze trace.json
 
 ---
 
-## 💻 CLI Commands
+## CLI Commands
 
 ### `analyze`
 Full analysis with pattern detection and LLM reasoning.
@@ -69,20 +69,20 @@ Options:
 
 ---
 
-## 🎯 Detected Patterns
+## Detected Patterns
 
 | Pattern | Severity | Description |
 |---------|----------|-------------|
-| 🔁 Infinite Loop | **Critical** | Same tool+input repeated 3+ times |
-| ⚡ Retry Storm | **High** | Same tool called repeatedly with varying inputs |
-| 📊 Context Overflow | **Critical** | Token count exceeding model limit |
-| 🎭 Hallucinated Tool | **High** | Tool called not in available tools list |
-| ⚠️ Empty Response | **Medium** | LLM or tool returning empty output |
-| 🔗 Error Cascade | **High** | Sequential errors propagating through events |
+| Infinite Loop | **Critical** | Same tool+input repeated 3+ times |
+| Retry Storm | **High** | Same tool called repeatedly with varying inputs |
+| Context Overflow | **Critical** | Token count exceeding model limit |
+| Hallucinated Tool | **High** | Tool called not in available tools list |
+| Empty Response | **Medium** | LLM or tool returning empty output |
+| Error Cascade | **High** | Sequential errors propagating through events |
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 agent-autopsy/
@@ -102,7 +102,7 @@ agent-autopsy/
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 Environment variables (`.env`):
 
@@ -115,7 +115,7 @@ LOG_LEVEL=INFO
 
 ---
 
-## 🧪 Development
+## Development
 
 ```bash
 # Run tests
@@ -127,6 +127,6 @@ pytest --cov=src tests/
 
 ---
 
-## 📄 License
+## License
 
 MIT
