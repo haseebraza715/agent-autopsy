@@ -1,19 +1,23 @@
-# Agent Autopsy
+# 🔍 Agent Autopsy
 
-A tool for analyzing and debugging agent execution traces. Identify failures, loops, and issues in your AI agent runs.
+> **Intelligent trace analysis for AI agents** — Automatically detect failures, loops, and issues in your agent execution traces.
 
 ![Architecture](diagrams/architecture.png)
 
-## Features
+---
 
-- **Multi-Format Support**: Parse traces from LangGraph, LangChain, OpenTelemetry, and generic JSON
-- **Pattern Detection**: Automatically detect loops, error cascades, hallucinated tools, and more
-- **Contract Validation**: Validate tool usage against defined schemas
-- **LLM Analysis**: AI-powered root cause analysis with event citations
-- **Report Generation**: Structured markdown reports with actionable recommendations
-- **Artifact Generation**: Code patches for retry policies, loop guards, and fixes
+## ✨ Features
 
-## Quick Start
+- 🔄 **Multi-Format Support** — Parse traces from LangGraph, LangChain, OpenTelemetry, and generic JSON
+- 🎯 **Pattern Detection** — Automatically detect loops, error cascades, hallucinated tools, and more
+- ✅ **Contract Validation** — Validate tool usage against defined schemas
+- 🤖 **LLM Analysis** — AI-powered root cause analysis with event citations
+- 📊 **Report Generation** — Structured markdown reports with actionable recommendations
+- 🛠️ **Artifact Generation** — Code patches for retry policies, loop guards, and fixes
+
+---
+
+## 🚀 Quick Start
 
 ```bash
 # Install dependencies
@@ -27,16 +31,20 @@ cp .env.example .env
 python -m src.cli analyze trace.json
 ```
 
-## Documentation
+---
 
-- **[Architecture](docs/architecture.md)** - System overview and components
-- **[Quick Start](docs/quickstart.md)** - Installation and basic usage
-- **[Ingestion](docs/ingestion.md)** - Trace format support and parsing
-- **[Analysis](docs/analysis.md)** - Pattern detection and LLM analysis
-- **[Patterns](docs/patterns.md)** - Detected failure patterns
-- **[Output](docs/output.md)** - Report and artifact generation
+## 📚 Documentation
 
-## CLI Commands
+- **[Architecture](docs/architecture.md)** — System overview and components
+- **[Quick Start](docs/quickstart.md)** — Installation and basic usage
+- **[Ingestion](docs/ingestion.md)** — Trace format support and parsing
+- **[Analysis](docs/analysis.md)** — Pattern detection and LLM analysis
+- **[Patterns](docs/patterns.md)** — Detected failure patterns
+- **[Output](docs/output.md)** — Report and artifact generation
+
+---
+
+## 💻 CLI Commands
 
 ### `analyze`
 Full analysis with pattern detection and LLM reasoning.
@@ -55,22 +63,26 @@ Options:
 
 ### Other Commands
 
-- `summary` - Quick trace summary without full analysis
-- `validate` - Validate trace file format
-- `config` - Show current configuration
+- `summary` — Quick trace summary without full analysis
+- `validate` — Validate trace file format
+- `config` — Show current configuration
 
-## Detected Patterns
+---
+
+## 🎯 Detected Patterns
 
 | Pattern | Severity | Description |
 |---------|----------|-------------|
-| Infinite Loop | Critical | Same tool+input repeated 3+ times |
-| Retry Storm | High | Same tool called repeatedly with varying inputs |
-| Context Overflow | Critical | Token count exceeding model limit |
-| Hallucinated Tool | High | Tool called not in available tools list |
-| Empty Response | Medium | LLM or tool returning empty output |
-| Error Cascade | High | Sequential errors propagating through events |
+| 🔁 Infinite Loop | **Critical** | Same tool+input repeated 3+ times |
+| ⚡ Retry Storm | **High** | Same tool called repeatedly with varying inputs |
+| 📊 Context Overflow | **Critical** | Token count exceeding model limit |
+| 🎭 Hallucinated Tool | **High** | Tool called not in available tools list |
+| ⚠️ Empty Response | **Medium** | LLM or tool returning empty output |
+| 🔗 Error Cascade | **High** | Sequential errors propagating through events |
 
-## Project Structure
+---
+
+## 📁 Project Structure
 
 ```
 agent-autopsy/
@@ -88,18 +100,22 @@ agent-autopsy/
 └── requirements.txt
 ```
 
-## Configuration
+---
+
+## ⚙️ Configuration
 
 Environment variables (`.env`):
 
-```
+```env
 OPENROUTER_API_KEY=your_key_here
 DEFAULT_MODEL=meta-llama/llama-3.1-8b-instruct
 FALLBACK_MODEL=meta-llama/llama-3.1-8b-instruct:free
 LOG_LEVEL=INFO
 ```
 
-## Development
+---
+
+## 🧪 Development
 
 ```bash
 # Run tests
@@ -109,6 +125,8 @@ pytest tests/
 pytest --cov=src tests/
 ```
 
-## License
+---
+
+## 📄 License
 
 MIT
