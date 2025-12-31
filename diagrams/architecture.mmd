@@ -1,45 +1,50 @@
-graph LR
-    %% Entry
-    User([User]) --> CLI[CLI]
-    Config[Config] --> CLI
-
-    %% Ingestion
-    CLI --> Parse[Parse Trace]
-    Parse --> Format{Format}
-    Format --> Parser[Parser]
-    Parser --> Normalize[Normalize]
-
-    %% Pre-analysis
-    Normalize --> PreAnalysis[Pre-Analysis]
-    PreAnalysis --> Patterns[Patterns]
-    Patterns --> Signals[Signals]
-
-    %% Decision
-    Signals --> Decision{Mode?}
-
-    %% Deterministic path
-    Decision -->|No LLM| Det[Deterministic]
-
-    %% LLM path
-    Decision -->|LLM| LLM[LLM Agent]
-    LLM --> API[OpenRouter]
-    API --> LLM
-
-    %% Output
-    LLM --> Result[Result]
-    Det --> Result
-    Result --> Report[Report]
-    Signals --> Artifacts[Artifacts]
-
+graph TB
+    %% High-level Architecture Overview
+    subgraph "Input Layer"
+        User([User])
+        TraceFiles[Trace Files]
+        LiveAgents[Live Agents]
+    end
+    
+    subgraph "Core System"
+        CLI[CLI Interface]
+        Ingestion[Ingestion Layer]
+        PreAnalysis[Pre-Analysis]
+        Analysis[Analysis Engine]
+        Output[Output Layer]
+    end
+    
+    subgraph "External Services"
+        OpenRouter[OpenRouter API]
+    end
+    
+    subgraph "Output"
+        Reports[Reports]
+        Artifacts[Code Artifacts]
+    end
+    
+    User --> CLI
+    TraceFiles --> CLI
+    LiveAgents --> CLI
+    
+    CLI --> Ingestion
+    Ingestion --> PreAnalysis
+    PreAnalysis --> Analysis
+    Analysis --> Output
+    
+    Analysis --> OpenRouter
+    OpenRouter --> Analysis
+    
+    Output --> Reports
+    Output --> Artifacts
+    
     %% Styling
-    classDef entry fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
-    classDef process fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
-    classDef analysis fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef input fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef core fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef external fill:#fff3e0,stroke:#f57c00,stroke-width:2px
     classDef output fill:#e0f2f1,stroke:#00695c,stroke-width:2px
-    classDef decision fill:#ffebee,stroke:#d32f2f,stroke-width:3px
-
-    class User,CLI,Config entry
-    class Parse,Format,Parser,Normalize,PreAnalysis,Patterns,Signals process
-    class Decision decision
-    class Det,LLM,API,Result analysis
-    class Report,Artifacts output
+    
+    class User,TraceFiles,LiveAgents input
+    class CLI,Ingestion,PreAnalysis,Analysis,Output core
+    class OpenRouter external
+    class Reports,Artifacts output
