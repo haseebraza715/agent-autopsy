@@ -14,9 +14,11 @@ Detects common agent failure patterns in traces:
 
 from collections import Counter
 from dataclasses import dataclass, field
+from datetime import timedelta
 from enum import Enum
 
 from src.schema import Trace, TraceEvent, EventType
+from src.utils.config import get_config
 
 
 class PatternType(str, Enum):
@@ -76,10 +78,10 @@ class PatternDetector:
 
     def detect_loops(self, threshold: int = 3) -> list[PatternResult]:
         """
-        Detect infinite loops where the same tool+input is repeated.
+        Detect infinite loops where the same tool+input is repeated consecutively.
 
         Args:
-            threshold: Number of repetitions to trigger detection
+            threshold: Number of consecutive repetitions to trigger detection
 
         Returns:
             List of detected loop patterns
@@ -90,73 +92,139 @@ class PatternDetector:
         if len(tool_calls) < threshold:
             return results
 
-        # Track tool signatures (name + input hash)
-        signatures: dict[str, list[int]] = {}
+        # Track consecutive sequences of identical tool signatures
+        consecutive_count = 1
+        last_sig = None
+        sequence_start_id = None
+        sequence_event_ids = []
 
         for event in tool_calls:
             sig = event.get_tool_signature()
-            if sig:
-                if sig not in signatures:
-                    signatures[sig] = []
-                signatures[sig].append(event.event_id)
 
-        # Find repeated signatures
-        for sig, event_ids in signatures.items():
-            if len(event_ids) >= threshold:
-                results.append(
-                    PatternResult(
-                        pattern_type=PatternType.INFINITE_LOOP,
-                        severity=Severity.CRITICAL,
-                        message=f"Identical tool call repeated {len(event_ids)} times",
-                        evidence=f"Same tool+input signature: {sig.split(':')[0]}",
-                        event_ids=event_ids,
-                        metadata={"signature": sig, "count": len(event_ids)},
+            if sig == last_sig and sig is not None:
+                # Continue the consecutive sequence
+                consecutive_count += 1
+                sequence_event_ids.append(event.event_id)
+            else:
+                # Check if previous sequence exceeded threshold
+                if consecutive_count >= threshold and last_sig:
+                    results.append(
+                        PatternResult(
+                            pattern_type=PatternType.INFINITE_LOOP,
+                            severity=Severity.CRITICAL,
+                            message=f"Identical tool call repeated {consecutive_count} times consecutively",
+                            evidence=f"Same tool+input signature: {last_sig.split(':')[0]}",
+                            event_ids=sequence_event_ids.copy(),
+                            metadata={"signature": last_sig, "count": consecutive_count},
+                        )
                     )
+
+                # Start new sequence
+                consecutive_count = 1
+                sequence_event_ids = [event.event_id]
+
+            last_sig = sig
+
+        # Check final sequence
+        if consecutive_count >= threshold and last_sig:
+            results.append(
+                PatternResult(
+                    pattern_type=PatternType.INFINITE_LOOP,
+                    severity=Severity.CRITICAL,
+                    message=f"Identical tool call repeated {consecutive_count} times consecutively",
+                    evidence=f"Same tool+input signature: {last_sig.split(':')[0]}",
+                    event_ids=sequence_event_ids,
+                    metadata={"signature": last_sig, "count": consecutive_count},
                 )
+            )
 
         return results
 
     def detect_retry_storms(self, threshold: int = 3) -> list[PatternResult]:
         """
-        Detect retry storms where the same tool is called repeatedly with similar inputs.
+        Detect retry storms where the same tool is called repeatedly within a time window.
 
-        More lenient than loop detection - looks for same tool name with varying inputs.
+        Uses configurable time window and checks for input similarity to distinguish
+        retries from legitimate varied calls to the same tool.
         """
         results = []
+        config = get_config()
         tool_calls = self.trace.get_tool_calls()
 
         if len(tool_calls) < threshold:
             return results
 
-        # Count calls per tool
-        tool_counts: dict[str, list[int]] = {}
+        window = timedelta(seconds=config.retry_window_seconds)
 
+        # Group calls by tool name
+        tool_events: dict[str, list[TraceEvent]] = {}
         for event in tool_calls:
             if event.name:
-                if event.name not in tool_counts:
-                    tool_counts[event.name] = []
-                tool_counts[event.name].append(event.event_id)
+                if event.name not in tool_events:
+                    tool_events[event.name] = []
+                tool_events[event.name].append(event)
 
-        # Find tools with many calls
-        for tool_name, event_ids in tool_counts.items():
-            if len(event_ids) >= threshold:
-                # Check if it's not already detected as a loop
-                loop_detected = any(
-                    tool_name in (r.metadata.get("signature", "") or "")
-                    for r in self.detect_loops()
-                )
+        # Check each tool for retry storms within time windows
+        for tool_name, events in tool_events.items():
+            if len(events) < threshold:
+                continue
 
-                if not loop_detected:
-                    results.append(
-                        PatternResult(
-                            pattern_type=PatternType.RETRY_STORM,
-                            severity=Severity.HIGH,
-                            message=f"Tool '{tool_name}' called {len(event_ids)} times",
-                            evidence=f"Multiple calls to same tool with varying inputs",
-                            event_ids=event_ids,
-                            metadata={"tool_name": tool_name, "count": len(event_ids)},
+            # Find clusters of calls within time window
+            i = 0
+            while i < len(events):
+                cluster = [events[i]]
+                cluster_ids = [events[i].event_id]
+
+                # Look for calls within window of first call in cluster
+                for j in range(i + 1, len(events)):
+                    # Check time proximity if timestamps available
+                    if events[i].timestamp and events[j].timestamp:
+                        delta = events[j].timestamp - events[i].timestamp
+                        if delta <= window:
+                            cluster.append(events[j])
+                            cluster_ids.append(events[j].event_id)
+                    else:
+                        # No timestamps - use event ID proximity as fallback
+                        if events[j].event_id - events[i].event_id <= 10:
+                            cluster.append(events[j])
+                            cluster_ids.append(events[j].event_id)
+
+                if len(cluster) >= threshold:
+                    # Check input similarity (are these actual retries?)
+                    inputs = [str(e.input) for e in cluster]
+                    unique_inputs = len(set(inputs))
+
+                    # If inputs are similar (retries) or identical (loop)
+                    # and this wasn't already caught as a loop
+                    if unique_inputs <= len(cluster) // 2 + 1:
+                        # Check not already detected as loop
+                        loop_results = self.detect_loops()
+                        is_loop = any(
+                            set(cluster_ids) & set(r.event_ids)
+                            for r in loop_results
                         )
-                    )
+
+                        if not is_loop:
+                            results.append(
+                                PatternResult(
+                                    pattern_type=PatternType.RETRY_STORM,
+                                    severity=Severity.HIGH,
+                                    message=f"Tool '{tool_name}' called {len(cluster)} times within {config.retry_window_seconds}s",
+                                    evidence=f"Multiple calls with similar inputs ({unique_inputs} unique inputs)",
+                                    event_ids=cluster_ids,
+                                    metadata={
+                                        "tool_name": tool_name,
+                                        "count": len(cluster),
+                                        "unique_inputs": unique_inputs,
+                                        "window_seconds": config.retry_window_seconds,
+                                    },
+                                )
+                            )
+                            # Skip past this cluster
+                            i = i + len(cluster) - 1
+                            break
+
+                i += 1
 
         return results
 
@@ -260,15 +328,46 @@ class PatternDetector:
 
         return results
 
-    def detect_context_overflow(self, threshold: int = 100000) -> list[PatternResult]:
+    def detect_context_overflow(self, threshold: int | None = None) -> list[PatternResult]:
         """
         Detect potential context overflow based on token counts.
 
-        Args:
-            threshold: Token threshold to trigger detection (default 100k)
+        Uses configurable threshold from Config, with optional override.
+        Also considers model-specific context limits when available.
         """
         results = []
+        config = get_config()
         total_tokens = self.trace.stats.total_tokens or 0
+
+        # Use config threshold if not overridden
+        if threshold is None:
+            threshold = config.context_overflow_threshold
+
+        # Check for model-specific limits and use the more restrictive
+        model = self.trace.env.model
+        if model:
+            # Common model context limits
+            model_limits = {
+                "gpt-4": 128000,
+                "gpt-4-turbo": 128000,
+                "gpt-4o": 128000,
+                "gpt-3.5-turbo": 16000,
+                "gpt-3.5-turbo-16k": 16000,
+                "claude-3": 200000,
+                "claude-3-opus": 200000,
+                "claude-3-sonnet": 200000,
+                "claude-3-haiku": 200000,
+                "claude-2": 100000,
+                "llama-3": 8000,
+                "llama-3.1": 128000,
+                "mistral": 32000,
+            }
+            # Find matching model limit (partial match)
+            model_lower = model.lower()
+            for model_name, limit in model_limits.items():
+                if model_name in model_lower:
+                    threshold = min(threshold, limit)
+                    break
 
         if total_tokens >= threshold:
             # Find which events contributed most to token usage
@@ -285,11 +384,13 @@ class PatternDetector:
                     pattern_type=PatternType.CONTEXT_OVERFLOW,
                     severity=Severity.CRITICAL,
                     message=f"Token count ({total_tokens}) approaching/exceeding limit",
-                    evidence=f"Total tokens: {total_tokens}, threshold: {threshold}",
+                    evidence=f"Total tokens: {total_tokens}, threshold: {threshold}" +
+                             (f" (model: {model})" if model else ""),
                     event_ids=top_events,
                     metadata={
                         "total_tokens": total_tokens,
                         "threshold": threshold,
+                        "model": model,
                     },
                 )
             )

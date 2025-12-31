@@ -140,6 +140,16 @@ class TestSafeSerialization:
         result = _safe_serialize(CustomClass())
         assert isinstance(result, str)
 
+    def test_serialize_object_with_attrs(self):
+        """Test serializing objects with attributes."""
+        class CustomClass:
+            def __init__(self):
+                self.name = "test"
+                self.count = 3
+
+        result = _safe_serialize(CustomClass())
+        assert result == {"name": "test", "count": 3}
+
 
 class TestTraceSaver:
     """Tests for TraceSaver callback handler."""

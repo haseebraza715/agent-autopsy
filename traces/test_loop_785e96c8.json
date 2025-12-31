@@ -1,0 +1,198 @@
+{
+  "run_id": "785e96c8-95e9-4143-b42f-e6488ffaea46",
+  "start_time": "2025-12-31T18:51:14.596Z",
+  "end_time": "2025-12-31T18:51:18.596Z",
+  "duration_ms": 4000,
+  "status": "loop_detected",
+  "total_events": 12,
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:51:14.596Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Find information about quantum computing",
+      "output": "I'll search for quantum computing information.",
+      "token_count": 100,
+      "latency_ms": 400,
+      "metadata": {}
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:51:15.096Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "quantum computing basics"
+      },
+      "output": {
+        "results": []
+      },
+      "latency_ms": 250,
+      "metadata": {
+        "iteration": 1
+      }
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:51:15.396Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "quantum computing basics"
+      },
+      "output": {
+        "results": []
+      },
+      "latency_ms": 250,
+      "metadata": {
+        "iteration": 2
+      }
+    },
+    {
+      "event_id": 3,
+      "ts": "2025-12-31T18:51:15.696Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "quantum computing basics"
+      },
+      "output": {
+        "results": []
+      },
+      "latency_ms": 250,
+      "metadata": {
+        "iteration": 3
+      }
+    },
+    {
+      "event_id": 4,
+      "ts": "2025-12-31T18:51:15.996Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "quantum computing basics"
+      },
+      "output": {
+        "results": []
+      },
+      "latency_ms": 250,
+      "metadata": {
+        "iteration": 4
+      }
+    },
+    {
+      "event_id": 5,
+      "ts": "2025-12-31T18:51:16.296Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "quantum computing basics"
+      },
+      "output": {
+        "results": []
+      },
+      "latency_ms": 250,
+      "metadata": {
+        "iteration": 5
+      }
+    },
+    {
+      "event_id": 6,
+      "ts": "2025-12-31T18:51:16.596Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "quantum computing basics"
+      },
+      "output": {
+        "results": []
+      },
+      "latency_ms": 250,
+      "metadata": {
+        "iteration": 6
+      }
+    },
+    {
+      "event_id": 7,
+      "ts": "2025-12-31T18:51:16.896Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "quantum computing basics"
+      },
+      "output": {
+        "results": []
+      },
+      "latency_ms": 250,
+      "metadata": {
+        "iteration": 7
+      }
+    },
+    {
+      "event_id": 8,
+      "ts": "2025-12-31T18:51:17.196Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "quantum computing basics"
+      },
+      "output": {
+        "results": []
+      },
+      "latency_ms": 250,
+      "metadata": {
+        "iteration": 8
+      }
+    },
+    {
+      "event_id": 9,
+      "ts": "2025-12-31T18:51:17.496Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "quantum computing basics"
+      },
+      "output": {
+        "results": []
+      },
+      "latency_ms": 250,
+      "metadata": {
+        "iteration": 9
+      }
+    },
+    {
+      "event_id": 10,
+      "ts": "2025-12-31T18:51:17.796Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "quantum computing basics"
+      },
+      "output": {
+        "results": []
+      },
+      "latency_ms": 250,
+      "metadata": {
+        "iteration": 10
+      }
+    },
+    {
+      "event_id": 11,
+      "ts": "2025-12-31T18:51:18.396Z",
+      "type": "error",
+      "name": "loop_detector",
+      "error": "Infinite loop detected: tool 'web_search' called 10 times with identical input",
+      "metadata": {
+        "loop_count": 10,
+        "tool": "web_search"
+      }
+    }
+  ],
+  "error_summary": "Infinite loop detected after 10 identical tool calls",
+  "metadata": {
+    "trace_version": "1.0",
+    "captured_by": "test_generator",
+    "scenario": "infinite_loop"
+  }
+}

@@ -104,25 +104,60 @@ class TraceGenerator:
                     if verbose:
                         print(f"  ✓ Analysis complete (with LLM)")
                 else:
-                    # Use deterministic analysis with tracing
-                    from src.tracing import start_trace, end_trace
-                    trace_handler, run_id = start_trace()
-                    
-                    try:
-                        result = run_analysis_without_llm(trace)
-                        if verbose:
-                            print(f"  ✓ Analysis complete (deterministic)")
-                    finally:
-                        saved_path = end_trace(trace_handler)
-                        if saved_path:
-                            all_traces.append(saved_path)
-                            has_failure, error_count = self.check_trace_for_failure(saved_path)
-                            if has_failure:
-                                failed_traces.append((saved_path, error_count))
-                                failure_found = True
-                                if verbose:
-                                    print(f"  ⚠ FAILURE DETECTED! ({error_count} error(s))")
-                                    print(f"  → Trace: {saved_path}")
+                    # Use deterministic analysis with synthetic trace events
+                    # Since no LLM callbacks fire, we manually create trace events
+                    from src.tracing import TraceSaver, get_trace_config
+                    from src.preanalysis import RootCauseBuilder
+                    import json
+                    from datetime import datetime
+
+                    trace_handler = TraceSaver(config=get_trace_config())
+
+                    # Add synthetic event for analysis mode decision
+                    trace_handler._add_event(
+                        event_type="decision",
+                        name="analysis_mode",
+                        input_data={"mode": "deterministic", "reason": "No API key configured"},
+                        output_data={"selected": "deterministic_analysis"},
+                    )
+
+                    # Run pre-analysis and add events for each pattern found
+                    preanalysis = RootCauseBuilder(trace).build()
+
+                    for signal in preanalysis.signals:
+                        trace_handler._add_event(
+                            event_type="message",
+                            name="pattern_detected",
+                            input_data={"pattern": signal.name, "severity": signal.severity},
+                            output_data={"description": signal.description},
+                        )
+
+                    # Run the analysis
+                    result = run_analysis_without_llm(trace)
+
+                    # Add event for final result
+                    trace_handler._add_event(
+                        event_type="message",
+                        name="analysis_complete",
+                        input_data={"hypotheses_count": len(preanalysis.hypotheses)},
+                        output_data={"success": result.success},
+                    )
+
+                    # Save the trace
+                    saved_path = trace_handler.save()
+
+                    if verbose:
+                        print(f"  ✓ Analysis complete (deterministic)")
+
+                    if saved_path:
+                        all_traces.append(saved_path)
+                        has_failure, error_count = self.check_trace_for_failure(saved_path)
+                        if has_failure:
+                            failed_traces.append((saved_path, error_count))
+                            failure_found = True
+                            if verbose:
+                                print(f"  ⚠ FAILURE DETECTED! ({error_count} error(s))")
+                                print(f"  → Trace: {saved_path}")
                 
                 # Check latest trace file for failures
                 if self.traces_dir.exists():

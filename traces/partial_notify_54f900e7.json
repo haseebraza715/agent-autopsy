@@ -1,0 +1,103 @@
+{
+  "run_id": "54f900e7-97fb-43c6-bae4-aa394929e5a2",
+  "start_time": "2025-12-31T18:59:20.958Z",
+  "end_time": "2025-12-31T18:59:35.958Z",
+  "duration_ms": 15000,
+  "status": "success",
+  "goal": "Send notifications to 5 users",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:59:20.958Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Send notification to users: alice, bob, charlie, david, eve",
+      "output": "I'll send notifications to each user.",
+      "token_count": 120,
+      "latency_ms": 500
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:59:21.558Z",
+      "type": "tool_call",
+      "name": "notify",
+      "input": {
+        "user": "alice",
+        "message": "New update available"
+      },
+      "output": {
+        "success": true,
+        "delivered": true
+      },
+      "latency_ms": 200
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:59:21.858Z",
+      "type": "tool_call",
+      "name": "notify",
+      "input": {
+        "user": "bob",
+        "message": "New update available"
+      },
+      "error": "User 'bob' has notifications disabled",
+      "latency_ms": 100
+    },
+    {
+      "event_id": 3,
+      "ts": "2025-12-31T18:59:22.058Z",
+      "type": "tool_call",
+      "name": "notify",
+      "input": {
+        "user": "charlie",
+        "message": "New update available"
+      },
+      "output": {
+        "success": true,
+        "delivered": true
+      },
+      "latency_ms": 180
+    },
+    {
+      "event_id": 4,
+      "ts": "2025-12-31T18:59:22.358Z",
+      "type": "tool_call",
+      "name": "notify",
+      "input": {
+        "user": "david",
+        "message": "New update available"
+      },
+      "error": "Invalid user ID: david not found",
+      "latency_ms": 80
+    },
+    {
+      "event_id": 5,
+      "ts": "2025-12-31T18:59:22.558Z",
+      "type": "tool_call",
+      "name": "notify",
+      "input": {
+        "user": "eve",
+        "message": "New update available"
+      },
+      "output": {
+        "success": true,
+        "delivered": true
+      },
+      "latency_ms": 190
+    },
+    {
+      "event_id": 6,
+      "ts": "2025-12-31T18:59:22.858Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Notification results: 3 delivered, 2 failed",
+      "output": "Notifications sent to 3 out of 5 users. Failed for bob (disabled) and david (not found).",
+      "token_count": 150,
+      "latency_ms": 600
+    }
+  ],
+  "metadata": {
+    "scenario": "partial_failure",
+    "success_rate": 0.6
+  }
+}

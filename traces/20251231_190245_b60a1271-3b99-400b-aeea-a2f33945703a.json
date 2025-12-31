@@ -1,13 +1,13 @@
 {
-  "run_id": "86f8968c-e398-4456-9271-7cf52c38aef9",
-  "start_time": "2025-12-31T17:18:21.862053Z",
-  "end_time": "2025-12-31T16:18:21.908039Z",
-  "duration_ms": 45.99,
+  "run_id": "b60a1271-3b99-400b-aeea-a2f33945703a",
+  "start_time": "2025-12-31T19:02:45.326049Z",
+  "end_time": "2025-12-31T18:02:45.755924Z",
+  "duration_ms": 429.88,
   "total_events": 5,
   "events": [
     {
       "event_id": 0,
-      "ts": "2025-12-31T16:18:21.863389Z",
+      "ts": "2025-12-31T18:02:45.328002Z",
       "type": "llm_start",
       "name": "ChatOpenAI",
       "input": [
@@ -18,13 +18,13 @@
           },
           {
             "type": "HumanMessage",
-            "content": "Analyze this agent execution trace:\n\n## Trace Overview\n- Run ID: run_success_001\n- Status: success\n- Total Events: 8\n- LLM Calls: 3\n- Tool Calls: 2\n- Errors: 0\n- Framework: unknown\n- Model: gpt-4\n\n## Pre-Analysis Summary\nNo significant issues detected in trace.\n\nBegin your analysis. Use the available tools to examine specific events and build your diagnosis.\nStart by examining the signals identified in the pre-analysis, then trace the causal chain to understand the root cause."
+            "content": "Analyze this agent execution trace:\n\n## Trace Overview\n- Run ID: 781472b5-4aa8-47e3-bee0-73b182f7a5f5\n- Status: success\n- Total Events: 6\n- LLM Calls: 2\n- Tool Calls: 3\n- Errors: 0\n- Framework: unknown\n- Model: None\n\n## Pre-Analysis Summary\nNo significant issues detected in trace.\n\nBegin your analysis. Use the available tools to examine specific events and build your diagnosis.\nStart by examining the signals identified in the pre-analysis, then trace the causal chain to understand the root cause."
           }
         ]
       ],
       "metadata": {
-        "run_id": "019b7534-0427-7990-824f-8dd3afb959ab",
-        "parent_run_id": "019b7534-0426-7c72-8c7a-437ce521e6a6",
+        "run_id": "019b7593-96cf-70c0-9d12-7d328b89b04b",
+        "parent_run_id": "019b7593-96cf-70c0-9d12-7d2e38aa82c1",
         "tags": [
           "seq:step:1"
         ],
@@ -38,8 +38,8 @@
           "__pregel_pull",
           "analyze"
         ],
-        "langgraph_checkpoint_ns": "analyze:a1f9123a-e8b8-8281-ba82-b88f8b0a1ec1",
-        "checkpoint_ns": "analyze:a1f9123a-e8b8-8281-ba82-b88f8b0a1ec1",
+        "langgraph_checkpoint_ns": "analyze:c19917ec-376e-2dbe-2cdb-6b43a563ac6d",
+        "checkpoint_ns": "analyze:c19917ec-376e-2dbe-2cdb-6b43a563ac6d",
         "ls_provider": "openai",
         "ls_model_name": "xiaomi/mimo-v2-flash:free",
         "ls_model_type": "chat",
@@ -49,29 +49,29 @@
     },
     {
       "event_id": 1,
-      "ts": "2025-12-31T16:18:21.907065Z",
+      "ts": "2025-12-31T18:02:45.752929Z",
       "type": "error",
       "name": "ChatOpenAI",
       "metadata": {
-        "run_id": "019b7534-0427-7990-824f-8dd3afb959ab",
+        "run_id": "019b7593-96cf-70c0-9d12-7d328b89b04b",
         "error_type": "AuthenticationError"
       },
-      "latency_ms": 43.71,
+      "latency_ms": 425.06,
       "error": "Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}"
     },
     {
       "event_id": 2,
-      "ts": "2025-12-31T16:18:21.907367Z",
+      "ts": "2025-12-31T18:02:45.753561Z",
       "type": "chain_end",
       "name": "unknown",
       "output": "end",
       "metadata": {
-        "run_id": "019b7534-0453-7c22-ac50-91e93636b55c"
+        "run_id": "019b7593-9879-7ff2-aa01-32cd0048e21e"
       }
     },
     {
       "event_id": 3,
-      "ts": "2025-12-31T16:18:21.907387Z",
+      "ts": "2025-12-31T18:02:45.753624Z",
       "type": "chain_end",
       "name": "unknown",
       "output": {
@@ -82,7 +82,7 @@
             "response_metadata": {},
             "type": "ai",
             "name": null,
-            "id": "d6cbf573-5ed3-4a19-aa19-aad3b59b7651",
+            "id": "d13065d6-764c-4991-ad02-2222e5c09028",
             "tool_calls": [],
             "invalid_tool_calls": [],
             "usage_metadata": null
@@ -91,12 +91,12 @@
         "analysis_complete": true
       },
       "metadata": {
-        "run_id": "019b7534-0426-7c72-8c7a-437ce521e6a6"
+        "run_id": "019b7593-96cf-70c0-9d12-7d2e38aa82c1"
       }
     },
     {
       "event_id": 4,
-      "ts": "2025-12-31T16:18:21.907584Z",
+      "ts": "2025-12-31T18:02:45.754148Z",
       "type": "chain_end",
       "name": "unknown",
       "output": {
@@ -107,15 +107,15 @@
             "response_metadata": {},
             "type": "system",
             "name": null,
-            "id": "1f592ac0-e5db-4441-90c7-25833a442a92"
+            "id": "9d9a65dc-b5e9-46b9-85d5-8f42080fbd01"
           },
           {
-            "content": "Analyze this agent execution trace:\n\n## Trace Overview\n- Run ID: run_success_001\n- Status: success\n- Total Events: 8\n- LLM Calls: 3\n- Tool Calls: 2\n- Errors: 0\n- Framework: unknown\n- Model: gpt-4\n\n## Pre-Analysis Summary\nNo significant issues detected in trace.\n\nBegin your analysis. Use the available tools to examine specific events and build your diagnosis.\nStart by examining the signals identified in the pre-analysis, then trace the causal chain to understand the root cause.",
+            "content": "Analyze this agent execution trace:\n\n## Trace Overview\n- Run ID: 781472b5-4aa8-47e3-bee0-73b182f7a5f5\n- Status: success\n- Total Events: 6\n- LLM Calls: 2\n- Tool Calls: 3\n- Errors: 0\n- Framework: unknown\n- Model: None\n\n## Pre-Analysis Summary\nNo significant issues detected in trace.\n\nBegin your analysis. Use the available tools to examine specific events and build your diagnosis.\nStart by examining the signals identified in the pre-analysis, then trace the causal chain to understand the root cause.",
             "additional_kwargs": {},
             "response_metadata": {},
             "type": "human",
             "name": null,
-            "id": "89e7ec0d-4d2e-4894-a183-18f53b34b41c"
+            "id": "da58e70c-a003-4f1a-8d55-86da45ee544b"
           },
           {
             "content": "Analysis error: LLM error: Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}",
@@ -123,25 +123,25 @@
             "response_metadata": {},
             "type": "ai",
             "name": null,
-            "id": "d6cbf573-5ed3-4a19-aa19-aad3b59b7651",
+            "id": "d13065d6-764c-4991-ad02-2222e5c09028",
             "tool_calls": [],
             "invalid_tool_calls": [],
             "usage_metadata": null
           }
         ],
         "trace_summary": {
-          "run_id": "run_success_001",
+          "run_id": "781472b5-4aa8-47e3-bee0-73b182f7a5f5",
           "status": "success",
-          "duration_ms": 1130,
-          "total_events": 8,
-          "llm_calls": 3,
-          "tool_calls": 2,
+          "duration_ms": 7100,
+          "total_events": 6,
+          "llm_calls": 2,
+          "tool_calls": 3,
           "errors": 0,
           "total_tokens": "***",
           "has_task_context": true,
-          "available_tools": 2,
+          "available_tools": 0,
           "framework": "unknown",
-          "model": "gpt-4"
+          "model": null
         },
         "preanalysis": {
           "signals": [],
@@ -152,7 +152,7 @@
         "final_report": ""
       },
       "metadata": {
-        "run_id": "019b7534-0426-7c72-8c7a-43626aaa73e7"
+        "run_id": "019b7593-96ce-7d53-b0ba-a603928b3537"
       }
     }
   ],

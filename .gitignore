@@ -8,10 +8,13 @@ venv/
 env/
 ENV/
 .venv
+*.pyc
+**/__pycache__/
 
 # Environment variables
 .env
 .env.local
+.streamlit/secrets.toml
 
 # IDE
 .vscode/

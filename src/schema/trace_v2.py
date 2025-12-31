@@ -13,7 +13,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class TraceStatus(str, Enum):
@@ -64,8 +64,8 @@ class TraceEvent(BaseModel):
     role: EventRole | None = None
 
     name: str | None = None  # tool name / node name / model name
-    input: str | dict[str, Any] | None = None
-    output: str | dict[str, Any] | None = None
+    input: str | dict[str, Any] | list[Any] | None = None
+    output: str | dict[str, Any] | list[Any] | None = None
 
     token_count: int | None = None
     latency_ms: int | None = None
@@ -73,6 +73,22 @@ class TraceEvent(BaseModel):
 
     error: EventError | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("latency_ms", mode="before")
+    @classmethod
+    def convert_latency_to_int(cls, v: Any) -> int | None:
+        """Convert float latency values to int (rounding)."""
+        if v is None:
+            return None
+        if isinstance(v, float):
+            return int(round(v))
+        if isinstance(v, int):
+            return v
+        # Try to convert string or other types
+        try:
+            return int(round(float(v)))
+        except (ValueError, TypeError):
+            return None
 
     def is_error(self) -> bool:
         """Check if this event is an error or contains an error."""
@@ -116,6 +132,22 @@ class TraceStats(BaseModel):
     num_llm_calls: int = 0
     num_tool_calls: int = 0
     num_errors: int = 0
+
+    @field_validator("total_latency_ms", mode="before")
+    @classmethod
+    def convert_latency_to_int(cls, v: Any) -> int | None:
+        """Convert float latency values to int (rounding)."""
+        if v is None:
+            return None
+        if isinstance(v, float):
+            return int(round(v))
+        if isinstance(v, int):
+            return v
+        # Try to convert string or other types
+        try:
+            return int(round(float(v)))
+        except (ValueError, TypeError):
+            return None
 
 
 class Trace(BaseModel):

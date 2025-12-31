@@ -21,3 +21,6 @@ pytest-asyncio>=0.21
 
 # Environment
 python-dotenv>=1.0
+
+# GUI
+streamlit>=1.29

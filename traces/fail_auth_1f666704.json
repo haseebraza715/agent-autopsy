@@ -1,0 +1,47 @@
+{
+  "run_id": "1f666704-0cea-4775-a210-0eb7d7c7e5a5",
+  "start_time": "2025-12-31T18:59:20.957Z",
+  "end_time": "2025-12-31T18:59:23.957Z",
+  "duration_ms": 3000,
+  "status": "failed",
+  "goal": "Access user's private repository",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:59:20.957Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Clone and analyze the private repo github.com/user/private-repo",
+      "output": "I'll access the repository.",
+      "token_count": 80,
+      "latency_ms": 400
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:59:21.457Z",
+      "type": "tool_call",
+      "name": "github_api",
+      "input": {
+        "action": "get_repo",
+        "repo": "user/private-repo"
+      },
+      "error": "401 Unauthorized: Bad credentials or token expired",
+      "latency_ms": 200
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:59:21.757Z",
+      "type": "error",
+      "name": "github_api",
+      "error": "Authentication failed: Invalid or expired GitHub token",
+      "metadata": {
+        "error_type": "AuthenticationError",
+        "status_code": 401
+      }
+    }
+  ],
+  "error_summary": "GitHub authentication failed - invalid or expired token",
+  "metadata": {
+    "scenario": "authentication_failure"
+  }
+}

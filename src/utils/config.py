@@ -32,6 +32,7 @@ class Config:
     # Pattern detection thresholds
     loop_threshold: int = 3
     context_overflow_threshold: int = 100000
+    retry_window_seconds: int = 60  # Time window for retry storm detection
 
     # Embedding settings (for Phase 3)
     embedding_model: str = "all-MiniLM-L6-v2"
