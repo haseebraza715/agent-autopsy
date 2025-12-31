@@ -104,6 +104,23 @@ agent-autopsy/
 
 ---
 
+## 🏗️ Architecture
+
+![Architecture](diagrams/architecture.png)
+
+---
+
+## 📚 Documentation
+
+- [Architecture](docs/architecture.md) — System overview
+- [Quick Start](docs/quickstart.md) — Installation guide
+- [Ingestion](docs/ingestion.md) — Trace format support
+- [Analysis](docs/analysis.md) — Pattern detection & LLM analysis
+- [Patterns](docs/patterns.md) — Detected failure patterns
+- [Output](docs/output.md) — Report generation
+
+---
+
 ## 🤝 Contributing
 
 PRs welcome! Feel free to submit issues or spread the word.
