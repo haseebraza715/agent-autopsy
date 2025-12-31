@@ -1,0 +1,56 @@
+graph TB
+    %% Trace Generation Workflow
+    Start([Start]) --> LoadSamples[Load Sample Traces]
+    LoadSamples --> SelectTrace[Select Sample Trace]
+    
+    SelectTrace --> ParseSample[Parse Sample Trace]
+    ParseSample --> RunAnalysis[Run Analysis Agent]
+    
+    RunAnalysis --> EnableTracing{Tracing Enabled?}
+    EnableTracing -->|Yes| CaptureEvents[Capture Events]
+    EnableTracing -->|No| SkipTracing[Skip Tracing]
+    
+    CaptureEvents --> LLMStart[LLM Start Event]
+    CaptureEvents --> ToolStart[Tool Start Event]
+    CaptureEvents --> ChainStart[Chain Start Event]
+    CaptureEvents --> ErrorEvent[Error Event]
+    
+    LLMStart --> LLMEnd[LLM End Event]
+    ToolStart --> ToolEnd[Tool End Event]
+    ChainStart --> ChainEnd[Chain End Event]
+    
+    LLMEnd --> SaveTrace[Save Trace File]
+    ToolEnd --> SaveTrace
+    ChainEnd --> SaveTrace
+    ErrorEvent --> SaveTrace
+    SkipTracing --> SaveTrace
+    
+    SaveTrace --> CheckFailure{Has Failure?}
+    CheckFailure -->|Yes| RecordFailure[Record Failed Trace]
+    CheckFailure -->|No| Continue[Continue]
+    
+    RecordFailure --> CheckMinRuns{Min Runs Reached?}
+    Continue --> CheckMinRuns
+    
+    CheckMinRuns -->|No| SelectTrace
+    CheckMinRuns -->|Yes| StopOnFailure{Stop on Failure?}
+    
+    StopOnFailure -->|Yes & Failure Found| End([End])
+    StopOnFailure -->|No| ContinueRuns{More Runs?}
+    
+    ContinueRuns -->|Yes| SelectTrace
+    ContinueRuns -->|No| End
+    
+    %% Styling
+    classDef start fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef process fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef event fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef output fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+    
+    class Start,End start
+    class LoadSamples,SelectTrace,ParseSample,RunAnalysis,CaptureEvents,SkipTracing,SaveTrace,Continue process
+    class EnableTracing,CheckFailure,CheckMinRuns,StopOnFailure,ContinueRuns decision
+    class LLMStart,LLMEnd,ToolStart,ToolEnd,ChainStart,ChainEnd,ErrorEvent event
+    class RecordFailure output
+

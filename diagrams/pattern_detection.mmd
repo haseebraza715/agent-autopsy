@@ -1,0 +1,52 @@
+graph TB
+    %% Pattern Detection Flow
+    Events[Trace Events] --> Detector[Pattern Detector]
+    
+    Detector --> LoopCheck[Check for Loops]
+    Detector --> RetryCheck[Check for Retries]
+    Detector --> ErrorCheck[Check for Errors]
+    Detector --> ToolCheck[Check Tool Validity]
+    Detector --> OutputCheck[Check Output Validity]
+    Detector --> TokenCheck[Check Token Usage]
+    
+    LoopCheck --> LoopPattern{Infinite Loop?<br/>Same tool+input 3+}
+    RetryCheck --> RetryPattern{Retry Storm?<br/>Same tool, varying input}
+    ErrorCheck --> CascadePattern{Error Cascade?<br/>Sequential errors}
+    ToolCheck --> HallucinationPattern{Hallucinated Tool?<br/>Tool not in list}
+    OutputCheck --> EmptyPattern{Empty Response?<br/>Null/empty output}
+    TokenCheck --> OverflowPattern{Context Overflow?<br/>Token limit exceeded}
+    
+    LoopPattern -->|Yes| LoopSignal[CRITICAL: Infinite Loop Signal]
+    OverflowPattern -->|Yes| OverflowSignal[CRITICAL: Context Overflow Signal]
+    
+    RetryPattern -->|Yes| RetrySignal[HIGH: Retry Storm Signal]
+    CascadePattern -->|Yes| CascadeSignal[HIGH: Error Cascade Signal]
+    HallucinationPattern -->|Yes| HallucinationSignal[HIGH: Hallucinated Tool Signal]
+    
+    EmptyPattern -->|Yes| EmptySignal[MEDIUM: Empty Response Signal]
+    
+    LoopSignal --> Signals[All Signals]
+    OverflowSignal --> Signals
+    RetrySignal --> Signals
+    CascadeSignal --> Signals
+    HallucinationSignal --> Signals
+    EmptySignal --> Signals
+    
+    Signals --> Hypotheses[Root Cause Hypotheses]
+    Hypotheses --> Confidence[Confidence Scores]
+    
+    %% Styling
+    classDef input fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef check fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef critical fill:#ffebee,stroke:#d32f2f,stroke-width:2px
+    classDef high fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef medium fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef output fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    
+    class Events input
+    class Detector,LoopCheck,RetryCheck,ErrorCheck,ToolCheck,OutputCheck,TokenCheck check
+    class LoopPattern,OverflowPattern,LoopSignal,OverflowSignal critical
+    class RetryPattern,CascadePattern,HallucinationPattern,RetrySignal,CascadeSignal,HallucinationSignal high
+    class EmptyPattern,EmptySignal medium
+    class Signals,Hypotheses,Confidence output
+
