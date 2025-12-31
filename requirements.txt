@@ -1,0 +1,23 @@
+# Core
+pydantic>=2.0
+typer>=0.9
+rich>=13.0
+
+# LLM & Agent
+langgraph>=0.2
+langchain-core>=0.3
+langchain-openai>=0.2
+openai>=1.0
+
+# Embeddings
+sentence-transformers>=2.2
+
+# HTTP
+httpx>=0.25
+
+# Testing
+pytest>=7.0
+pytest-asyncio>=0.21
+
+# Environment
+python-dotenv>=1.0

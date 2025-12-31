@@ -1,0 +1,104 @@
+"""
+Configuration management for Agent Autopsy.
+
+Handles environment variables, API keys, and default settings.
+"""
+
+import os
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from dotenv import load_dotenv
+
+
+@dataclass
+class Config:
+    """Application configuration."""
+
+    # OpenRouter settings
+    openrouter_api_key: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+
+    # Model settings
+    default_model: str = "meta-llama/llama-3.1-8b-instruct"
+    fallback_model: str = "meta-llama/llama-3.1-8b-instruct:free"
+
+    # Analysis settings
+    max_retries: int = 3
+    timeout_seconds: int = 120
+    max_tokens: int = 4096
+
+    # Pattern detection thresholds
+    loop_threshold: int = 3
+    context_overflow_threshold: int = 100000
+
+    # Embedding settings (for Phase 3)
+    embedding_model: str = "all-MiniLM-L6-v2"
+
+    # Logging
+    log_level: str = "INFO"
+
+    # Paths
+    output_dir: Path = field(default_factory=lambda: Path("./reports"))
+
+    def __post_init__(self):
+        """Validate configuration after initialization."""
+        if not self.openrouter_api_key:
+            # Try to load from environment
+            load_dotenv()
+            self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY", "")
+
+        if not self.openrouter_api_key:
+            print("Warning: OPENROUTER_API_KEY not set. LLM analysis will be unavailable.")
+
+    @classmethod
+    def from_env(cls) -> "Config":
+        """Create config from environment variables."""
+        load_dotenv()
+
+        return cls(
+            openrouter_api_key=os.getenv("OPENROUTER_API_KEY", ""),
+            default_model=os.getenv("DEFAULT_MODEL", "meta-llama/llama-3.1-8b-instruct"),
+            fallback_model=os.getenv("FALLBACK_MODEL", "meta-llama/llama-3.1-8b-instruct:free"),
+            log_level=os.getenv("LOG_LEVEL", "INFO"),
+            embedding_model=os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2"),
+        )
+
+    def get_model(self, override: str | None = None) -> str:
+        """Get the model to use, with optional override."""
+        if override:
+            return override
+        return self.default_model
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert config to dictionary (hiding sensitive values)."""
+        return {
+            "openrouter_base_url": self.openrouter_base_url,
+            "default_model": self.default_model,
+            "fallback_model": self.fallback_model,
+            "max_retries": self.max_retries,
+            "timeout_seconds": self.timeout_seconds,
+            "max_tokens": self.max_tokens,
+            "loop_threshold": self.loop_threshold,
+            "log_level": self.log_level,
+            "has_api_key": bool(self.openrouter_api_key),
+        }
+
+
+# Global config instance
+_config: Config | None = None
+
+
+def get_config() -> Config:
+    """Get the global configuration instance."""
+    global _config
+    if _config is None:
+        _config = Config.from_env()
+    return _config
+
+
+def set_config(config: Config) -> None:
+    """Set the global configuration instance."""
+    global _config
+    _config = config

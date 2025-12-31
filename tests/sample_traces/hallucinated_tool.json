@@ -1,0 +1,77 @@
+{
+  "run_id": "run_hallucination_001",
+  "status": "failed",
+  "start_time": "2024-01-15T12:00:00Z",
+  "end_time": "2024-01-15T12:00:20Z",
+  "model": "gpt-4",
+  "tools": ["web_search", "calculator"],
+  "input": {
+    "goal": "Send an email to john@example.com with the meeting notes"
+  },
+  "events": [
+    {
+      "type": "message",
+      "role": "system",
+      "content": "You are a helpful assistant with access to search and calculation tools.",
+      "timestamp": "2024-01-15T12:00:00Z"
+    },
+    {
+      "type": "message",
+      "role": "user",
+      "content": "Send an email to john@example.com with the meeting notes",
+      "timestamp": "2024-01-15T12:00:01Z"
+    },
+    {
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Send email to john@example.com",
+      "output": "I'll use the email_sender tool to send this email.",
+      "token_count": 150,
+      "latency_ms": 500,
+      "timestamp": "2024-01-15T12:00:02Z"
+    },
+    {
+      "type": "tool_call",
+      "name": "email_sender",
+      "input": {"to": "john@example.com", "subject": "Meeting Notes", "body": "Here are the meeting notes..."},
+      "output": null,
+      "latency_ms": 100,
+      "timestamp": "2024-01-15T12:00:03Z",
+      "error": {
+        "message": "Tool 'email_sender' not found",
+        "type": "ToolNotFoundError"
+      }
+    },
+    {
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Email tool failed, try another approach",
+      "output": "Let me try the send_mail function instead.",
+      "token_count": 100,
+      "latency_ms": 400,
+      "timestamp": "2024-01-15T12:00:04Z"
+    },
+    {
+      "type": "tool_call",
+      "name": "send_mail",
+      "input": {"recipient": "john@example.com", "message": "Meeting notes..."},
+      "output": null,
+      "latency_ms": 100,
+      "timestamp": "2024-01-15T12:00:05Z",
+      "error": {
+        "message": "Tool 'send_mail' not found",
+        "type": "ToolNotFoundError"
+      }
+    },
+    {
+      "type": "error",
+      "error": {
+        "message": "Unable to complete task - required tool not available",
+        "type": "TaskFailedError"
+      },
+      "timestamp": "2024-01-15T12:00:06Z"
+    }
+  ],
+  "error": "Model attempted to use non-existent tools: email_sender, send_mail",
+  "final_output": null
+}
