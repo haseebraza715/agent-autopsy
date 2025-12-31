@@ -1,4 +1,14 @@
-<h1 align="center">Agent Autopsy</h1>
+<h1 align="center">
+  <pre>
+  ╔═══════════════════════════════════╗
+  ║                                   ║
+  ║      AGENT AUTOPSY                ║
+  ║                                   ║
+  ║   🔍 Trace Analysis Engine       ║
+  ║                                   ║
+  ╚═══════════════════════════════════╝
+  </pre>
+</h1>
 
 <p align="center">
   <a href="https://github.com/haseebraza715/agent-autopsy/blob/main/LICENSE">
@@ -13,10 +23,6 @@
   <b>Intelligent trace analysis for AI agents</b></br>
   <sub>Automatically detect failures, loops, and issues in your agent execution traces</sub><br>
 </p>
-
-<br />
-
-![Architecture](diagrams/architecture.png)
 
 <br />
 
@@ -120,6 +126,12 @@ DEFAULT_MODEL=meta-llama/llama-3.1-8b-instruct
 FALLBACK_MODEL=meta-llama/llama-3.1-8b-instruct:free
 LOG_LEVEL=INFO
 ```
+
+<br />
+
+## Architecture
+
+![Architecture](diagrams/architecture.png)
 
 <br />
 
