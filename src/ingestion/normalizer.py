@@ -17,17 +17,57 @@ class TraceNormalizer:
         Normalize a trace by:
         - Recalculating stats
         - Ensuring event IDs are sequential
+        - Remapping parent_event_id references
         - Filling in missing timestamps
-        - Validating structure
+        - Validating chronological order
         """
-        # Ensure sequential event IDs
+        # Build old_id -> new_id mapping and renumber event IDs
+        id_mapping = {}
         for i, event in enumerate(trace.events):
+            old_id = event.event_id
+            id_mapping[old_id] = i
             event.event_id = i
+
+        # Remap parent_event_id values to maintain causal links
+        for event in trace.events:
+            if event.parent_event_id is not None:
+                if event.parent_event_id in id_mapping:
+                    event.parent_event_id = id_mapping[event.parent_event_id]
+                else:
+                    # Parent doesn't exist - set to None
+                    event.parent_event_id = None
+
+        # Infer missing timestamps
+        TraceNormalizer._infer_missing_timestamps(trace)
 
         # Recalculate stats
         trace.stats = TraceNormalizer.calculate_stats(trace)
 
         return trace
+
+    @staticmethod
+    def _infer_missing_timestamps(trace: Trace) -> None:
+        """Fill in missing timestamps based on adjacent events."""
+        last_ts = trace.timestamp_start
+        for event in trace.events:
+            if event.timestamp is None:
+                event.timestamp = last_ts
+            else:
+                last_ts = event.timestamp
+
+    @staticmethod
+    def _validate_chronological_order(trace: Trace) -> list[str]:
+        """Check events are in chronological order and return issues."""
+        issues = []
+        last_ts = None
+        for event in trace.events:
+            if event.timestamp and last_ts and event.timestamp < last_ts:
+                issues.append(
+                    f"Event {event.event_id} timestamp precedes previous event"
+                )
+            if event.timestamp:
+                last_ts = event.timestamp
+        return issues
 
     @staticmethod
     def calculate_stats(trace: Trace) -> TraceStats:

@@ -15,6 +15,7 @@
 
 ## Features
 
+- **Web GUI** — Streamlit-based interface for easy trace analysis
 - **Multi-Format Support** — LangGraph + generic JSON (LangChain/OpenTelemetry detected but parsed generically)
 - **Pattern Detection** — Loops, error cascades, hallucinated tools, and more
 - **LLM Analysis** — AI-powered root cause analysis with event citations
@@ -27,13 +28,24 @@
 
 ## Quick Start
 
+### Web GUI (Recommended)
+
 ```bash
 # Install
 pip install -r requirements.txt
 
-# Configure
+# Configure (optional, for LLM analysis)
 cp .env.example .env  # Add your OPENROUTER_API_KEY
 
+# Launch Streamlit app
+streamlit run app.py
+```
+
+Open `http://localhost:8501` in your browser to use the GUI.
+
+### CLI
+
+```bash
 # Analyze a trace
 python -m src.cli analyze trace.json
 ```
@@ -52,6 +64,25 @@ python -m src.cli analyze trace.json
 | Error Cascade | High | Sequential error propagation |
 
 ---
+
+## Web GUI
+
+The Streamlit interface provides an intuitive way to analyze traces:
+
+- **Home Dashboard** — Quick access to recent traces and reports
+- **Analyze Trace** — Upload and analyze individual traces with interactive results
+- **Trace Viewer** — Browse events with filtering and detailed views
+- **Batch Analysis** — Process multiple traces at once
+- **Reports** — View and download generated reports
+- **Settings** — Configure API keys and analysis options
+
+### Recent Updates
+
+- Fixed schema validation for float latency values and list inputs
+- Improved error display with proper EventError field handling
+- Enhanced trace viewer with better event name display
+- Fixed duplicate key issues in UI components
+- Added support for Streamlit deployment
 
 ## CLI Usage
 

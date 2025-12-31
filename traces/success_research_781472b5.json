@@ -1,0 +1,95 @@
+{
+  "run_id": "781472b5-4aa8-47e3-bee0-73b182f7a5f5",
+  "start_time": "2025-12-31T18:59:20.957Z",
+  "end_time": "2025-12-31T18:59:45.957Z",
+  "duration_ms": 25000,
+  "status": "success",
+  "goal": "Research competitors and summarize their pricing strategies",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:59:20.957Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Research competitors and summarize pricing strategies",
+      "output": "I'll search for information about each competitor.",
+      "token_count": 180,
+      "latency_ms": 900
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:59:21.957Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "CompanyA pricing plans 2024"
+      },
+      "output": {
+        "results": [
+          {
+            "title": "CompanyA Pricing",
+            "snippet": "Starting at $29/month..."
+          }
+        ]
+      },
+      "latency_ms": 1500
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:59:23.557Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "CompanyB pricing plans 2024"
+      },
+      "output": {
+        "results": [
+          {
+            "title": "CompanyB Plans",
+            "snippet": "Free tier available, Pro at $49..."
+          }
+        ]
+      },
+      "latency_ms": 1400
+    },
+    {
+      "event_id": 3,
+      "ts": "2025-12-31T18:59:25.057Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "CompanyC enterprise pricing"
+      },
+      "output": {
+        "results": [
+          {
+            "title": "CompanyC Enterprise",
+            "snippet": "Custom pricing, contact sales..."
+          }
+        ]
+      },
+      "latency_ms": 1300
+    },
+    {
+      "event_id": 4,
+      "ts": "2025-12-31T18:59:26.457Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Research results for 3 competitors collected",
+      "output": "Based on the research, here's the competitive pricing analysis...",
+      "token_count": 600,
+      "latency_ms": 2000
+    },
+    {
+      "event_id": 5,
+      "ts": "2025-12-31T18:59:28.557Z",
+      "type": "message",
+      "name": "assistant",
+      "role": "assistant",
+      "output": "Competitor Pricing Summary:\n1. CompanyA: $29-99/mo\n2. CompanyB: Free-$49/mo\n3. CompanyC: Enterprise only"
+    }
+  ],
+  "metadata": {
+    "scenario": "multi_step_research_success"
+  }
+}

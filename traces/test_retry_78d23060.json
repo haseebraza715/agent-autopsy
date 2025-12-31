@@ -1,0 +1,93 @@
+{
+  "run_id": "78d23060-6883-4eb3-b21a-6be8d163ddbf",
+  "start_time": "2025-12-31T18:51:14.596Z",
+  "end_time": "2025-12-31T18:51:22.596Z",
+  "duration_ms": 8000,
+  "status": "success",
+  "total_events": 10,
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:51:14.596Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Search for recent news about AI",
+      "output": "I'll search for recent AI news.",
+      "token_count": 120,
+      "latency_ms": 500,
+      "metadata": {}
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:51:15.196Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "recent AI news 2024"
+      },
+      "latency_ms": 2000,
+      "error": "Connection timeout after 2000ms",
+      "metadata": {
+        "retry_count": 0
+      }
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:51:17.296Z",
+      "type": "error",
+      "name": "web_search",
+      "error": "Connection timeout after 2000ms",
+      "metadata": {
+        "error_type": "TimeoutError"
+      }
+    },
+    {
+      "event_id": 3,
+      "ts": "2025-12-31T18:51:17.396Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "recent AI news 2024"
+      },
+      "output": [
+        {
+          "title": "GPT-5 announced",
+          "url": "https://example.com/1"
+        },
+        {
+          "title": "AI regulation updates",
+          "url": "https://example.com/2"
+        }
+      ],
+      "latency_ms": 1500,
+      "metadata": {
+        "retry_count": 1
+      }
+    },
+    {
+      "event_id": 4,
+      "ts": "2025-12-31T18:51:18.996Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Search results: GPT-5 announced, AI regulation updates",
+      "output": "Here are the recent AI news highlights...",
+      "token_count": 250,
+      "latency_ms": 700,
+      "metadata": {}
+    },
+    {
+      "event_id": 5,
+      "ts": "2025-12-31T18:51:19.796Z",
+      "type": "message",
+      "name": "assistant",
+      "role": "assistant",
+      "output": "Here are the latest AI news: 1) GPT-5 has been announced 2) New AI regulations are being discussed",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "trace_version": "1.0",
+    "captured_by": "test_generator",
+    "scenario": "tool_error_with_retry"
+  }
+}

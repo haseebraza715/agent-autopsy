@@ -1,0 +1,66 @@
+{
+  "run_id": "992945aa-a1f1-4c18-ba6d-8dff35c3b3df",
+  "start_time": "2025-12-31T18:51:14.596Z",
+  "end_time": "2025-12-31T18:51:19.596Z",
+  "duration_ms": 5000,
+  "status": "success",
+  "total_events": 8,
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:51:14.596Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "What is the weather in New York?",
+      "output": "I'll check the weather for you using the weather tool.",
+      "token_count": 150,
+      "latency_ms": 800,
+      "metadata": {
+        "model": "gpt-4"
+      }
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:51:15.446Z",
+      "type": "tool_call",
+      "name": "get_weather",
+      "input": {
+        "city": "New York"
+      },
+      "output": {
+        "temperature": 72,
+        "condition": "sunny",
+        "humidity": 45
+      },
+      "latency_ms": 200,
+      "metadata": {}
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:51:15.696Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Weather data: temperature=72, condition=sunny",
+      "output": "The weather in New York is currently sunny with a temperature of 72\u00b0F and 45% humidity.",
+      "token_count": 180,
+      "latency_ms": 600,
+      "metadata": {
+        "model": "gpt-4"
+      }
+    },
+    {
+      "event_id": 3,
+      "ts": "2025-12-31T18:51:16.346Z",
+      "type": "message",
+      "name": "assistant",
+      "role": "assistant",
+      "output": "The weather in New York is currently sunny with a temperature of 72\u00b0F and 45% humidity. It's a beautiful day!",
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "trace_version": "1.0",
+    "captured_by": "test_generator",
+    "scenario": "successful_execution"
+  }
+}

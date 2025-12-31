@@ -201,6 +201,72 @@ class GenericJSONParser(TraceParser):
             expected_output_type=data.get("expected_output_type") or data.get("output_type"),
         )
 
+    def _merge_start_end_events(self, raw_events: list[dict]) -> list[dict]:
+        """
+        Merge paired *_start and *_end events into single events.
+
+        TraceSaver emits separate start/end events (e.g., llm_start, llm_end).
+        This method pairs them to avoid double-counting in pattern detection.
+        """
+        pending_starts: dict[tuple, dict] = {}  # key: (base_type, name, run_id) -> event_data
+        merged_events = []
+
+        for raw in raw_events:
+            if not isinstance(raw, dict):
+                merged_events.append(raw)
+                continue
+
+            type_value = str(raw.get("type", "")).lower()
+            name = raw.get("name", "")
+            run_id = raw.get("run_id") or raw.get("event_id")
+
+            if type_value.endswith("_start"):
+                # Store start event for later merging
+                base_type = type_value.replace("_start", "")
+                key = (base_type, name, run_id)
+                pending_starts[key] = raw.copy()
+                continue
+
+            if type_value.endswith("_end"):
+                # Find matching start and merge
+                base_type = type_value.replace("_end", "")
+                key = (base_type, name, run_id)
+                start_event = pending_starts.pop(key, None)
+
+                if start_event:
+                    # Merge: use start's input, end's output/tokens/latency
+                    merged = {
+                        **start_event,
+                        "type": base_type,
+                        "output": raw.get("output") or start_event.get("output"),
+                        "latency_ms": raw.get("latency_ms") or start_event.get("latency_ms"),
+                        "token_count": raw.get("token_count") or start_event.get("token_count"),
+                        "tokens": raw.get("tokens") or start_event.get("tokens"),
+                        "error": raw.get("error") or start_event.get("error"),
+                    }
+                    # Preserve the end timestamp as the event timestamp
+                    if raw.get("ts") or raw.get("timestamp"):
+                        merged["timestamp"] = raw.get("timestamp") or raw.get("ts")
+                        merged["ts"] = raw.get("ts") or raw.get("timestamp")
+                    merged_events.append(merged)
+                else:
+                    # No matching start, use end event as-is with base type
+                    event_copy = raw.copy()
+                    event_copy["type"] = base_type
+                    merged_events.append(event_copy)
+                continue
+
+            # Non-start/end events pass through unchanged
+            merged_events.append(raw)
+
+        # Add any unmatched start events (shouldn't happen normally)
+        for raw in pending_starts.values():
+            raw_copy = raw.copy()
+            raw_copy["type"] = raw_copy["type"].replace("_start", "")
+            merged_events.append(raw_copy)
+
+        return merged_events
+
     def _extract_events(self, data: dict[str, Any]) -> list[TraceEvent]:
         """Extract events from various structures."""
         events = []
@@ -212,6 +278,9 @@ class GenericJSONParser(TraceParser):
             if key in data and isinstance(data[key], list):
                 raw_events = data[key]
                 break
+
+        # Merge paired start/end events to avoid double-counting
+        raw_events = self._merge_start_end_events(raw_events)
 
         for raw in raw_events:
             if not isinstance(raw, dict):
@@ -255,7 +324,7 @@ class GenericJSONParser(TraceParser):
                 output=raw.get("output") or raw.get("result") or raw.get("response"),
                 token_count=raw.get("token_count") or raw.get("tokens") or raw.get("tokenCount"),
                 latency_ms=raw.get("latency_ms") or raw.get("duration_ms") or raw.get("latency"),
-                timestamp=self._parse_timestamp(raw.get("timestamp") or raw.get("time")),
+                timestamp=self._parse_timestamp(raw.get("timestamp") or raw.get("time") or raw.get("ts")),
                 error=error,
                 metadata=raw.get("metadata", {}),
             )

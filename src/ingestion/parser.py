@@ -62,6 +62,8 @@ def parse_trace_file(file_path: str | Path) -> Trace:
         Normalized Trace object
     """
     from .formats.langgraph import LangGraphParser
+    from .formats.langchain import LangChainParser
+    from .formats.opentelemetry import OpenTelemetryParser
     from .formats.generic import GenericJSONParser
 
     path = Path(file_path)
@@ -77,6 +79,8 @@ def parse_trace_file(file_path: str | Path) -> Trace:
 
     parsers: dict[str, TraceParser] = {
         "langgraph": LangGraphParser(),
+        "langchain": LangChainParser(),
+        "opentelemetry": OpenTelemetryParser(),
         "generic": GenericJSONParser(),
     }
 

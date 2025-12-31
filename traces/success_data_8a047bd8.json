@@ -1,0 +1,90 @@
+{
+  "run_id": "8a047bd8-c266-4e97-810a-917e2ab66aa2",
+  "start_time": "2025-12-31T18:59:20.957Z",
+  "end_time": "2025-12-31T18:59:38.957Z",
+  "duration_ms": 18000,
+  "status": "success",
+  "goal": "Analyze quarterly sales data and identify trends",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:59:20.957Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Analyze quarterly sales data and identify trends",
+      "output": "I'll load the data and perform trend analysis.",
+      "token_count": 150,
+      "latency_ms": 800
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:59:21.857Z",
+      "type": "tool_call",
+      "name": "data_loader",
+      "input": {
+        "source": "sales_q4_2024.csv"
+      },
+      "output": {
+        "rows": 1500,
+        "columns": [
+          "date",
+          "product",
+          "revenue",
+          "units"
+        ]
+      },
+      "latency_ms": 1200
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:59:23.157Z",
+      "type": "tool_call",
+      "name": "statistics",
+      "input": {
+        "operation": "trend_analysis",
+        "column": "revenue"
+      },
+      "output": {
+        "trend": "increasing",
+        "growth_rate": 0.15,
+        "r_squared": 0.92
+      },
+      "latency_ms": 800
+    },
+    {
+      "event_id": 3,
+      "ts": "2025-12-31T18:59:24.057Z",
+      "type": "tool_call",
+      "name": "visualizer",
+      "input": {
+        "chart_type": "line",
+        "data": "revenue_by_month"
+      },
+      "output": {
+        "chart_url": "/charts/revenue_trend.png"
+      },
+      "latency_ms": 600
+    },
+    {
+      "event_id": 4,
+      "ts": "2025-12-31T18:59:24.757Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Analysis complete: 15% growth, R\u00b2=0.92",
+      "output": "The quarterly sales show a strong upward trend with 15% growth...",
+      "token_count": 400,
+      "latency_ms": 1200
+    },
+    {
+      "event_id": 5,
+      "ts": "2025-12-31T18:59:26.057Z",
+      "type": "message",
+      "name": "assistant",
+      "role": "assistant",
+      "output": "Sales Analysis Report:\n- Growth: 15% QoQ\n- Trend: Strong positive\n- Top products: Widget Pro, Gadget X"
+    }
+  ],
+  "metadata": {
+    "scenario": "data_analysis_success"
+  }
+}

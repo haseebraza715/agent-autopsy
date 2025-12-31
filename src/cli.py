@@ -328,59 +328,52 @@ def autopsy_run(
         "-o", "--output",
         help="Output file path for the report (default: ./reports/<trace_name>.md)",
     ),
+    no_llm: bool = typer.Option(
+        False,
+        "--no-llm",
+        help="Run only deterministic analysis without LLM",
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "-v", "--verbose",
+        help="Show detailed output",
+    ),
 ):
     """
-    Run autopsy analysis on a captured trace file.
+    Run full autopsy analysis on a captured trace file.
 
     This command loads a trace JSON file (captured by TraceSaver),
-    analyzes it for patterns and issues, and generates a report.
+    runs the complete analysis pipeline (parsing, normalization,
+    pattern detection, and LLM analysis), and generates a report.
 
     Example:
         python -m src.cli autopsy-run traces/20241231_123456_abc123.json
-        python -m src.cli autopsy-run traces/my_trace.json -o report.md
+        python -m src.cli autopsy-run traces/my_trace.json -o report.md --no-llm
     """
+    config = get_config()
+
     console.print(Panel.fit(
         "[bold blue]Agent Autopsy[/bold blue]\n"
-        "Analyzing captured trace...",
+        "Running full analysis pipeline...",
         border_style="blue",
     ))
 
-    # Load trace JSON
-    try:
-        with open(trace_file, "r") as f:
-            trace_data = json.load(f)
-    except Exception as e:
-        console.print(f"[red]Error loading trace file:[/red] {e}")
-        raise typer.Exit(1)
+    # Step 1: Parse and normalize trace
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Parsing trace file...", total=None)
 
-    # Print basic stats
-    run_id = trace_data.get("run_id", "unknown")
-    total_events = trace_data.get("total_events", len(trace_data.get("events", [])))
-    duration_ms = trace_data.get("duration_ms", "N/A")
-    start_time = trace_data.get("start_time", "N/A")
+        try:
+            trace = parse_trace_file(trace_file)
+            trace = TraceNormalizer.normalize(trace)
+        except Exception as e:
+            console.print(f"[red]Error parsing trace:[/red] {e}")
+            raise typer.Exit(1)
 
-    events = trace_data.get("events", [])
-
-    # Count event types
-    event_counts = {}
-    error_count = 0
-    for event in events:
-        event_type = event.get("type", "unknown")
-        event_counts[event_type] = event_counts.get(event_type, 0) + 1
-        if event_type == "error":
-            error_count += 1
-
-    # Detect potential loops (same tool+input repeated)
-    tool_calls = []
-    for event in events:
-        if event.get("type") == "tool_start":
-            tool_calls.append((event.get("name"), str(event.get("input", ""))[:100]))
-
-    loop_count = 0
-    if len(tool_calls) >= 3:
-        for i in range(len(tool_calls) - 2):
-            if tool_calls[i] == tool_calls[i+1] == tool_calls[i+2]:
-                loop_count += 1
+        progress.update(task, description="Trace parsed successfully")
 
     # Print trace summary
     table = Table(title="Trace Summary", show_header=False)
@@ -388,127 +381,84 @@ def autopsy_run(
     table.add_column("Value", style="white")
 
     table.add_row("Trace File", str(trace_file))
-    table.add_row("Run ID", run_id)
-    table.add_row("Start Time", start_time)
-    table.add_row("Duration (ms)", str(duration_ms))
-    table.add_row("Total Events", str(total_events))
-    table.add_row("Errors", f"[red]{error_count}[/red]" if error_count else "0")
-    table.add_row("Potential Loops", f"[yellow]{loop_count}[/yellow]" if loop_count else "0")
+    table.add_row("Run ID", trace.run_id)
+    table.add_row("Status", trace.status.value)
+    table.add_row("Total Events", str(len(trace.events)))
+    table.add_row("LLM Calls", str(trace.stats.num_llm_calls))
+    table.add_row("Tool Calls", str(trace.stats.num_tool_calls))
+    table.add_row("Errors", f"[red]{trace.stats.num_errors}[/red]" if trace.stats.num_errors else "0")
 
     console.print(table)
 
-    # Print event type breakdown
-    console.print("\n[bold]Event Type Breakdown:[/bold]")
-    for event_type, count in sorted(event_counts.items()):
-        console.print(f"  {event_type}: {count}")
+    # Step 2: Run pre-analysis
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Running pre-analysis...", total=None)
 
-    # Print errors if any
-    if error_count > 0:
-        console.print("\n[bold red]Errors Found:[/bold red]")
-        for event in events:
-            if event.get("type") == "error":
-                console.print(f"  - Event {event.get('event_id')}: {event.get('error', 'Unknown error')}")
-                if event.get("name"):
-                    console.print(f"    Component: {event.get('name')}")
+        preanalysis = RootCauseBuilder(trace).build()
 
-    # Generate report
-    report_lines = [
-        f"# Autopsy Report: {run_id}",
-        "",
-        "## Trace Summary",
-        "",
-        f"- **Trace File:** `{trace_file}`",
-        f"- **Run ID:** {run_id}",
-        f"- **Start Time:** {start_time}",
-        f"- **Duration:** {duration_ms}ms",
-        f"- **Total Events:** {total_events}",
-        f"- **Errors:** {error_count}",
-        f"- **Potential Loops:** {loop_count}",
-        "",
-        "## Event Breakdown",
-        "",
-    ]
+        progress.update(task, description=f"Pre-analysis complete: {len(preanalysis.signals)} signals, {len(preanalysis.hypotheses)} hypotheses")
 
-    for event_type, count in sorted(event_counts.items()):
-        report_lines.append(f"- **{event_type}:** {count}")
+    if verbose:
+        _print_preanalysis_summary(preanalysis)
 
-    if error_count > 0:
-        report_lines.extend([
-            "",
-            "## Errors",
-            "",
-        ])
-        for event in events:
-            if event.get("type") == "error":
-                report_lines.append(f"### Error at Event {event.get('event_id')}")
-                report_lines.append("")
-                report_lines.append(f"- **Component:** {event.get('name', 'Unknown')}")
-                report_lines.append(f"- **Error:** {event.get('error', 'Unknown error')}")
-                if event.get("metadata"):
-                    report_lines.append(f"- **Error Type:** {event['metadata'].get('error_type', 'Unknown')}")
-                report_lines.append("")
+    # Step 3: Run analysis (LLM or deterministic)
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        if no_llm or not config.openrouter_api_key:
+            task = progress.add_task("Running deterministic analysis...", total=None)
+            result = run_analysis_without_llm(trace)
+        else:
+            task = progress.add_task("Running LLM analysis...", total=None)
+            try:
+                result = run_analysis(trace, verbose=verbose)
+            except Exception as e:
+                console.print(f"[yellow]LLM analysis failed, falling back to deterministic:[/yellow] {e}")
+                result = run_analysis_without_llm(trace)
 
-    if loop_count > 0:
-        report_lines.extend([
-            "",
-            "## Potential Loops Detected",
-            "",
-            f"Found {loop_count} potential infinite loop(s) where the same tool was called with the same input 3+ times consecutively.",
-            "",
-        ])
+        progress.update(task, description="Analysis complete")
 
-    report_lines.extend([
-        "",
-        "## Event Timeline",
-        "",
-        "| Event ID | Type | Name | Latency (ms) |",
-        "|----------|------|------|--------------|",
-    ])
+    # Step 4: Generate report
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Generating report...", total=None)
 
-    for event in events[:50]:  # Limit to first 50 events for readability
-        event_id = event.get("event_id", "-")
-        event_type = event.get("type", "-")
-        name = event.get("name", "-")
-        latency = event.get("latency_ms", "-")
-        report_lines.append(f"| {event_id} | {event_type} | {name} | {latency} |")
+        # Determine output path
+        if output is None:
+            reports_dir = Path("./reports")
+            reports_dir.mkdir(parents=True, exist_ok=True)
+            output = reports_dir / f"{trace_file.stem}.md"
 
-    if len(events) > 50:
-        report_lines.append(f"\n*... and {len(events) - 50} more events*")
+        # Generate the report
+        report_gen = ReportGenerator(trace, result)
+        report_content = report_gen.generate()
 
-    report_lines.extend([
-        "",
-        "---",
-        "",
-        f"*Report generated by Agent Autopsy at {datetime.utcnow().isoformat()}Z*",
-    ])
+        # Write report
+        output.parent.mkdir(parents=True, exist_ok=True)
+        with open(output, "w") as f:
+            f.write(report_content)
 
-    report_content = "\n".join(report_lines)
-
-    # Determine output path
-    if output is None:
-        reports_dir = Path("./reports")
-        reports_dir.mkdir(parents=True, exist_ok=True)
-        output = reports_dir / f"{trace_file.stem}.md"
-
-    # Write report
-    output.parent.mkdir(parents=True, exist_ok=True)
-    with open(output, "w") as f:
-        f.write(report_content)
+        progress.update(task, description="Report generated")
 
     console.print(f"\n[green]Report saved to:[/green] {output}")
 
-    # Print summary panel
-    status_color = "green" if error_count == 0 and loop_count == 0 else "yellow" if error_count == 0 else "red"
-    status_text = "HEALTHY" if error_count == 0 and loop_count == 0 else "WARNING" if error_count == 0 else "ISSUES FOUND"
+    # Print result summary
+    _print_result_summary(result, preanalysis)
 
-    console.print(Panel.fit(
-        f"Status: [{status_color}]{status_text}[/{status_color}]\n"
-        f"Events: {total_events}\n"
-        f"Errors: {error_count}\n"
-        f"Loops: {loop_count}",
-        title="Autopsy Complete",
-        border_style=status_color,
-    ))
+    # Return status based on findings
+    if trace.stats.num_errors > 0 or len(preanalysis.signals) > 0:
+        console.print("\n[yellow]Issues detected in trace - review report for details[/yellow]")
+    else:
+        console.print("\n[green]No issues detected in trace[/green]")
 
 
 def main():

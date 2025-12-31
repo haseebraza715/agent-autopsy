@@ -1,13 +1,13 @@
 {
-  "run_id": "614df1dd-fda3-4388-8aba-ddd4266f0c19",
-  "start_time": "2025-12-31T17:18:22.131685Z",
-  "end_time": "2025-12-31T16:18:22.178481Z",
-  "duration_ms": 46.8,
+  "run_id": "dd128ae2-8e53-46b4-a4d9-316423d37e6d",
+  "start_time": "2025-12-31T19:00:26.682602Z",
+  "end_time": "2025-12-31T18:00:27.080816Z",
+  "duration_ms": 398.22,
   "total_events": 5,
   "events": [
     {
       "event_id": 0,
-      "ts": "2025-12-31T16:18:22.132646Z",
+      "ts": "2025-12-31T18:00:26.684214Z",
       "type": "llm_start",
       "name": "ChatOpenAI",
       "input": [
@@ -18,13 +18,13 @@
           },
           {
             "type": "HumanMessage",
-            "content": "Analyze this agent execution trace:\n\n## Trace Overview\n- Run ID: run_hallucination_001\n- Status: failed\n- Total Events: 7\n- LLM Calls: 2\n- Tool Calls: 2\n- Errors: 3\n- Framework: unknown\n- Model: gpt-4\n\n## Pre-Analysis Summary\nFound 4 high severity issue(s), 1 medium severity issue(s). Top hypothesis: Model calling non-existent tools (hallucination) (confidence: 90%)\n\nBegin your analysis. Use the available tools to examine specific events and build your diagnosis.\nStart by examining the signals identified in the pre-analysis, then trace the causal chain to understand the root cause."
+            "content": "Analyze this agent execution trace:\n\n## Trace Overview\n- Run ID: b8f735cd-fdb3-4239-902d-fc0e163edf02\n- Status: failed\n- Total Events: 10\n- LLM Calls: 1\n- Tool Calls: 8\n- Errors: 9\n- Framework: unknown\n- Model: None\n\n## Pre-Analysis Summary\nFound 1 critical issue(s), 1 high severity issue(s), 1 medium severity issue(s). Top hypothesis: Missing exit condition in graph/router logic (confidence: 85%)\n\nBegin your analysis. Use the available tools to examine specific events and build your diagnosis.\nStart by examining the signals identified in the pre-analysis, then trace the causal chain to understand the root cause."
           }
         ]
       ],
       "metadata": {
-        "run_id": "019b7534-0534-73f0-82ff-73161435eedb",
-        "parent_run_id": "019b7534-0534-73f0-82ff-730917d663e4",
+        "run_id": "019b7591-793c-7280-a080-c29f431b8c3d",
+        "parent_run_id": "019b7591-793b-7363-9ccf-dc4481c0e1a5",
         "tags": [
           "seq:step:1"
         ],
@@ -38,8 +38,8 @@
           "__pregel_pull",
           "analyze"
         ],
-        "langgraph_checkpoint_ns": "analyze:670fa3e4-a35e-363a-ed32-dd392238ceec",
-        "checkpoint_ns": "analyze:670fa3e4-a35e-363a-ed32-dd392238ceec",
+        "langgraph_checkpoint_ns": "analyze:ab483018-7254-8c54-e902-8c2602e37293",
+        "checkpoint_ns": "analyze:ab483018-7254-8c54-e902-8c2602e37293",
         "ls_provider": "openai",
         "ls_model_name": "xiaomi/mimo-v2-flash:free",
         "ls_model_type": "chat",
@@ -49,29 +49,29 @@
     },
     {
       "event_id": 1,
-      "ts": "2025-12-31T16:18:22.177394Z",
+      "ts": "2025-12-31T18:00:27.076254Z",
       "type": "error",
       "name": "ChatOpenAI",
       "metadata": {
-        "run_id": "019b7534-0534-73f0-82ff-73161435eedb",
+        "run_id": "019b7591-793c-7280-a080-c29f431b8c3d",
         "error_type": "AuthenticationError"
       },
-      "latency_ms": 44.8,
+      "latency_ms": 392.05,
       "error": "Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}"
     },
     {
       "event_id": 2,
-      "ts": "2025-12-31T16:18:22.177786Z",
+      "ts": "2025-12-31T18:00:27.076867Z",
       "type": "chain_end",
       "name": "unknown",
       "output": "end",
       "metadata": {
-        "run_id": "019b7534-0561-7551-bd71-7384d9df1fa5"
+        "run_id": "019b7591-7ac4-7253-acd0-21c2cfb68464"
       }
     },
     {
       "event_id": 3,
-      "ts": "2025-12-31T16:18:22.177807Z",
+      "ts": "2025-12-31T18:00:27.076952Z",
       "type": "chain_end",
       "name": "unknown",
       "output": {
@@ -82,7 +82,7 @@
             "response_metadata": {},
             "type": "ai",
             "name": null,
-            "id": "f2faf55d-15b6-4074-b6b7-37d2ed8234b1",
+            "id": "1d0acefa-4ed2-478d-ab98-06ab4b08a078",
             "tool_calls": [],
             "invalid_tool_calls": [],
             "usage_metadata": null
@@ -91,12 +91,12 @@
         "analysis_complete": true
       },
       "metadata": {
-        "run_id": "019b7534-0534-73f0-82ff-730917d663e4"
+        "run_id": "019b7591-793b-7363-9ccf-dc4481c0e1a5"
       }
     },
     {
       "event_id": 4,
-      "ts": "2025-12-31T16:18:22.177977Z",
+      "ts": "2025-12-31T18:00:27.079022Z",
       "type": "chain_end",
       "name": "unknown",
       "output": {
@@ -107,15 +107,15 @@
             "response_metadata": {},
             "type": "system",
             "name": null,
-            "id": "c4fe086c-15da-46bb-a06b-917a9ba17cff"
+            "id": "2f343e5c-febb-4e66-ade9-e5a40ec0f5cb"
           },
           {
-            "content": "Analyze this agent execution trace:\n\n## Trace Overview\n- Run ID: run_hallucination_001\n- Status: failed\n- Total Events: 7\n- LLM Calls: 2\n- Tool Calls: 2\n- Errors: 3\n- Framework: unknown\n- Model: gpt-4\n\n## Pre-Analysis Summary\nFound 4 high severity issue(s), 1 medium severity issue(s). Top hypothesis: Model calling non-existent tools (hallucination) (confidence: 90%)\n\nBegin your analysis. Use the available tools to examine specific events and build your diagnosis.\nStart by examining the signals identified in the pre-analysis, then trace the causal chain to understand the root cause.",
+            "content": "Analyze this agent execution trace:\n\n## Trace Overview\n- Run ID: b8f735cd-fdb3-4239-902d-fc0e163edf02\n- Status: failed\n- Total Events: 10\n- LLM Calls: 1\n- Tool Calls: 8\n- Errors: 9\n- Framework: unknown\n- Model: None\n\n## Pre-Analysis Summary\nFound 1 critical issue(s), 1 high severity issue(s), 1 medium severity issue(s). Top hypothesis: Missing exit condition in graph/router logic (confidence: 85%)\n\nBegin your analysis. Use the available tools to examine specific events and build your diagnosis.\nStart by examining the signals identified in the pre-analysis, then trace the causal chain to understand the root cause.",
             "additional_kwargs": {},
             "response_metadata": {},
             "type": "human",
             "name": null,
-            "id": "8f9a5f6f-57ad-4cff-b2b2-f489ec13741f"
+            "id": "21c520fc-1961-439e-82c9-fdaa87b79910"
           },
           {
             "content": "Analysis error: LLM error: Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}",
@@ -123,35 +123,56 @@
             "response_metadata": {},
             "type": "ai",
             "name": null,
-            "id": "f2faf55d-15b6-4074-b6b7-37d2ed8234b1",
+            "id": "1d0acefa-4ed2-478d-ab98-06ab4b08a078",
             "tool_calls": [],
             "invalid_tool_calls": [],
             "usage_metadata": null
           }
         ],
         "trace_summary": {
-          "run_id": "run_hallucination_001",
+          "run_id": "b8f735cd-fdb3-4239-902d-fc0e163edf02",
           "status": "failed",
-          "duration_ms": 1100,
-          "total_events": 7,
-          "llm_calls": 2,
-          "tool_calls": 2,
-          "errors": 3,
+          "duration_ms": 1500,
+          "total_events": 10,
+          "llm_calls": 1,
+          "tool_calls": 8,
+          "errors": 9,
           "total_tokens": "***",
           "has_task_context": true,
-          "available_tools": 2,
+          "available_tools": 0,
           "framework": "unknown",
-          "model": "gpt-4"
+          "model": null
         },
         "preanalysis": {
           "signals": [
+            {
+              "type": "infinite_loop",
+              "severity": "critical",
+              "evidence": "Same tool+input signature: health_check",
+              "events": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8
+              ]
+            },
             {
               "type": "empty_response",
               "severity": "medium",
               "evidence": "Empty or null output detected",
               "events": [
+                1,
+                2,
                 3,
-                5
+                4,
+                5,
+                6,
+                7,
+                8
               ]
             },
             {
@@ -159,59 +180,52 @@
               "severity": "high",
               "evidence": "Errors propagating sequentially across events",
               "events": [
+                1,
+                2,
                 3,
+                4,
                 5,
-                6
-              ]
-            },
-            {
-              "type": "hallucinated_tool",
-              "severity": "high",
-              "evidence": "Tool called not in available tools: {'calculator', 'web_search'}",
-              "events": [
-                3,
-                5
-              ]
-            },
-            {
-              "type": "contract_unknown_tool",
-              "severity": "high",
-              "evidence": "Tool 'email_sender' not in allow-list",
-              "events": [
-                3
-              ]
-            },
-            {
-              "type": "contract_unknown_tool",
-              "severity": "high",
-              "evidence": "Tool 'send_mail' not in allow-list",
-              "events": [
-                5
+                6,
+                7,
+                8,
+                9
               ]
             }
           ],
           "top_suspects": [
             {
-              "hypothesis": "Model calling non-existent tools (hallucination)",
-              "confidence": 0.9,
+              "hypothesis": "Missing exit condition in graph/router logic",
+              "confidence": 0.85,
               "supporting_events": [
+                1,
+                2,
                 3,
-                5
+                4,
+                5,
+                6,
+                7,
+                8
               ],
-              "category": "prompt",
+              "category": "code",
               "suggested_fixes": [
-                "Add stricter tool definitions in system prompt",
-                "Validate tool names before execution",
-                "Use structured output for tool selection"
+                "Add max iteration limit to graph execution",
+                "Add exit condition check in router node",
+                "Implement loop detection with early termination"
               ]
             },
             {
               "hypothesis": "Unhandled error causing cascade failures",
               "confidence": 0.8,
               "supporting_events": [
+                1,
+                2,
                 3,
+                4,
                 5,
-                6
+                6,
+                7,
+                8,
+                9
               ],
               "category": "code",
               "suggested_fixes": [
@@ -221,25 +235,17 @@
               ]
             },
             {
-              "hypothesis": "Tool input/output not matching expected schema",
-              "confidence": 0.7,
-              "supporting_events": [
-                3,
-                5
-              ],
-              "category": "tool",
-              "suggested_fixes": [
-                "Add schema validation before tool calls",
-                "Update tool schemas to match actual behavior",
-                "Add type coercion for common mismatches"
-              ]
-            },
-            {
               "hypothesis": "Tool or model returning empty/null responses",
               "confidence": 0.65,
               "supporting_events": [
+                1,
+                2,
                 3,
-                5
+                4,
+                5,
+                6,
+                7,
+                8
               ],
               "category": "tool",
               "suggested_fixes": [
@@ -249,13 +255,13 @@
               ]
             }
           ],
-          "summary": "Found 4 high severity issue(s), 1 medium severity issue(s). Top hypothesis: Model calling non-existent tools (hallucination) (confidence: 90%)"
+          "summary": "Found 1 critical issue(s), 1 high severity issue(s), 1 medium severity issue(s). Top hypothesis: Missing exit condition in graph/router logic (confidence: 85%)"
         },
         "analysis_complete": true,
         "final_report": ""
       },
       "metadata": {
-        "run_id": "019b7534-0533-7f11-9bcc-f2bd0941f49d"
+        "run_id": "019b7591-793b-7363-9ccf-dc307f85c1fc"
       }
     }
   ],

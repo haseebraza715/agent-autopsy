@@ -1,0 +1,48 @@
+{
+  "run_id": "2fc2eb25-5ea1-4544-97fe-2bc17be3c7d2",
+  "start_time": "2025-12-31T18:59:20.958Z",
+  "end_time": "2025-12-31T18:59:23.958Z",
+  "duration_ms": 3000,
+  "status": "failed",
+  "goal": "Delete old log files",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:59:20.958Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Clean up old log files in /var/log/app/",
+      "output": "I'll delete the old log files.",
+      "token_count": 90,
+      "latency_ms": 400
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:59:21.458Z",
+      "type": "tool_call",
+      "name": "file_system",
+      "input": {
+        "action": "delete",
+        "path": "/var/log/app/*.log",
+        "older_than_days": 30
+      },
+      "error": "Permission denied: Cannot delete files in /var/log/app/",
+      "latency_ms": 100
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:59:21.658Z",
+      "type": "error",
+      "name": "file_system",
+      "error": "PermissionError: Operation not permitted on /var/log/app/",
+      "metadata": {
+        "error_type": "PermissionError",
+        "path": "/var/log/app/"
+      }
+    }
+  ],
+  "error_summary": "Permission denied for file deletion operation",
+  "metadata": {
+    "scenario": "permission_denied"
+  }
+}

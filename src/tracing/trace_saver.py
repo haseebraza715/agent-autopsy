@@ -108,7 +108,10 @@ def _safe_serialize(obj: Any, max_chars: int = 5000) -> Any:
             # Pydantic models
             return _safe_serialize(obj.dict(), max_chars)
         elif hasattr(obj, "__dict__"):
-            return _safe_serialize(obj.__dict__, max_chars)
+            obj_dict = obj.__dict__
+            if obj_dict:
+                return _safe_serialize(obj_dict, max_chars)
+            return repr(obj)
         else:
             # Fallback to repr for unknown types
             repr_str = repr(obj)
@@ -202,6 +205,10 @@ class TraceSaver(BaseCallbackHandler):
         if not self.config.enabled:
             return
 
+        # Handle None serialized
+        if serialized is None:
+            serialized = {}
+        
         model_name = serialized.get("name", serialized.get("id", ["unknown"])[-1] if isinstance(serialized.get("id"), list) else "unknown")
 
         self._pending_starts[str(run_id)] = {
@@ -236,6 +243,10 @@ class TraceSaver(BaseCallbackHandler):
         if not self.config.enabled:
             return
 
+        # Handle None serialized
+        if serialized is None:
+            serialized = {}
+        
         model_name = serialized.get("name", serialized.get("id", ["unknown"])[-1] if isinstance(serialized.get("id"), list) else "unknown")
 
         self._pending_starts[str(run_id)] = {
@@ -378,6 +389,10 @@ class TraceSaver(BaseCallbackHandler):
         if not self.config.enabled:
             return
 
+        # Handle None serialized
+        if serialized is None:
+            serialized = {}
+        
         tool_name = serialized.get("name", "unknown_tool")
 
         self._pending_starts[str(run_id)] = {
@@ -481,6 +496,10 @@ class TraceSaver(BaseCallbackHandler):
         if not self.config.enabled:
             return
 
+        # Handle None serialized
+        if serialized is None:
+            serialized = {}
+        
         chain_name = serialized.get("name", serialized.get("id", ["unknown"])[-1] if isinstance(serialized.get("id"), list) else "unknown")
 
         self._pending_starts[str(run_id)] = {

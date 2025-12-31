@@ -1,0 +1,49 @@
+{
+  "run_id": "b88e8b98-3727-4057-930f-f97cbb5f7b84",
+  "start_time": "2025-12-31T18:59:20.958Z",
+  "end_time": "2025-12-31T18:59:22.958Z",
+  "duration_ms": 2000,
+  "status": "failed",
+  "goal": "Send email to user",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:59:20.958Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Send welcome email to new user john",
+      "output": "I'll send the welcome email.",
+      "token_count": 80,
+      "latency_ms": 400
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:59:21.458Z",
+      "type": "tool_call",
+      "name": "email_sender",
+      "input": {
+        "to": "john",
+        "subject": "Welcome!",
+        "body": "Welcome to our platform..."
+      },
+      "error": "Invalid email address format: 'john' is not a valid email",
+      "latency_ms": 50
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:59:21.558Z",
+      "type": "error",
+      "name": "email_sender",
+      "error": "Validation error: Invalid email address format",
+      "metadata": {
+        "error_type": "ValidationError",
+        "field": "to",
+        "value": "john"
+      }
+    }
+  ],
+  "error_summary": "Invalid email address provided",
+  "metadata": {
+    "scenario": "invalid_input_validation"
+  }
+}

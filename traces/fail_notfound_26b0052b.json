@@ -1,0 +1,60 @@
+{
+  "run_id": "26b0052b-ad5b-4fb6-908b-b37190393e1b",
+  "start_time": "2025-12-31T18:59:20.958Z",
+  "end_time": "2025-12-31T18:59:24.958Z",
+  "duration_ms": 4000,
+  "status": "failed",
+  "goal": "Get user profile details",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:59:20.958Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Fetch profile for user ID 12345",
+      "output": "I'll retrieve the user profile.",
+      "token_count": 70,
+      "latency_ms": 350
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:59:21.408Z",
+      "type": "tool_call",
+      "name": "database_query",
+      "input": {
+        "query": "SELECT * FROM users WHERE id = 12345"
+      },
+      "output": {
+        "rows": [],
+        "count": 0
+      },
+      "latency_ms": 150
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:59:21.658Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Query returned no results",
+      "output": "The user with ID 12345 was not found in the database.",
+      "token_count": 80,
+      "latency_ms": 400
+    },
+    {
+      "event_id": 3,
+      "ts": "2025-12-31T18:59:22.158Z",
+      "type": "error",
+      "name": "user_service",
+      "error": "User not found: No user exists with ID 12345",
+      "metadata": {
+        "error_type": "NotFoundError",
+        "resource": "user",
+        "id": 12345
+      }
+    }
+  ],
+  "error_summary": "User with ID 12345 not found",
+  "metadata": {
+    "scenario": "resource_not_found"
+  }
+}

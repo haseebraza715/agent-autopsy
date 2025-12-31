@@ -69,20 +69,23 @@ class ContractValidator:
             )
             return violations
 
-        # Check if tool is known
-        if not self.registry.is_known_tool(event.name):
-            violations.append(
-                ContractViolation(
-                    event_id=event.event_id,
-                    tool_name=event.name,
-                    violation_type="unknown_tool",
-                    severity=ViolationSeverity.HIGH,
-                    message=f"Tool '{event.name}' not in allow-list",
-                    evidence={"available_tools": self.registry.get_all_tool_names()},
-                    suggested_fix=f"Add '{event.name}' to available tools or use existing tool",
+        # Check if tool is known - but only if tools_available was provided
+        # Skip unknown-tool validation when no allowlist is available
+        # (e.g., traces from TraceSaver that don't include tool metadata)
+        if self.trace.env.tools_available:
+            if not self.registry.is_known_tool(event.name):
+                violations.append(
+                    ContractViolation(
+                        event_id=event.event_id,
+                        tool_name=event.name,
+                        violation_type="unknown_tool",
+                        severity=ViolationSeverity.HIGH,
+                        message=f"Tool '{event.name}' not in allow-list",
+                        evidence={"available_tools": self.registry.get_all_tool_names()},
+                        suggested_fix=f"Add '{event.name}' to available tools or use existing tool",
+                    )
                 )
-            )
-            return violations
+                return violations
 
         contract = self.registry.get_contract(event.name)
 

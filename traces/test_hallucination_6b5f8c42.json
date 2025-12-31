@@ -1,0 +1,73 @@
+{
+  "run_id": "6b5f8c42-908e-4ef4-bc4d-e24b4cda5d12",
+  "start_time": "2025-12-31T18:51:14.596Z",
+  "end_time": "2025-12-31T18:51:17.596Z",
+  "duration_ms": 3000,
+  "status": "failed",
+  "total_events": 5,
+  "tools": [
+    "web_search",
+    "calculator",
+    "get_weather"
+  ],
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:51:14.596Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Book a flight to Paris for tomorrow",
+      "output": "I'll book the flight using the flight_booking tool.",
+      "token_count": 100,
+      "latency_ms": 500,
+      "metadata": {}
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:51:15.196Z",
+      "type": "tool_call",
+      "name": "flight_booking",
+      "input": {
+        "destination": "Paris",
+        "date": "tomorrow"
+      },
+      "latency_ms": 50,
+      "error": "Tool 'flight_booking' not found in available tools",
+      "metadata": {
+        "available_tools": [
+          "web_search",
+          "calculator",
+          "get_weather"
+        ]
+      }
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:51:15.296Z",
+      "type": "error",
+      "name": "tool_executor",
+      "error": "Hallucinated tool call: 'flight_booking' does not exist. Available: web_search, calculator, get_weather",
+      "metadata": {
+        "error_type": "HallucinatedToolError",
+        "tool_called": "flight_booking"
+      }
+    },
+    {
+      "event_id": 3,
+      "ts": "2025-12-31T18:51:15.396Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Error: flight_booking tool not available",
+      "output": "I apologize, I don't have access to a flight booking tool. I can only search the web, calculate, or check weather.",
+      "token_count": 80,
+      "latency_ms": 400,
+      "metadata": {}
+    }
+  ],
+  "error_summary": "Attempted to use non-existent tool 'flight_booking'",
+  "metadata": {
+    "trace_version": "1.0",
+    "captured_by": "test_generator",
+    "scenario": "hallucinated_tool"
+  }
+}
