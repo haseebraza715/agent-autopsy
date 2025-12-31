@@ -1,11 +1,8 @@
 <h1 align="center">
   <pre>
-    ╔═══════════════════════════════════╗
-    ║                                   ║
-    ║      🔍 AGENT AUTOPSY             ║
-    ║                                   ║
-    ║   Trace Analysis Engine           ║
-    ║                                   ║
+    ╔═══════════════════════════════════╗                               
+    ║      🔍 AGENT AUTOPSY             ║                    
+    ║     Trace Analysis Engine         ║                            
     ╚═══════════════════════════════════╝
   </pre>
 </h1>
