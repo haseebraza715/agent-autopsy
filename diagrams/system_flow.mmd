@@ -1,0 +1,64 @@
+graph TB
+    %% Entry Point
+    User([User]) --> CLI[CLI Interface]
+    Config[Configuration] --> CLI
+    
+    %% Trace Input
+    CLI --> Input{Input Type}
+    Input -->|Trace File| Parse[Parse Trace]
+    Input -->|Live Agent| TraceCapture[Trace Capture]
+    
+    %% Ingestion Pipeline
+    Parse --> Format{Format Detection}
+    Format -->|LangGraph| LangGraphParser[LangGraph Parser]
+    Format -->|LangChain| LangChainParser[LangChain Parser]
+    Format -->|OpenTelemetry| OTELParser[OTEL Parser]
+    Format -->|Generic JSON| GenericParser[Generic Parser]
+    
+    LangGraphParser --> Normalize[Normalize to Schema]
+    LangChainParser --> Normalize
+    OTELParser --> Normalize
+    GenericParser --> Normalize
+    
+    %% Pre-Analysis
+    Normalize --> PreAnalysis[Pre-Analysis Engine]
+    PreAnalysis --> PatternDetector[Pattern Detector]
+    PreAnalysis --> ContractValidator[Contract Validator]
+    PreAnalysis --> RootCauseBuilder[Root Cause Builder]
+    
+    PatternDetector --> Signals[Signals]
+    ContractValidator --> Signals
+    RootCauseBuilder --> Signals
+    
+    %% Analysis Decision
+    Signals --> Decision{Analysis Mode}
+    Decision -->|No LLM| Deterministic[Deterministic Analysis]
+    Decision -->|With LLM| LLMAgent[LLM Analysis Agent]
+    
+    %% LLM Analysis Path
+    LLMAgent --> AnalysisTools[Analysis Tools]
+    LLMAgent --> OpenRouter[OpenRouter API]
+    AnalysisTools --> LLMAgent
+    OpenRouter --> LLMAgent
+    
+    %% Output Generation
+    Deterministic --> Result[Analysis Result]
+    LLMAgent --> Result
+    Result --> ReportGen[Report Generator]
+    Signals --> ArtifactGen[Artifact Generator]
+    
+    ReportGen --> Report[Markdown Report]
+    ArtifactGen --> Artifacts[Code Patches]
+    
+    %% Styling
+    classDef entry fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef ingestion fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef analysis fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef output fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+    classDef decision fill:#ffebee,stroke:#d32f2f,stroke-width:3px
+    
+    class User,CLI,Config entry
+    class Parse,Format,LangGraphParser,LangChainParser,OTELParser,GenericParser,Normalize ingestion
+    class TraceCapture,PreAnalysis,PatternDetector,ContractValidator,RootCauseBuilder,Signals,Decision,Deterministic,LLMAgent,AnalysisTools,OpenRouter,Result analysis
+    class ReportGen,ArtifactGen,Report,Artifacts output
+

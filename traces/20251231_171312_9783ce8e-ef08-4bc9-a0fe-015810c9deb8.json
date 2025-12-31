@@ -1,0 +1,163 @@
+{
+  "run_id": "9783ce8e-ef08-4bc9-a0fe-015810c9deb8",
+  "start_time": "2025-12-31T17:13:12.153128Z",
+  "end_time": "2025-12-31T16:13:12.200385Z",
+  "duration_ms": 47.26,
+  "total_events": 5,
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T16:13:12.153864Z",
+      "type": "llm_start",
+      "name": "ChatOpenAI",
+      "input": [
+        [
+          {
+            "type": "SystemMessage",
+            "content": "You are an expert agent debugger analyzing execution traces to identify failures, loops, and issues.\n\n## Your Role\nYou analyze agent execution traces to:\n1. Identify what failed\n2. Pinpoint where it failed (with event IDs)\n3. Explain why it failed (root cause chain)\n4. Recommend fixes (categorized by type)\n\n## CRITICAL REQUIREMENTS\n\n### Citation Policy\n- **ALWAYS cite event IDs** for every non-trivial claim\n- Format: \"Event 14 shows...\" or \"Events 14-16 demonstrate...\"\n- Do not make claims without evidence from the trace\n\n### Tool Usage\n- Only use tools from the provided list\n- Start by getting the trace summary\n- Use targeted queries - don't over-fetch data\n- Build understanding incrementally\n\n### Analysis Approach\n1. First, get the overview (trace summary, pre-analysis bundle)\n2. Examine specific events mentioned in signals\n3. Trace the causal chain from root cause to failure\n4. Formulate actionable recommendations\n\n## Fix Categories\nWhen recommending fixes, categorize them:\n\n**A) Graph/Code fixes**: Changes to agent graph structure, routing logic, state management\n**B) Tool contract fixes**: Schema validation, input/output checking, error handling\n**C) Prompt/policy fixes**: System prompt changes, guardrails, behavioral policies\n**D) Ops fixes**: Timeouts, retries, caching, monitoring\n\n## Output Format\nStructure your analysis as:\n1. Summary (1-2 sentences, failure point event ID, severity)\n2. Timeline (key events, transitions, failure moment)\n3. Root Cause Chain (step-by-step with event citations)\n4. Fix Recommendations (categorized, actionable)\n5. Confidence level (0-1 scale with reasoning)\n\n## Example Good Analysis\n\"The agent entered an infinite loop at event 14. Events 14-46 show repeated calls to `web_search` with identical input (evidence: event 14 input='weather NYC', event 15 input='weather NYC'). The root cause is missing exit condition in the router (event 13 decision). Fix: Add max_iterations check in router logic.\"\n\n## Example Bad Analysis (AVOID)\n\"The agent failed.\" (no event citations)\n\"Something went wrong with the search.\" (vague, no evidence)\n\"I think there might be a loop.\" (uncertain without checking)\n"
+          },
+          {
+            "type": "HumanMessage",
+            "content": "Analyze this agent execution trace:\n\n## Trace Overview\n- Run ID: run_success_001\n- Status: success\n- Total Events: 8\n- LLM Calls: 3\n- Tool Calls: 2\n- Errors: 0\n- Framework: unknown\n- Model: gpt-4\n\n## Pre-Analysis Summary\nNo significant issues detected in trace.\n\nBegin your analysis. Use the available tools to examine specific events and build your diagnosis.\nStart by examining the signals identified in the pre-analysis, then trace the causal chain to understand the root cause."
+          }
+        ]
+      ],
+      "metadata": {
+        "run_id": "019b752f-4a59-7282-b5c5-e8c3d94039e0",
+        "parent_run_id": "019b752f-4a59-7282-b5c5-e8bcb8ae863f",
+        "tags": [
+          "seq:step:1"
+        ],
+        "is_chat_model": true,
+        "langgraph_step": 1,
+        "langgraph_node": "analyze",
+        "langgraph_triggers": [
+          "branch:to:analyze"
+        ],
+        "langgraph_path": [
+          "__pregel_pull",
+          "analyze"
+        ],
+        "langgraph_checkpoint_ns": "analyze:07cbf28a-e7b2-44fe-4010-5a8b67d73eb8",
+        "checkpoint_ns": "analyze:07cbf28a-e7b2-44fe-4010-5a8b67d73eb8",
+        "ls_provider": "openai",
+        "ls_model_name": "xiaomi/mimo-v2-flash:free",
+        "ls_model_type": "chat",
+        "ls_temperature": 0.1,
+        "ls_max_tokens": "***"
+      }
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T16:13:12.199467Z",
+      "type": "error",
+      "name": "ChatOpenAI",
+      "metadata": {
+        "run_id": "019b752f-4a59-7282-b5c5-e8c3d94039e0",
+        "error_type": "AuthenticationError"
+      },
+      "latency_ms": 45.63,
+      "error": "Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}"
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T16:13:12.199688Z",
+      "type": "chain_end",
+      "name": "unknown",
+      "output": "end",
+      "metadata": {
+        "run_id": "019b752f-4a87-72a1-9027-501032730cf1"
+      }
+    },
+    {
+      "event_id": 3,
+      "ts": "2025-12-31T16:13:12.199704Z",
+      "type": "chain_end",
+      "name": "unknown",
+      "output": {
+        "messages": [
+          {
+            "content": "Analysis error: LLM error: Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": "6a401f3a-10f3-419d-80d6-66777b0d5b94",
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+          }
+        ],
+        "analysis_complete": true
+      },
+      "metadata": {
+        "run_id": "019b752f-4a59-7282-b5c5-e8bcb8ae863f"
+      }
+    },
+    {
+      "event_id": 4,
+      "ts": "2025-12-31T16:13:12.199877Z",
+      "type": "chain_end",
+      "name": "unknown",
+      "output": {
+        "messages": [
+          {
+            "content": "You are an expert agent debugger analyzing execution traces to identify failures, loops, and issues.\n\n## Your Role\nYou analyze agent execution traces to:\n1. Identify what failed\n2. Pinpoint where it failed (with event IDs)\n3. Explain why it failed (root cause chain)\n4. Recommend fixes (categorized by type)\n\n## CRITICAL REQUIREMENTS\n\n### Citation Policy\n- **ALWAYS cite event IDs** for every non-trivial claim\n- Format: \"Event 14 shows...\" or \"Events 14-16 demonstrate...\"\n- Do not make claims without evidence from the trace\n\n### Tool Usage\n- Only use tools from the provided list\n- Start by getting the trace summary\n- Use targeted queries - don't over-fetch data\n- Build understanding incrementally\n\n### Analysis Approach\n1. First, get the overview (trace summary, pre-analysis bundle)\n2. Examine specific events mentioned in signals\n3. Trace the causal chain from root cause to failure\n4. Formulate actionable recommendations\n\n## Fix Categories\nWhen recommending fixes, categorize them:\n\n**A) Graph/Code fixes**: Changes to agent graph structure, routing logic, state management\n**B) Tool contract fixes**: Schema validation, input/output checking, error handling\n**C) Prompt/policy fixes**: System prompt changes, guardrails, behavioral policies\n**D) Ops fixes**: Timeouts, retries, caching, monitoring\n\n## Output Format\nStructure your analysis as:\n1. Summary (1-2 sentences, failure point event ID, severity)\n2. Timeline (key events, transitions, failure moment)\n3. Root Cause Chain (step-by-step with event citations)\n4. Fix Recommendations (categorized, actionable)\n5. Confidence level (0-1 scale with reasoning)\n\n## Example Good Analysis\n\"The agent entered an infinite loop at event 14. Events 14-46 show repeated calls to `web_search` with identical input (evidence: event 14 input='weather NYC', event 15 input='weather NYC'). The root cause is missing exit condition in the router (event 13 decision). Fix: Add max_iterations check in router logic.\"\n\n## Example Bad Analysis (AVOID)\n\"The agent failed.\" (no event citations)\n\"Something went wrong with the search.\" (vague, no evidence)\n\"I think there might be a loop.\" (uncertain without checking)\n",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "system",
+            "name": null,
+            "id": "a7aed62f-3e88-4bb8-af78-c07127070703"
+          },
+          {
+            "content": "Analyze this agent execution trace:\n\n## Trace Overview\n- Run ID: run_success_001\n- Status: success\n- Total Events: 8\n- LLM Calls: 3\n- Tool Calls: 2\n- Errors: 0\n- Framework: unknown\n- Model: gpt-4\n\n## Pre-Analysis Summary\nNo significant issues detected in trace.\n\nBegin your analysis. Use the available tools to examine specific events and build your diagnosis.\nStart by examining the signals identified in the pre-analysis, then trace the causal chain to understand the root cause.",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "human",
+            "name": null,
+            "id": "a4df2cb1-0b01-4df3-b2ab-6bef0bf83295"
+          },
+          {
+            "content": "Analysis error: LLM error: Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}",
+            "additional_kwargs": {},
+            "response_metadata": {},
+            "type": "ai",
+            "name": null,
+            "id": "6a401f3a-10f3-419d-80d6-66777b0d5b94",
+            "tool_calls": [],
+            "invalid_tool_calls": [],
+            "usage_metadata": null
+          }
+        ],
+        "trace_summary": {
+          "run_id": "run_success_001",
+          "status": "success",
+          "duration_ms": 1130,
+          "total_events": 8,
+          "llm_calls": 3,
+          "tool_calls": 2,
+          "errors": 0,
+          "total_tokens": "***",
+          "has_task_context": true,
+          "available_tools": 2,
+          "framework": "unknown",
+          "model": "gpt-4"
+        },
+        "preanalysis": {
+          "signals": [],
+          "top_suspects": [],
+          "summary": "No significant issues detected in trace."
+        },
+        "analysis_complete": true,
+        "final_report": ""
+      },
+      "metadata": {
+        "run_id": "019b752f-4a59-7282-b5c5-e8ad6bd8d483"
+      }
+    }
+  ],
+  "metadata": {
+    "trace_version": "1.0",
+    "captured_by": "agent_autopsy"
+  }
+}
