@@ -1,6 +1,6 @@
 <div align="center">
 
-# Agent Autopsy
+# 🔍 Agent Autopsy
 
 **Intelligent trace analysis for AI agents**
 
@@ -9,17 +9,17 @@
 
 *Automatically detect failures, loops, and issues in agent execution traces*
 
-**[🌐 Try it live](https://autopsyagent.streamlit.app/)** | [📖 Documentation](docs/) | [🐛 Report Issue](https://github.com/haseebraza715/agent-autopsy/issues)
+**[Try it live](https://autopsyagent.streamlit.app/)** | [Documentation](docs/) | [Report Issue](https://github.com/haseebraza715/agent-autopsy/issues)
 
 </div>
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Web App (Recommended)
 
-**👉 [Use the live app](https://autopsyagent.streamlit.app/)**
+**[Use the live app](https://autopsyagent.streamlit.app/)**
 
 Or run locally:
 ```bash
@@ -34,7 +34,7 @@ python -m src.cli analyze trace.json
 
 ---
 
-## ✨ Features
+## Features
 
 - **Web GUI** — Interactive Streamlit interface for trace analysis
 - **Pattern Detection** — Loops, error cascades, hallucinated tools, context overflow
@@ -45,7 +45,7 @@ python -m src.cli analyze trace.json
 
 ---
 
-## 📊 Detected Patterns
+## Detected Patterns
 
 | Pattern | Severity | Description |
 |---------|----------|-------------|
@@ -58,7 +58,7 @@ python -m src.cli analyze trace.json
 
 ---
 
-## 🖥️ Web GUI Features
+## Web GUI Features
 
 - **Home Dashboard** — Quick access to recent traces and reports
 - **Analyze Trace** — Upload and analyze with interactive results
@@ -68,7 +68,7 @@ python -m src.cli analyze trace.json
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ```env
 OPENROUTER_API_KEY=your_key_here
@@ -79,7 +79,7 @@ TRACE_DIR=./traces
 
 ---
 
-## 📝 Trace Capture
+## Trace Capture
 
 ```python
 from src.tracing import start_trace, end_trace
@@ -91,7 +91,7 @@ end_trace(trace_handler)
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 - [Architecture](docs/architecture.md) — System overview
 - [Quick Start](docs/quickstart.md) — Installation guide
@@ -99,7 +99,7 @@ end_trace(trace_handler)
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 PRs welcome! Feel free to submit issues or spread the word.
 
