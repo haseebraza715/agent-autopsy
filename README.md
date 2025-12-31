@@ -72,7 +72,7 @@ python -m src.cli analyze trace.json
 
 ```env
 OPENROUTER_API_KEY=your_key_here
-DEFAULT_MODEL=meta-llama/llama-3.1-8b-instruct
+DEFAULT_MODEL=xiaomi/mimo-v2-flash:free
 TRACE_ENABLED=1
 TRACE_DIR=./traces
 ```
