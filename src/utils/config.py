@@ -42,6 +42,11 @@ class Config:
     # Paths
     output_dir: Path = field(default_factory=lambda: Path("./reports"))
 
+    # Tracing settings
+    trace_enabled: bool = True
+    trace_dir: Path = field(default_factory=lambda: Path("./traces"))
+    trace_max_chars: int = 5000
+
     def __post_init__(self):
         """Validate configuration after initialization."""
         if not self.openrouter_api_key:
@@ -63,6 +68,9 @@ class Config:
             fallback_model=os.getenv("FALLBACK_MODEL", "meta-llama/llama-3.1-8b-instruct:free"),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             embedding_model=os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2"),
+            trace_enabled=os.getenv("TRACE_ENABLED", "1").lower() in ("1", "true", "yes"),
+            trace_dir=Path(os.getenv("TRACE_DIR", "./traces")),
+            trace_max_chars=int(os.getenv("TRACE_MAX_CHARS", "5000")),
         )
 
     def get_model(self, override: str | None = None) -> str:
@@ -83,6 +91,9 @@ class Config:
             "loop_threshold": self.loop_threshold,
             "log_level": self.log_level,
             "has_api_key": bool(self.openrouter_api_key),
+            "trace_enabled": self.trace_enabled,
+            "trace_dir": str(self.trace_dir),
+            "trace_max_chars": self.trace_max_chars,
         }
 
 

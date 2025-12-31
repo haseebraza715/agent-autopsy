@@ -19,6 +19,7 @@ from langgraph.graph.message import add_messages
 from src.schema import Trace
 from src.ingestion import TraceNormalizer
 from src.preanalysis import RootCauseBuilder
+from src.tracing import TraceSaver, start_trace, end_trace, get_trace_config
 from .tools import AnalysisToolkit, TOOL_DEFINITIONS
 from .prompts import SYSTEM_PROMPT, get_analysis_prompt, get_final_report_prompt
 from src.utils.config import get_config
@@ -238,8 +239,12 @@ class AnalysisAgent:
 
         return "report"  # Default to generating report
 
-    def run(self) -> AnalysisResult:
-        """Run the analysis and return results."""
+    def run(self, trace_handler: TraceSaver | None = None) -> AnalysisResult:
+        """Run the analysis and return results.
+
+        Args:
+            trace_handler: Optional TraceSaver callback for capturing execution trace.
+        """
         # Prepare initial state
         trace_summary = TraceNormalizer.get_summary(self.trace)
         preanalysis = RootCauseBuilder(self.trace).build()
@@ -257,9 +262,15 @@ class AnalysisAgent:
             "final_report": "",
         }
 
+        # Build config with callbacks if trace handler provided
+        config = {}
+        if trace_handler:
+            config["callbacks"] = [trace_handler]
+            config["run_name"] = "agent_autopsy_analysis"
+
         try:
-            # Run the graph
-            final_state = self.graph.invoke(initial_state)
+            # Run the graph with optional tracing
+            final_state = self.graph.invoke(initial_state, config=config if config else None)
 
             return AnalysisResult(
                 report=final_state.get("final_report", ""),
@@ -268,6 +279,9 @@ class AnalysisAgent:
                 success=True,
             )
         except Exception as e:
+            # Record error in trace if handler provided
+            if trace_handler:
+                trace_handler.add_error_event(e, context="agent_run")
             return AnalysisResult(
                 report="",
                 trace_summary=trace_summary,
@@ -281,6 +295,7 @@ def run_analysis(
     trace: Trace,
     model: str | None = None,
     verbose: bool = False,
+    enable_tracing: bool | None = None,
 ) -> AnalysisResult:
     """
     Convenience function to run analysis on a trace.
@@ -289,12 +304,33 @@ def run_analysis(
         trace: The trace to analyze
         model: Optional model override
         verbose: Whether to print debug output
+        enable_tracing: Override for trace capture (None = use env config)
 
     Returns:
         AnalysisResult with report and metadata
     """
     agent = AnalysisAgent(trace, model=model, verbose=verbose)
-    return agent.run()
+
+    # Determine if tracing should be enabled
+    trace_config = get_trace_config()
+    should_trace = enable_tracing if enable_tracing is not None else trace_config.enabled
+
+    trace_handler = None
+    if should_trace:
+        trace_handler, run_id = start_trace()
+
+    try:
+        result = agent.run(trace_handler=trace_handler)
+        return result
+    except Exception as e:
+        # Ensure error is captured
+        if trace_handler:
+            trace_handler.add_error_event(e, context="run_analysis")
+        raise
+    finally:
+        # Always save trace, even on exception
+        if trace_handler:
+            end_trace(trace_handler)
 
 
 def run_analysis_without_llm(trace: Trace) -> AnalysisResult:

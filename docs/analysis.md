@@ -4,57 +4,89 @@ Agent Autopsy uses deterministic pattern detection combined with LLM reasoning.
 
 ## Analysis Flow
 
-```mermaid
-graph TB
-    Trace[Trace] --> PreAnalysis[Pre-Analysis]
-    
-    PreAnalysis --> Patterns[Pattern Detection<br/>• Loops<br/>• Errors<br/>• Hallucinations]
-    PreAnalysis --> Contracts[Contract Validation<br/>• Schema check<br/>• Type validation]
-    PreAnalysis --> Builder[Root Cause Builder<br/>• Hypotheses<br/>• Confidence scores]
-    
-    Patterns --> Signals[Signals]
-    Contracts --> Signals
-    Builder --> Signals
-    
-    Signals --> Decision{Analysis Mode}
-    
-    Decision -->|--no-llm| Det[Deterministic<br/>Pattern-based only]
-    Decision -->|With API Key| LLM[LLM Analysis<br/>ReAct Agent]
-    
-    LLM --> Tools[Analysis Tools<br/>get_event, find_errors, etc.]
-    LLM --> API[OpenRouter API]
-    Tools --> LLM
-    API --> LLM
-    
-    LLM --> Result[Analysis Result]
-    Det --> Result
-    
-    Result --> Report[Report]
-    
-    classDef pre fill:#fff3e0,stroke:#ef6c00
-    classDef analysis fill:#fce4ec,stroke:#c2185b
-    classDef output fill:#e0f2f1,stroke:#00695c
-    
-    class Trace,PreAnalysis,Patterns,Contracts,Builder,Signals pre
-    class Decision,Det,LLM,Tools,API,Result analysis
-    class Report output
-```
+The analysis pipeline processes traces through multiple stages. See [System Flow Diagram](../diagrams/system_flow.mmd) for complete flow.
 
-## Pattern Detection
+### Stage 1: Pre-Analysis
 
-Detects common failure patterns:
-- **Infinite Loops**: Same tool+input repeated 3+ times
-- **Retry Storms**: Same tool with varying inputs
-- **Error Cascades**: Sequential errors propagating
-- **Hallucinated Tools**: Tools not in available list
-- **Empty Responses**: Null/empty outputs
-- **Context Overflow**: Token limits exceeded
+**Pattern Detection**
+- Detects infinite loops, retry storms, error cascades
+- Identifies hallucinated tools and empty responses
+- Checks for context overflow
 
-## LLM Analysis
+**Contract Validation**
+- Validates tool schemas and input/output types
+- Checks for contract violations
 
-Uses LangGraph ReAct agent with:
-- **Analysis Tools**: Query trace data
-- **OpenRouter API**: LLM provider
-- **Event Citations**: References specific events
-- **Root Cause Chain**: Step-by-step analysis
+**Root Cause Builder**
+- Generates hypotheses based on detected patterns
+- Assigns confidence scores to hypotheses
+- Links hypotheses to supporting events
 
+### Stage 2: Analysis Mode Decision
+
+The system chooses between two analysis modes:
+
+**Deterministic Analysis** (--no-llm flag or no API key)
+- Uses only pattern detection results
+- Generates basic report from pre-analysis
+- Fast, no external API calls
+
+**LLM Analysis** (default with API key)
+- Uses LangGraph ReAct agent
+- Queries trace data using analysis tools
+- Performs deep root cause analysis
+- Generates detailed reports with event citations
+
+### Stage 3: LLM Analysis (if enabled)
+
+**Analysis Tools**
+- `get_event`: Retrieve specific event by ID
+- `find_errors`: Find all error events
+- `get_trace_summary`: Get high-level trace summary
+- `get_preanalysis_bundle`: Get pre-analysis results
+
+**ReAct Pattern**
+- Agent reasons about trace events
+- Uses tools to gather evidence
+- Builds root cause chain step-by-step
+- Cites specific events in analysis
+
+**OpenRouter Integration**
+- Sends prompts to OpenRouter API
+- Receives LLM responses
+- Handles API errors gracefully
+
+### Stage 4: Report Generation
+
+**Report Components**
+- Summary with status and confidence
+- Timeline of key events
+- Root cause chain with event citations
+- Fix recommendations categorized by type
+- Evidence with cited events
+
+**Artifact Generation**
+- Code patches for retry policies
+- Loop guard implementations
+- Error handling improvements
+- Configuration updates
+
+## Pattern Detection Details
+
+See [Patterns](patterns.md) for detailed information on detected patterns.
+
+## LLM Analysis Details
+
+The LLM analysis uses a ReAct (Reasoning + Acting) agent pattern:
+
+1. **Initial Prompt**: Provides trace summary and pre-analysis results
+2. **Tool Usage**: Agent queries trace data using analysis tools
+3. **Reasoning**: Agent analyzes evidence and builds causal chain
+4. **Report Generation**: Agent generates structured report with citations
+5. **Validation**: System validates report completeness
+
+**Key Features**:
+- Event citations for all claims
+- Step-by-step root cause analysis
+- Categorized fix recommendations
+- Confidence scoring
