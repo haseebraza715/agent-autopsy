@@ -3,6 +3,7 @@ Module for generating summary reports from analysis results.
 """
 
 import json
+import logging
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -56,6 +57,7 @@ class SummaryReportGenerator:
                 severity_counts[pattern["severity"]] += 1
         
         # Extract error types from trace files
+        logger = logging.getLogger(__name__)
         if traces_dir.exists():
             for trace_file in traces_dir.glob("*.json"):
                 try:
@@ -66,8 +68,12 @@ class SummaryReportGenerator:
                         if event.get("type") == "error":
                             error_type = event.get("metadata", {}).get("error_type", "Unknown")
                             error_types[error_type] += 1
-                except:
-                    pass
+                except (OSError, json.JSONDecodeError):
+                    logger.warning(
+                        "Failed to parse trace while collecting error types: %s",
+                        trace_file,
+                        exc_info=True,
+                    )
         
         # Generate summary report with improved formatting
         report_lines = [
@@ -241,4 +247,3 @@ class SummaryReportGenerator:
             print(f"✓ Summary report saved: {summary_file}")
         
         return summary_file
-

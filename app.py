@@ -5,6 +5,7 @@ A user-friendly interface for analyzing agent execution traces.
 """
 
 import json
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +20,17 @@ from src.analysis import run_analysis
 from src.analysis.agent import run_analysis_without_llm
 from src.output import ReportGenerator, ArtifactGenerator
 from src.utils.config import get_config, Config
+
+
+# Logging setup
+logger = logging.getLogger(__name__)
+if not logging.getLogger().handlers:
+    log_level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+    log_level = getattr(logging, log_level_name, logging.INFO)
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    )
 
 
 # Page configuration
@@ -102,7 +114,7 @@ def load_reports_index() -> list[dict]:
             with open(index_path) as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError):
-            pass
+            logger.warning("Failed to read reports index at %s", index_path, exc_info=True)
     return []
 
 
@@ -215,6 +227,7 @@ def render_home_page():
                             st.session_state.current_page = "Analyze Trace"
                             st.rerun()
                         except Exception as e:
+                            logger.exception("Failed loading recent trace file: %s", trace_file)
                             st.error(f"Error loading trace: {e}")
         else:
             st.info("No trace files found in ./traces/")
@@ -262,6 +275,7 @@ def render_analyze_page():
                 st.session_state.trace = trace
                 st.success("Trace loaded successfully!")
             except Exception as e:
+                logger.exception("Failed parsing uploaded trace file: %s", uploaded_file.name)
                 st.error(f"Error parsing trace: {e}")
 
     with select_tab:
@@ -282,6 +296,7 @@ def render_analyze_page():
                         st.success("Trace loaded successfully!")
                         st.rerun()
                     except Exception as e:
+                        logger.exception("Failed parsing selected trace file: %s", selected_file)
                         st.error(f"Error parsing trace: {e}")
             else:
                 st.info("No trace files found in ./traces/")
@@ -323,6 +338,10 @@ def render_analyze_page():
                             model = model_override if model_override else None
                             result = run_analysis(trace, model=model)
                         except Exception as e:
+                            logger.exception(
+                                "LLM analysis failed for run %s. Falling back to deterministic mode.",
+                                trace.run_id,
+                            )
                             st.warning(f"LLM analysis failed: {e}. Falling back to deterministic.")
                             result = run_analysis_without_llm(trace)
 
@@ -346,6 +365,7 @@ def render_analyze_page():
                     st.success("Analysis complete!")
 
                 except Exception as e:
+                    logger.exception("Analysis failed for run %s", trace.run_id)
                     st.error(f"Analysis failed: {e}")
 
         st.markdown("---")
@@ -587,6 +607,7 @@ def render_trace_viewer_page():
                         st.session_state.trace = trace
                         st.rerun()
                     except Exception as e:
+                        logger.exception("Failed loading trace in viewer: %s", selected_file)
                         st.error(f"Error parsing trace: {e}")
         return
 
@@ -711,13 +732,19 @@ def render_batch_analysis_page():
                 trace = TraceNormalizer.normalize(trace)
 
                 preanalysis = RootCauseBuilder(trace).build()
+                llm_fallback_error = None
 
                 if no_llm:
                     result = run_analysis_without_llm(trace)
                 else:
                     try:
                         result = run_analysis(trace)
-                    except:
+                    except Exception as e:
+                        llm_fallback_error = str(e)
+                        logger.exception(
+                            "LLM analysis failed for batch trace %s. Falling back to deterministic mode.",
+                            trace_file,
+                        )
                         result = run_analysis_without_llm(trace)
 
                 # Save report if requested
@@ -737,10 +764,12 @@ def render_batch_analysis_page():
                     "signals": len(preanalysis.signals),
                     "hypotheses": len(preanalysis.hypotheses),
                     "success": True,
+                    "llm_fallback_error": llm_fallback_error,
                     "report_path": str(report_path) if report_path else None,
                 })
 
             except Exception as e:
+                logger.exception("Batch analysis failed for trace file: %s", trace_file)
                 results.append({
                     "file": trace_file.name,
                     "status": "ERROR",
@@ -789,6 +818,20 @@ def render_batch_analysis_page():
                 "success": "Success",
             },
         )
+
+        fallback_rows = [r for r in results if r.get("llm_fallback_error")]
+        if fallback_rows:
+            st.warning(f"LLM fallback used for {len(fallback_rows)} trace(s).")
+            with st.expander("LLM fallback details"):
+                for row in fallback_rows:
+                    st.markdown(f"- **{row['file']}**: {row['llm_fallback_error']}")
+
+        error_rows = [r for r in results if not r.get("success")]
+        if error_rows:
+            st.error(f"{len(error_rows)} trace(s) failed during batch analysis.")
+            with st.expander("Batch analysis errors"):
+                for row in error_rows:
+                    st.markdown(f"- **{row['file']}**: {row.get('error', 'Unknown error')}")
 
 
 def render_reports_page():
@@ -840,7 +883,8 @@ def render_reports_page():
             if selected_report.suffix == ".json":
                 try:
                     st.json(json.loads(content))
-                except:
+                except json.JSONDecodeError:
+                    logger.warning("Invalid JSON report content in %s", selected_report, exc_info=True)
                     st.code(content)
             else:
                 st.markdown(content)

@@ -3,6 +3,7 @@ Module for analyzing traces and generating reports.
 """
 
 import json
+import logging
 import subprocess
 import sys
 from pathlib import Path
@@ -134,8 +135,12 @@ class TraceAnalyzer:
                                 "evidence": f"{error_count} error(s) found",
                                 "event_ids": [e.get("event_id") for e in events if e.get("type") == "error"],
                             })
-                    except:
-                        pass
+                    except (OSError, json.JSONDecodeError):
+                        logging.getLogger(__name__).warning(
+                            "Failed to extract error metadata from %s",
+                            trace_file,
+                            exc_info=True,
+                        )
                 else:
                     result_info["error"] = proc_result.stderr[:200] if proc_result.stderr else "Unknown error"
                     
@@ -214,4 +219,3 @@ class TraceAnalyzer:
             print()
         
         return all_results
-
