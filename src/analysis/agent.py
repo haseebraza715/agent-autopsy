@@ -8,6 +8,7 @@ This agent analyzes traces using a combination of:
 """
 
 import json
+import re
 from typing import Any, Annotated, TypedDict
 from dataclasses import dataclass
 
@@ -30,6 +31,11 @@ class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
     trace_summary: dict
     preanalysis: dict
+    investigation_iterations: int
+    report_revisions: int
+    token_usage_estimate: int
+    token_budget_warning: bool
+    report_quality: dict[str, Any]
     analysis_complete: bool
     final_report: str
 
@@ -42,6 +48,91 @@ class AnalysisResult:
     preanalysis: dict
     success: bool
     error: str | None = None
+
+
+class ReportQualityValidator:
+    """Deterministic validator/scorer for generated analysis reports."""
+
+    _SECTION_PATTERNS = {
+        "summary": r"(?im)^##?\s*summary\b",
+        "timeline": r"(?im)^##?\s*(timeline|what happened)\b",
+        "root_cause": r"(?im)^##?\s*root cause",
+        "fixes": r"(?im)^##?\s*fix recommendations?",
+        "confidence": r"(?im)^##?\s*confidence\b",
+    }
+    _EVENT_CITATION_RE = re.compile(r"\bEvent(?:s)?\s+\d+(?:\s*-\s*\d+)?\b", re.IGNORECASE)
+    _ACTION_RE = re.compile(
+        r"\b(add|implement|set|limit|validate|guard|retry|escalate|cache|monitor|truncate|summarize)\b",
+        re.IGNORECASE,
+    )
+
+    @classmethod
+    def validate(cls, report: str) -> dict[str, Any]:
+        """Score report quality on completeness, specificity, and actionability."""
+        text = report or ""
+        section_hits = {
+            section: bool(re.search(pattern, text))
+            for section, pattern in cls._SECTION_PATTERNS.items()
+        }
+        completeness = sum(1 for present in section_hits.values() if present) / len(section_hits)
+
+        citations = cls._EVENT_CITATION_RE.findall(text)
+        has_event_citations = len(citations) > 0
+        if len(citations) >= 4:
+            specificity = 1.0
+        elif len(citations) >= 2:
+            specificity = 0.75
+        elif len(citations) == 1:
+            specificity = 0.5
+        else:
+            specificity = 0.1
+
+        has_root_cause = bool(re.search(r"\broot cause\b", text, re.IGNORECASE))
+        has_fix_recommendations = bool(re.search(r"\bfix recommendations?\b", text, re.IGNORECASE))
+        action_verbs = cls._ACTION_RE.findall(text)
+        if len(action_verbs) >= 6:
+            actionability = 1.0
+        elif len(action_verbs) >= 3:
+            actionability = 0.75
+        elif len(action_verbs) >= 1:
+            actionability = 0.5
+        else:
+            actionability = 0.2
+
+        overall = (completeness * 0.4) + (specificity * 0.3) + (actionability * 0.3)
+        missing_sections = [name for name, present in section_hits.items() if not present]
+
+        return {
+            "overall_score": round(overall, 3),
+            "completeness": round(completeness, 3),
+            "specificity": round(specificity, 3),
+            "actionability": round(actionability, 3),
+            "has_event_citations": has_event_citations,
+            "has_root_cause": has_root_cause,
+            "has_fix_recommendations": has_fix_recommendations,
+            "missing_sections": missing_sections,
+            "citation_count": len(citations),
+        }
+
+    @classmethod
+    def build_feedback(cls, quality: dict[str, Any]) -> str:
+        """Build concise feedback for revision pass."""
+        feedback: list[str] = []
+        if quality.get("missing_sections"):
+            feedback.append(
+                "Add missing sections: " + ", ".join(quality["missing_sections"]) + "."
+            )
+        if not quality.get("has_event_citations"):
+            feedback.append("Cite concrete evidence using explicit event IDs for every major claim.")
+        if not quality.get("has_root_cause"):
+            feedback.append("Include a clear root cause chain, not just symptoms.")
+        if not quality.get("has_fix_recommendations"):
+            feedback.append("Include concrete fix recommendations grouped by category.")
+        if quality.get("actionability", 0) < 0.65:
+            feedback.append("Make recommendations implementation-ready with explicit actions.")
+        if not feedback:
+            feedback.append("Improve precision and specificity while preserving structure.")
+        return " ".join(feedback)
 
 
 class AnalysisAgent:
@@ -111,6 +202,23 @@ class AnalysisAgent:
     def _analyze_node(self, state: AgentState) -> AgentState:
         """Main analysis node - calls LLM to reason about trace."""
         messages = state["messages"]
+        investigation_iterations = state.get("investigation_iterations", 0)
+        token_usage_estimate = state.get("token_usage_estimate", 0)
+        budget = max(1, self.config.analysis_token_budget)
+
+        # Budget guard before another investigation turn
+        if token_usage_estimate >= budget:
+            return {
+                "messages": [
+                    AIMessage(
+                        content=(
+                            "Token budget reached for investigation pass. "
+                            "Proceeding to synthesis using collected evidence."
+                        )
+                    )
+                ],
+                "token_budget_warning": True,
+            }
 
         # Bind tools to LLM
         llm_with_tools = self.llm.bind_tools(
@@ -120,7 +228,13 @@ class AnalysisAgent:
 
         try:
             response = llm_with_tools.invoke(messages)
-            return {"messages": [response]}
+            token_usage_estimate += self._estimate_message_tokens(response)
+            return {
+                "messages": [response],
+                "investigation_iterations": investigation_iterations + 1,
+                "token_usage_estimate": token_usage_estimate,
+                "token_budget_warning": token_usage_estimate >= int(budget * 0.85),
+            }
         except Exception as e:
             # Handle LLM errors gracefully
             error_msg = f"LLM error: {str(e)}"
@@ -134,6 +248,7 @@ class AnalysisAgent:
     def _execute_tools_node(self, state: AgentState) -> AgentState:
         """Execute tools requested by the LLM."""
         last_message = state["messages"][-1]
+        token_usage_estimate = state.get("token_usage_estimate", 0)
 
         if not hasattr(last_message, "tool_calls") or not last_message.tool_calls:
             return state
@@ -149,15 +264,20 @@ class AnalysisAgent:
 
             # Execute the tool
             result = self._execute_tool(tool_name, tool_args)
+            rendered = json.dumps(result, default=str)
+            token_usage_estimate += self._estimate_text_tokens(rendered)
 
             tool_messages.append(
                 ToolMessage(
-                    content=json.dumps(result, default=str),
+                    content=rendered,
                     tool_call_id=tool_call["id"],
                 )
             )
 
-        return {"messages": tool_messages}
+        return {
+            "messages": tool_messages,
+            "token_usage_estimate": token_usage_estimate,
+        }
 
     def _execute_tool(self, tool_name: str, args: dict) -> Any:
         """Execute a single tool and return the result."""
@@ -191,16 +311,69 @@ class AnalysisAgent:
 
     def _generate_report_node(self, state: AgentState) -> AgentState:
         """Generate the final structured report."""
-        messages = state["messages"]
+        base_messages = list(state["messages"])
+        synthesis_prompt = (
+            "You are now in synthesis pass. First pass investigation is complete.\n"
+            "Use only evidence already gathered from tool calls and pre-analysis.\n\n"
+            + get_final_report_prompt()
+        )
+        base_messages.append(HumanMessage(content=synthesis_prompt))
+        max_revisions = max(0, self.config.analysis_max_report_revisions)
+        target_quality = self.config.analysis_report_quality_threshold
 
-        # Add prompt for final report
-        messages.append(HumanMessage(content=get_final_report_prompt()))
+        best_report = ""
+        best_quality: dict[str, Any] = {"overall_score": -1.0}
+        report_revisions = state.get("report_revisions", 0)
+        revision_messages = base_messages
 
         try:
-            response = self.llm.invoke(messages)
+            for revision in range(max_revisions + 1):
+                response = self.llm.invoke(revision_messages)
+                candidate = response.content if isinstance(response.content, str) else str(response.content)
+                quality = ReportQualityValidator.validate(candidate)
+
+                if quality.get("overall_score", 0.0) > best_quality.get("overall_score", -1.0):
+                    best_report = candidate
+                    best_quality = quality
+
+                report_revisions += 1
+                if (
+                    quality.get("overall_score", 0.0) >= target_quality
+                    and quality.get("has_event_citations")
+                    and quality.get("has_root_cause")
+                    and quality.get("has_fix_recommendations")
+                ):
+                    return {
+                        "messages": [response],
+                        "final_report": candidate,
+                        "report_revisions": report_revisions,
+                        "report_quality": quality,
+                        "analysis_complete": True,
+                    }
+
+                if revision < max_revisions:
+                    feedback = ReportQualityValidator.build_feedback(quality)
+                    revision_messages = revision_messages + [
+                        AIMessage(content=candidate),
+                        HumanMessage(
+                            content=(
+                                "Revise the report to pass quality gate.\n"
+                                f"Feedback: {feedback}\n"
+                                "Keep all sections and improve specificity/actionability."
+                            )
+                        ),
+                    ]
+
+            quality_note = (
+                "\n\n---\n"
+                f"Quality gate warning: best score {best_quality.get('overall_score', 0):.2f} "
+                f"(target {target_quality:.2f})."
+            )
             return {
-                "messages": [response],
-                "final_report": response.content,
+                "messages": [AIMessage(content=best_report + quality_note)],
+                "final_report": best_report + quality_note,
+                "report_revisions": report_revisions,
+                "report_quality": best_quality,
                 "analysis_complete": True,
             }
         except Exception as e:
@@ -218,15 +391,18 @@ class AnalysisAgent:
 
         # Check if LLM wants to use tools
         if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+            if state.get("investigation_iterations", 0) >= self.config.analysis_max_iterations:
+                return "report"
+            if state.get("token_usage_estimate", 0) >= self.config.analysis_token_budget:
+                return "report"
             return "tools"
 
-        # Check if we have enough analysis to generate report
-        # (This is a simplified heuristic - could be more sophisticated)
-        message_count = len(state["messages"])
-        if message_count > 10:  # After several rounds, generate report
+        if state.get("investigation_iterations", 0) >= self.config.analysis_max_iterations:
             return "report"
 
-        # Check if the message indicates analysis is complete
+        if state.get("token_usage_estimate", 0) >= self.config.analysis_token_budget:
+            return "report"
+
         content = last_message.content.lower() if hasattr(last_message, "content") else ""
         if any(phrase in content for phrase in [
             "root cause",
@@ -238,6 +414,19 @@ class AnalysisAgent:
             return "report"
 
         return "report"  # Default to generating report
+
+    def _estimate_message_tokens(self, message: Any) -> int:
+        """Estimate token cost from a message object."""
+        content = ""
+        if hasattr(message, "content"):
+            content = message.content if isinstance(message.content, str) else str(message.content)
+        return self._estimate_text_tokens(content)
+
+    def _estimate_text_tokens(self, text: str) -> int:
+        """Approximate token usage using a character heuristic."""
+        if not text:
+            return 0
+        return max(1, len(text) // 4)
 
     def run(self, trace_handler: TraceSaver | None = None) -> AnalysisResult:
         """Run the analysis and return results.
@@ -258,6 +447,11 @@ class AnalysisAgent:
             ],
             "trace_summary": trace_summary,
             "preanalysis": preanalysis.to_dict(),
+            "investigation_iterations": 0,
+            "report_revisions": 0,
+            "token_usage_estimate": self._estimate_text_tokens(initial_prompt),
+            "token_budget_warning": False,
+            "report_quality": {},
             "analysis_complete": False,
             "final_report": "",
         }
