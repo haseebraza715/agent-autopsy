@@ -9,7 +9,7 @@ This file tracks roadmap execution from `docs/improvement-plan.md`.
 | Phase | Status | Notes |
 |---|---|---|
 | Phase 1 - Clean Up What We Have | Completed | Implemented, tested, and committed |
-| Phase 2 - Deepen the Core | Not Started | Pending after Phase 1 |
+| Phase 2 - Deepen the Core | Completed | Implemented, tested, and committed |
 | Phase 3 - MCP Server Integration | Not Started | Pending |
 | Phase 4 - Open Source Growth | Not Started | Pending |
 | Phase 5 - Advanced Features | Not Started | Pending |
@@ -43,17 +43,29 @@ Goal: Remove ghost features, fix tests, and improve reliability.
 
 ## Phase 2 - Deepen the Core
 
-Status: Not Started
+Status: Completed
 Goal: Improve analysis quality, parser depth, and deterministic report quality.
 
 ### TODO
 
-- [ ] Strengthen LLM analysis agent with iteration budget and quality gate
-- [ ] Build robust LangChain parser support
-- [ ] Build robust OpenTelemetry parser support
-- [ ] Add new pattern detectors (goal drift, stale context, token waste, auth failures, timeout, redundant calls)
-- [ ] Improve deterministic narrative report output
-- [ ] Make model context limits configurable
+- [x] Strengthen LLM analysis agent with iteration budget and quality gate
+- [x] Build robust LangChain parser support
+- [x] Build robust OpenTelemetry parser support
+- [x] Add new pattern detectors (goal drift, stale context, token waste, auth failures, timeout, redundant calls)
+- [x] Improve deterministic narrative report output
+- [x] Make model context limits configurable
+
+### Completed in this phase
+
+- [x] Added configurable analysis controls (`analysis_max_iterations`, report revision budget, quality threshold, token budget)
+- [x] Implemented report quality validator and synthesis quality gate with automatic revision feedback loop
+- [x] Added token budget awareness in analysis pass and safe synthesis fallback note when quality threshold is not met
+- [x] Upgraded LangChain parser for callback traces, parent/child run reconstruction, retriever mapping, and token extraction
+- [x] Upgraded OpenTelemetry parser for OTLP structures (`resourceSpans/scopeSpans/spans`), semantic-convention attributes, and robust parent linking
+- [x] Added deterministic detectors for goal drift, stale context, token waste, auth/permission failures, timeout patterns, and redundant tool calls
+- [x] Moved model context limits to `src/preanalysis/model_context_limits.json` with configurable override path and per-trace context-window support
+- [x] Enhanced deterministic report rendering with health score, evidence-aware timeline, and templated fix recommendations
+- [x] Expanded automated tests for parser depth, quality gate logic, deterministic reporting, and advanced detectors
 
 ## Phase 3 - MCP Server Integration
 
@@ -101,3 +113,4 @@ Goal: Add intelligent and extensible debugging capabilities.
 
 - 2026-04-08: Initialized phase tracking file and seeded TODOs for all phases.
 - 2026-04-08: Completed Phase 1 implementation (dependency cleanup, docs honesty, stronger tests, error handling/logging, CI workflow).
+- 2026-04-08: Completed Phase 2 implementation (agent quality gate, parser depth, advanced pattern detectors, deterministic report improvements, configurable model limits).
