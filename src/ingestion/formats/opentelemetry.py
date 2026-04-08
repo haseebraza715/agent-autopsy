@@ -99,7 +99,8 @@ class OpenTelemetryParser(TraceParser):
             for resource_span in data["resourceSpans"]:
                 if not isinstance(resource_span, dict):
                     continue
-                for scope_span in resource_span.get("scopeSpans", []):
+                scope_spans = resource_span.get("scopeSpans") or resource_span.get("instrumentationLibrarySpans") or []
+                for scope_span in scope_spans:
                     if not isinstance(scope_span, dict):
                         continue
                     for span in scope_span.get("spans", []):
@@ -107,6 +108,7 @@ class OpenTelemetryParser(TraceParser):
                             # Add resource attributes to span
                             resource = resource_span.get("resource", {})
                             span["_resource"] = resource
+                            span["_scope"] = scope_span.get("scope") or scope_span.get("instrumentationLibrary")
                             spans.append(span)
 
         # Simplified format with spans array
@@ -210,6 +212,7 @@ class OpenTelemetryParser(TraceParser):
         tools = []
         model = None
         framework = "opentelemetry"
+        context_window_tokens = None
 
         # Extract from resource attributes
         if "resourceSpans" in data:
@@ -220,32 +223,49 @@ class OpenTelemetryParser(TraceParser):
                         continue
                     key = attr.get("key", "")
                     value = self._get_attr_value(attr)
+                    key_lower = key.lower()
 
-                    if "service.name" in key:
+                    if "service.name" in key_lower:
                         framework = value or framework
-                    if "model" in key.lower():
+                    if "model" in key_lower:
                         model = value
+                    if context_window_tokens is None and any(
+                        t in key_lower for t in ["context_window", "context_limit", "max_context", "max_input_tokens"]
+                    ):
+                        if isinstance(value, (int, float, str)):
+                            try:
+                                context_window_tokens = int(float(value))
+                            except (TypeError, ValueError):
+                                pass
 
         # Extract from span attributes
         for span in spans:
-            for attr in span.get("attributes", []):
-                if not isinstance(attr, dict):
-                    continue
-                key = attr.get("key", "")
-                value = self._get_attr_value(attr)
-
-                if "tool" in key.lower() and value:
+            attrs = self._flatten_attributes(span.get("attributes", []))
+            for key, value in attrs.items():
+                key_lower = key.lower()
+                if any(k in key_lower for k in ["tool.name", "tool", "function.name"]) and value:
                     if isinstance(value, list):
-                        tools.extend(value)
+                        tools.extend(str(v) for v in value if v is not None)
                     else:
                         tools.append(str(value))
-                if "model" in key.lower() and not model:
-                    model = value
+                if "gen_ai.system" in key_lower and not framework:
+                    framework = str(value)
+                if "model" in key_lower and not model and value:
+                    model = str(value)
+                if context_window_tokens is None and any(
+                    t in key_lower for t in ["context_window", "context_limit", "max_context", "max_input_tokens"]
+                ):
+                    if isinstance(value, (int, float, str)):
+                        try:
+                            context_window_tokens = int(float(value))
+                        except (TypeError, ValueError):
+                            pass
 
         return EnvironmentInfo(
             agent_framework=framework,
             model=model,
             tools_available=list(set(tools)),
+            context_window_tokens=context_window_tokens,
         )
 
     def _get_attr_value(self, attr: dict) -> Any:
@@ -272,12 +292,10 @@ class OpenTelemetryParser(TraceParser):
 
         # Look for input/query in span attributes
         for span in spans:
-            for attr in span.get("attributes", []):
-                if not isinstance(attr, dict):
-                    continue
-                key = attr.get("key", "").lower()
-                if any(k in key for k in ["input", "query", "prompt", "question"]):
-                    value = self._get_attr_value(attr)
+            attrs = self._flatten_attributes(span.get("attributes", []))
+            for key, value in attrs.items():
+                key_lower = key.lower()
+                if any(k in key_lower for k in ["input", "query", "prompt", "question"]):
                     if isinstance(value, str) and len(value) > 5:
                         goal = value
                         break
@@ -292,21 +310,22 @@ class OpenTelemetryParser(TraceParser):
     def _spans_to_events(self, spans: list[dict]) -> list[TraceEvent]:
         """Convert OTEL spans to TraceEvents."""
         events = []
-        span_id_map = {}  # Map spanId -> event_id for parent linking
+        span_id_map: dict[str, int] = {}  # Map spanId -> event_id for parent linking
 
         # First pass: create events and build ID map
         for i, span in enumerate(spans):
             span_id = span.get("spanId")
             if span_id:
-                span_id_map[span_id] = i
+                span_id_map[str(span_id)] = i
 
         # Second pass: create TraceEvents with correct parent_event_id
         for i, span in enumerate(spans):
-            event_type = self._determine_span_type(span)
+            attrs = self._flatten_attributes(span.get("attributes", []))
+            event_type = self._determine_span_type(span, attrs)
 
             # Map parent span to parent event
             parent_span_id = span.get("parentSpanId")
-            parent_event_id = span_id_map.get(parent_span_id) if parent_span_id else None
+            parent_event_id = span_id_map.get(str(parent_span_id)) if parent_span_id else None
 
             # Extract timing
             start_time = self._parse_otel_timestamp(span.get("startTimeUnixNano"))
@@ -321,19 +340,18 @@ class OpenTelemetryParser(TraceParser):
             token_count = None
             name = span.get("name")
 
-            for attr in span.get("attributes", []):
-                if not isinstance(attr, dict):
-                    continue
-                key = attr.get("key", "").lower()
-                value = self._get_attr_value(attr)
-
-                if any(k in key for k in ["input", "prompt", "query"]):
+            for key, value in attrs.items():
+                key_lower = key.lower()
+                if input_data is None and any(k in key_lower for k in ["input", "prompt", "query", "request"]):
                     input_data = value
-                elif any(k in key for k in ["output", "response", "result"]):
+                elif output_data is None and any(k in key_lower for k in ["output", "response", "result", "completion"]):
                     output_data = value
-                elif "token" in key:
-                    if isinstance(value, (int, float)):
-                        token_count = int(value)
+                if token_count is None and "token" in key_lower:
+                    if isinstance(value, (int, float, str)):
+                        try:
+                            token_count = int(float(value))
+                        except (TypeError, ValueError):
+                            token_count = None
 
             # Extract error from status
             error = None
@@ -343,6 +361,10 @@ class OpenTelemetryParser(TraceParser):
                     message=status["message"],
                     category=status.get("code"),
                 )
+            elif isinstance(status, dict):
+                code = status.get("code") or status.get("statusCode")
+                if code in (2, "2", "STATUS_CODE_ERROR"):
+                    error = EventError(message="Span marked as error", category=str(code))
 
             # Check for error events
             for span_event in span.get("events", []):
@@ -351,6 +373,8 @@ class OpenTelemetryParser(TraceParser):
                     if "error" in event_name or "exception" in event_name:
                         # Extract error details from event attributes
                         for attr in span_event.get("attributes", []):
+                            if not isinstance(attr, dict):
+                                continue
                             key = attr.get("key", "").lower()
                             value = self._get_attr_value(attr)
                             if "message" in key:
@@ -359,13 +383,13 @@ class OpenTelemetryParser(TraceParser):
                                 if error:
                                     error.stack = str(value)
 
-            # Build metadata from remaining attributes
-            metadata = {}
-            for attr in span.get("attributes", []):
-                if isinstance(attr, dict):
-                    key = attr.get("key", "")
-                    value = self._get_attr_value(attr)
-                    metadata[key] = value
+            # Build metadata from attributes and span identifiers
+            metadata: dict[str, Any] = {
+                **attrs,
+                "trace_id": span.get("traceId"),
+                "span_id": span.get("spanId"),
+                "parent_span_id": span.get("parentSpanId"),
+            }
 
             event = TraceEvent(
                 event_id=i,
@@ -385,9 +409,10 @@ class OpenTelemetryParser(TraceParser):
 
         return events
 
-    def _determine_span_type(self, span: dict) -> EventType:
+    def _determine_span_type(self, span: dict, attrs: dict[str, Any] | None = None) -> EventType:
         """Determine event type from span."""
         name = str(span.get("name", "")).lower()
+        attrs = attrs or self._flatten_attributes(span.get("attributes", []))
 
         # Check span kind
         kind = span.get("kind")
@@ -398,7 +423,7 @@ class OpenTelemetryParser(TraceParser):
         # Infer from name
         if any(k in name for k in ["llm", "model", "chat", "completion", "openai", "anthropic"]):
             return EventType.LLM_CALL
-        if any(k in name for k in ["tool", "function", "action"]):
+        if any(k in name for k in ["tool", "function", "action", "retriever"]):
             return EventType.TOOL_CALL
         if any(k in name for k in ["decision", "router", "branch"]):
             return EventType.DECISION
@@ -406,13 +431,11 @@ class OpenTelemetryParser(TraceParser):
             return EventType.ERROR
 
         # Check attributes
-        for attr in span.get("attributes", []):
-            if not isinstance(attr, dict):
-                continue
-            key = attr.get("key", "").lower()
-            if "llm" in key or "model" in key:
+        for key in attrs.keys():
+            key_lower = key.lower()
+            if "gen_ai." in key_lower or "llm" in key_lower or "model" in key_lower:
                 return EventType.LLM_CALL
-            if "tool" in key:
+            if "tool" in key_lower or "function" in key_lower or "retriever" in key_lower:
                 return EventType.TOOL_CALL
 
         return EventType.MESSAGE
@@ -422,19 +445,17 @@ class OpenTelemetryParser(TraceParser):
         # Find the root span (no parent) with output
         for span in spans:
             if not span.get("parentSpanId"):
-                for attr in span.get("attributes", []):
-                    if isinstance(attr, dict):
-                        key = attr.get("key", "").lower()
-                        if any(k in key for k in ["output", "response", "result"]):
-                            return self._get_attr_value(attr)
+                attrs = self._flatten_attributes(span.get("attributes", []))
+                for key, value in attrs.items():
+                    if any(k in key.lower() for k in ["output", "response", "result", "completion"]):
+                        return value
 
         # Try last span
         if spans:
-            for attr in spans[-1].get("attributes", []):
-                if isinstance(attr, dict):
-                    key = attr.get("key", "").lower()
-                    if any(k in key for k in ["output", "response"]):
-                        return self._get_attr_value(attr)
+            attrs = self._flatten_attributes(spans[-1].get("attributes", []))
+            for key, value in attrs.items():
+                if any(k in key.lower() for k in ["output", "response", "completion"]):
+                    return value
 
         return None
 
@@ -456,3 +477,15 @@ class OpenTelemetryParser(TraceParser):
             return "; ".join(errors[:3])
 
         return None
+
+    def _flatten_attributes(self, attributes: list[Any]) -> dict[str, Any]:
+        """Convert OTEL attribute list into a flat key/value dict."""
+        flat: dict[str, Any] = {}
+        for attr in attributes:
+            if not isinstance(attr, dict):
+                continue
+            key = attr.get("key")
+            if key is None:
+                continue
+            flat[str(key)] = self._get_attr_value(attr)
+        return flat

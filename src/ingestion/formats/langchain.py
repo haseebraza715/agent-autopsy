@@ -190,6 +190,7 @@ class LangChainParser(TraceParser):
     def _extract_environment(self, data: dict[str, Any]) -> EnvironmentInfo:
         """Extract environment information."""
         tools_available = []
+        context_window_tokens = None
 
         # Extract tools from various locations
         for key in ["tools", "functions", "available_tools"]:
@@ -222,10 +223,57 @@ class LangChainParser(TraceParser):
                 invocation = extra.get("invocation_params", {})
                 model = invocation.get("model_name") or invocation.get("model")
 
+                for key in ["context_window_tokens", "context_window", "max_context_tokens"]:
+                    raw = invocation.get(key) or extra.get(key)
+                    if isinstance(raw, (int, float, str)):
+                        try:
+                            context_window_tokens = int(float(raw))
+                            break
+                        except (TypeError, ValueError):
+                            continue
+
+        # Try to extract from runs metadata
+        if "runs" in data and isinstance(data["runs"], list):
+            for run in data["runs"]:
+                if not isinstance(run, dict):
+                    continue
+                run_type = str(run.get("run_type", "")).lower()
+                if run_type in {"tool", "retriever", "function"}:
+                    run_name = run.get("name")
+                    if isinstance(run_name, str) and run_name:
+                        tools_available.append(run_name)
+
+                if model is None:
+                    extra = run.get("extra", {})
+                    if isinstance(extra, dict):
+                        invocation = extra.get("invocation_params", {})
+                        if isinstance(invocation, dict):
+                            model = invocation.get("model_name") or invocation.get("model")
+
+                if context_window_tokens is None:
+                    for key in ["context_window_tokens", "context_window", "context_limit", "max_context_tokens"]:
+                        raw = run.get(key)
+                        if isinstance(raw, (int, float, str)):
+                            try:
+                                context_window_tokens = int(float(raw))
+                                break
+                            except (TypeError, ValueError):
+                                continue
+
+        for key in ["context_window_tokens", "context_window", "context_limit", "max_context_tokens"]:
+            raw = data.get(key)
+            if isinstance(raw, (int, float, str)):
+                try:
+                    context_window_tokens = int(float(raw))
+                    break
+                except (TypeError, ValueError):
+                    continue
+
         return EnvironmentInfo(
             agent_framework="langchain",
             model=model,
             tools_available=list(set(tools_available)),
+            context_window_tokens=context_window_tokens,
         )
 
     def _extract_task_context(self, data: dict[str, Any]) -> TaskContext | None:
@@ -239,8 +287,29 @@ class LangChainParser(TraceParser):
                 if isinstance(val, str):
                     goal = val
                 elif isinstance(val, dict):
-                    goal = val.get("input") or val.get("query") or val.get("question")
+                    goal = (
+                        val.get("input")
+                        or val.get("query")
+                        or val.get("question")
+                        or val.get("prompt")
+                        or val.get("goal")
+                    )
                 break
+
+        if not goal and "runs" in data and isinstance(data["runs"], list):
+            for run in data["runs"]:
+                if not isinstance(run, dict):
+                    continue
+                inputs = run.get("inputs")
+                if isinstance(inputs, dict):
+                    goal = (
+                        inputs.get("input")
+                        or inputs.get("query")
+                        or inputs.get("question")
+                        or inputs.get("prompt")
+                    )
+                    if goal:
+                        break
 
         if not goal:
             return None
@@ -258,34 +327,64 @@ class LangChainParser(TraceParser):
 
         # Handle flat run structure (single run with child_runs)
         if "child_runs" in data or "run_type" in data:
-            parsed = self._parse_run(data, event_id, parent_id=None)
-            events.extend(parsed)
+            self._append_run_tree(
+                run=data,
+                start_event_id=event_id,
+                parent_event_id=None,
+                children_by_parent={},
+                visited=set(),
+                out_events=events,
+            )
             return events
 
         # Handle runs list structure
         if "runs" in data and isinstance(data["runs"], list):
-            parent_map = {}  # run_id -> event_id for parent mapping
+            runs = [run for run in data["runs"] if isinstance(run, dict)]
+            by_id: dict[str, dict[str, Any]] = {}
+            children_by_parent: dict[str, list[dict[str, Any]]] = {}
+            roots: list[dict[str, Any]] = []
 
-            for run in data["runs"]:
-                if not isinstance(run, dict):
-                    continue
+            for run in runs:
+                rid = self._run_identifier(run)
+                if rid:
+                    by_id[rid] = run
 
-                run_id = run.get("id") or run.get("run_id")
+            for run in runs:
                 parent_run_id = run.get("parent_run_id")
+                parent_key = str(parent_run_id) if parent_run_id is not None else ""
+                if parent_key and parent_key in by_id:
+                    children_by_parent.setdefault(parent_key, []).append(run)
+                else:
+                    roots.append(run)
 
-                # Determine parent_event_id from run hierarchy
-                parent_event_id = parent_map.get(parent_run_id) if parent_run_id else None
+            visited: set[int] = set()
+            for root in roots:
+                event_id = self._append_run_tree(
+                    run=root,
+                    start_event_id=event_id,
+                    parent_event_id=None,
+                    children_by_parent=children_by_parent,
+                    visited=visited,
+                    out_events=events,
+                )
 
-                parsed = self._parse_run(run, event_id, parent_event_id)
-                events.extend(parsed)
-
-                # Store mapping for child runs
-                if run_id and parsed:
-                    parent_map[run_id] = parsed[0].event_id
-
-                event_id += len(parsed)
+            # Fallback for orphaned/disconnected runs
+            for run in runs:
+                if id(run) not in visited:
+                    event_id = self._append_run_tree(
+                        run=run,
+                        start_event_id=event_id,
+                        parent_event_id=None,
+                        children_by_parent=children_by_parent,
+                        visited=visited,
+                        out_events=events,
+                    )
 
             return events
+
+        # Handle callback-event format
+        if "callbacks" in data and isinstance(data["callbacks"], list):
+            return self._extract_callback_events(data["callbacks"])
 
         # Handle events list directly
         if "events" in data and isinstance(data["events"], list):
@@ -310,7 +409,7 @@ class LangChainParser(TraceParser):
         # Determine event type from run_type
         if run_type in ["llm", "chat_model"]:
             event_type = EventType.LLM_CALL
-        elif run_type in ["tool", "function"]:
+        elif run_type in ["tool", "function", "retriever"]:
             event_type = EventType.TOOL_CALL
         elif run_type in ["chain", "agent"]:
             event_type = EventType.DECISION
@@ -343,9 +442,24 @@ class LangChainParser(TraceParser):
 
         # Extract token counts
         token_count = None
-        token_usage = run.get("token_usage") or run.get("llm_output", {}).get("token_usage", {})
+        token_usage = (
+            run.get("token_usage")
+            or run.get("usage_metadata")
+            or run.get("llm_output", {}).get("token_usage", {})
+            or run.get("response_metadata", {}).get("token_usage", {})
+        )
         if isinstance(token_usage, dict):
-            token_count = token_usage.get("total_tokens")
+            token_count = (
+                token_usage.get("total_tokens")
+                or token_usage.get("total")
+                or token_usage.get("output_tokens")
+                or token_usage.get("completion_tokens")
+            )
+            if token_count is not None:
+                try:
+                    token_count = int(float(token_count))
+                except (TypeError, ValueError):
+                    token_count = None
 
         event = TraceEvent(
             event_id=start_id,
@@ -360,18 +474,12 @@ class LangChainParser(TraceParser):
             latency_ms=latency_ms,
             timestamp=start_time or end_time,
             error=error,
-            metadata=run.get("extra", {}),
+            metadata={
+                **(run.get("extra", {}) if isinstance(run.get("extra"), dict) else {}),
+                "run_type": run_type,
+            },
         )
         events.append(event)
-
-        # Parse child runs recursively
-        child_runs = run.get("child_runs", [])
-        child_id = start_id + 1
-        for child in child_runs:
-            if isinstance(child, dict):
-                child_events = self._parse_run(child, child_id, start_id)
-                events.extend(child_events)
-                child_id += len(child_events)
 
         return events
 
@@ -392,9 +500,13 @@ class LangChainParser(TraceParser):
                     stack=error_data.get("traceback"),
                 )
 
+        parent_value = raw.get("parent_id")
+        if parent_value is None:
+            parent_value = raw.get("parent_run_id")
+
         event = TraceEvent(
             event_id=start_id,
-            parent_event_id=raw.get("parent_id") or raw.get("parent_run_id"),
+            parent_event_id=self._safe_parent_event_id(parent_value),
             span_id=raw.get("run_id") or raw.get("id"),
             type=event_type,
             role=role,
@@ -415,7 +527,7 @@ class LangChainParser(TraceParser):
 
         if run_type in ["llm", "chat_model", "model"]:
             return EventType.LLM_CALL
-        if run_type in ["tool", "function", "tool_call"]:
+        if run_type in ["tool", "function", "tool_call", "retriever"]:
             return EventType.TOOL_CALL
         if run_type in ["chain", "agent", "decision"]:
             return EventType.DECISION
@@ -429,6 +541,135 @@ class LangChainParser(TraceParser):
             return EventType.TOOL_CALL
 
         return EventType.MESSAGE
+
+    def _safe_parent_event_id(self, value: Any) -> int | None:
+        """Convert parent IDs to int when possible; otherwise drop unresolved IDs."""
+        if value is None:
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(value)
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+        return None
+
+    def _run_identifier(self, run: dict[str, Any]) -> str:
+        """Get a stable string identifier for a run record."""
+        raw = run.get("id") or run.get("run_id")
+        return str(raw) if raw is not None else ""
+
+    def _append_run_tree(
+        self,
+        run: dict[str, Any],
+        start_event_id: int,
+        parent_event_id: int | None,
+        children_by_parent: dict[str, list[dict[str, Any]]],
+        visited: set[int],
+        out_events: list[TraceEvent],
+    ) -> int:
+        """Append a run and all known descendants to out_events, returning next event ID."""
+        if id(run) in visited:
+            return start_event_id
+
+        visited.add(id(run))
+        parsed = self._parse_run(run, start_event_id, parent_event_id)
+        out_events.extend(parsed)
+        current_event_id = start_event_id
+        next_event_id = start_event_id + len(parsed)
+
+        run_id = self._run_identifier(run)
+        child_runs: list[dict[str, Any]] = []
+        if run_id:
+            child_runs.extend(children_by_parent.get(run_id, []))
+        child_runs.extend(
+            child
+            for child in run.get("child_runs", [])
+            if isinstance(child, dict)
+        )
+
+        for child in child_runs:
+            next_event_id = self._append_run_tree(
+                run=child,
+                start_event_id=next_event_id,
+                parent_event_id=current_event_id,
+                children_by_parent=children_by_parent,
+                visited=visited,
+                out_events=out_events,
+            )
+        return next_event_id
+
+    def _extract_callback_events(self, callbacks: list[Any]) -> list[TraceEvent]:
+        """Parse callback-style events into normalized trace events."""
+        events: list[TraceEvent] = []
+        event_id = 0
+        run_id_to_event_id: dict[str, int] = {}
+
+        for callback in callbacks:
+            if not isinstance(callback, dict):
+                continue
+
+            run_id = callback.get("run_id") or callback.get("id")
+            parent_run_id = callback.get("parent_run_id")
+
+            raw = self._callback_to_raw_event(callback)
+            if raw is None:
+                continue
+
+            if parent_run_id is not None:
+                mapped_parent = run_id_to_event_id.get(str(parent_run_id))
+                if mapped_parent is not None:
+                    raw["parent_id"] = mapped_parent
+
+            parsed = self._parse_event(raw, event_id)
+            events.extend(parsed)
+            if run_id is not None and parsed:
+                run_id_to_event_id[str(run_id)] = parsed[0].event_id
+            event_id += len(parsed)
+
+        return events
+
+    def _callback_to_raw_event(self, callback: dict[str, Any]) -> dict[str, Any] | None:
+        """Convert callback payloads into a generic event-shaped dictionary."""
+        event_name = str(callback.get("event") or callback.get("type") or "").lower()
+        if not event_name:
+            return None
+        if event_name.startswith("on_"):
+            event_name = event_name[3:]
+        event_name = event_name.replace("_start", "").replace("_end", "")
+
+        event_type = "message"
+        if any(k in event_name for k in ["llm", "chat", "model"]):
+            event_type = "llm"
+        elif any(k in event_name for k in ["tool", "retriever", "function"]):
+            event_type = "tool"
+        elif any(k in event_name for k in ["chain", "agent"]):
+            event_type = "chain"
+        elif "error" in event_name:
+            event_type = "error"
+
+        token_count = callback.get("token_count") or callback.get("tokens")
+        if token_count is None and isinstance(callback.get("usage"), dict):
+            usage = callback["usage"]
+            token_count = (
+                usage.get("total_tokens")
+                or usage.get("total")
+                or usage.get("completion_tokens")
+                or usage.get("output_tokens")
+            )
+
+        return {
+            "type": event_type,
+            "run_id": callback.get("run_id") or callback.get("id"),
+            "name": callback.get("name") or callback.get("tool_name") or event_name,
+            "input": callback.get("input") or callback.get("inputs") or callback.get("prompt"),
+            "output": callback.get("output") or callback.get("outputs") or callback.get("result"),
+            "token_count": token_count,
+            "latency_ms": callback.get("latency_ms") or callback.get("duration_ms"),
+            "timestamp": callback.get("timestamp") or callback.get("time"),
+            "error": callback.get("error"),
+            "metadata": callback.get("metadata") or callback.get("extra", {}),
+        }
 
     def _determine_role(self, raw: dict[str, Any]) -> EventRole | None:
         """Determine role from raw data."""

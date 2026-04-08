@@ -178,6 +178,7 @@ class LangGraphParser(TraceParser):
     def _extract_environment(self, data: dict[str, Any]) -> EnvironmentInfo:
         """Extract environment information."""
         tools_available = []
+        context_window_tokens = None
 
         # Extract tools from various locations
         if "tools" in data:
@@ -203,10 +204,20 @@ class LangGraphParser(TraceParser):
         # Extract model
         model = data.get("model") or config.get("model")
 
+        for key in ["context_window_tokens", "context_window", "context_limit", "max_context_tokens"]:
+            raw = data.get(key, config.get(key))
+            if isinstance(raw, (int, float, str)):
+                try:
+                    context_window_tokens = int(float(raw))
+                    break
+                except (TypeError, ValueError):
+                    continue
+
         return EnvironmentInfo(
             agent_framework="langgraph",
             model=model,
             tools_available=list(set(tools_available)),
+            context_window_tokens=context_window_tokens,
         )
 
     def _extract_task_context(self, data: dict[str, Any]) -> TaskContext | None:
@@ -286,7 +297,7 @@ class LangGraphParser(TraceParser):
 
         event = TraceEvent(
             event_id=start_id,
-            parent_event_id=raw.get("parent_id"),
+            parent_event_id=self._safe_parent_event_id(raw.get("parent_id")),
             span_id=raw.get("span_id"),
             type=event_type,
             role=role,
@@ -363,6 +374,18 @@ class LangGraphParser(TraceParser):
         if raw.get("type") in ["tool", "tool_call", "function"]:
             return EventRole.TOOL
 
+        return None
+
+    def _safe_parent_event_id(self, value: Any) -> int | None:
+        """Convert parent IDs to int when possible."""
+        if value is None:
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(value)
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
         return None
 
     def _extract_final_output(self, data: dict[str, Any]) -> str | dict | None:
