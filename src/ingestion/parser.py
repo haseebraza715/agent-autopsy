@@ -29,10 +29,20 @@ class TraceParser(ABC):
     @classmethod
     def detect_format(cls, data: dict[str, Any]) -> str:
         """Detect the format of the trace data."""
+        # OpenTelemetry detection (check first to avoid false positives)
+        if "resourceSpans" in data or "traceId" in data:
+            return "opentelemetry"
+
         # LangGraph detection
         if "thread_id" in data or "checkpoint" in data:
             return "langgraph"
         if "runs" in data and isinstance(data["runs"], list):
+            # Distinguish LangChain runs from generic LangGraph run arrays.
+            if any(
+                isinstance(run, dict) and run.get("run_type")
+                for run in data["runs"]
+            ):
+                return "langchain"
             return "langgraph"
 
         # LangChain detection
@@ -40,10 +50,6 @@ class TraceParser(ABC):
             return "langchain"
         if "callbacks" in data:
             return "langchain"
-
-        # OpenTelemetry detection
-        if "resourceSpans" in data or "traceId" in data:
-            return "opentelemetry"
 
         return "generic"
 

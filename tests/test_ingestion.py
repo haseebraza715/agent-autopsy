@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from src.ingestion import parse_trace_file, TraceNormalizer
+from src.ingestion.parser import TraceParser
 from src.ingestion.formats.langgraph import LangGraphParser
 from src.ingestion.formats.generic import GenericJSONParser
 from src.ingestion.formats.langchain import LangChainParser
@@ -149,6 +150,15 @@ class TestTraceNormalizer:
 class TestAdditionalFormatParsers:
     """Tests for dedicated LangChain/OpenTelemetry parser behavior."""
 
+    def test_detect_format_prefers_langchain_when_runs_have_run_type(self):
+        data = {
+            "runs": [
+                {"id": "r1", "run_type": "chain"},
+                {"id": "r2", "run_type": "tool"},
+            ]
+        }
+        assert TraceParser.detect_format(data) == "langchain"
+
     def test_parse_langchain_run_trace(self):
         """LangChain parser should map run_type to normalized event types."""
         parser = LangChainParser()
@@ -180,6 +190,70 @@ class TestAdditionalFormatParsers:
         assert len(trace.events) == 2
         assert trace.events[0].type == EventType.DECISION
         assert trace.events[1].type == EventType.TOOL_CALL
+
+    def test_parse_langchain_runs_parent_links_and_retriever(self):
+        parser = LangChainParser()
+        data = {
+            "run_id": "lc-run-2",
+            "runs": [
+                {
+                    "id": "child-1",
+                    "parent_run_id": "root-1",
+                    "run_type": "retriever",
+                    "name": "kb_lookup",
+                    "inputs": {"query": "budget"},
+                    "outputs": {"docs": ["doc-1"]},
+                    "usage_metadata": {"total_tokens": 18},
+                },
+                {
+                    "id": "root-1",
+                    "run_type": "chain",
+                    "name": "planner",
+                    "inputs": {"input": "Create a budget plan"},
+                    "outputs": {"result": "done"},
+                },
+            ],
+        }
+
+        trace = parser.parse(data)
+        trace = TraceNormalizer.normalize(trace)
+        root = next(e for e in trace.events if e.name == "planner")
+        child = next(e for e in trace.events if e.name == "kb_lookup")
+
+        assert child.type == EventType.TOOL_CALL
+        assert child.parent_event_id == root.event_id
+        assert child.token_count == 18
+
+    def test_parse_langchain_callback_trace(self):
+        parser = LangChainParser()
+        data = {
+            "run_id": "lc-cb-1",
+            "callbacks": [
+                {
+                    "event": "on_chain_start",
+                    "run_id": "chain-1",
+                    "name": "root_chain",
+                    "input": {"input": "hello"},
+                    "timestamp": "2024-01-01T00:00:00Z",
+                },
+                {
+                    "event": "on_tool_end",
+                    "run_id": "tool-1",
+                    "parent_run_id": "chain-1",
+                    "name": "search",
+                    "output": {"result": "ok"},
+                    "duration_ms": 120,
+                },
+            ],
+        }
+
+        trace = parser.parse(data)
+        trace = TraceNormalizer.normalize(trace)
+
+        assert len(trace.events) == 2
+        assert trace.events[0].type == EventType.DECISION
+        assert trace.events[1].type == EventType.TOOL_CALL
+        assert trace.events[1].parent_event_id == trace.events[0].event_id
 
     def test_parse_opentelemetry_spans(self):
         """OpenTelemetry parser should parse OTLP-style spans into events."""
@@ -224,3 +298,61 @@ class TestAdditionalFormatParsers:
         assert len(trace.events) == 1
         assert trace.events[0].type == EventType.LLM_CALL
         assert trace.events[0].token_count == 42
+
+    def test_parse_opentelemetry_parent_links_and_genai_attributes(self):
+        parser = OpenTelemetryParser()
+        data = {
+            "resourceSpans": [
+                {
+                    "resource": {
+                        "attributes": [
+                            {"key": "service.name", "value": {"stringValue": "agent-service"}},
+                            {"key": "gen_ai.model", "value": {"stringValue": "gpt-4.1-mini"}},
+                            {"key": "gen_ai.max_input_tokens", "value": {"intValue": 64000}},
+                        ]
+                    },
+                    "scopeSpans": [
+                        {
+                            "spans": [
+                                {
+                                    "traceId": "trace-otel-1",
+                                    "spanId": "root-span",
+                                    "name": "agent.router",
+                                    "startTimeUnixNano": 1704067200000000000,
+                                    "endTimeUnixNano": 1704067200200000000,
+                                    "attributes": [
+                                        {"key": "gen_ai.prompt", "value": {"stringValue": "Find revenue by quarter"}},
+                                    ],
+                                    "status": {"code": 1},
+                                },
+                                {
+                                    "traceId": "trace-otel-1",
+                                    "spanId": "child-span",
+                                    "parentSpanId": "root-span",
+                                    "name": "tool.search",
+                                    "startTimeUnixNano": 1704067200300000000,
+                                    "endTimeUnixNano": 1704067200800000000,
+                                    "attributes": [
+                                        {"key": "tool.name", "value": {"stringValue": "search"}},
+                                        {"key": "gen_ai.usage.total_tokens", "value": {"intValue": 77}},
+                                        {"key": "gen_ai.response", "value": {"stringValue": "found data"}},
+                                    ],
+                                    "status": {"code": "STATUS_CODE_ERROR", "message": "timed out"},
+                                },
+                            ]
+                        }
+                    ],
+                }
+            ]
+        }
+
+        trace = parser.parse(data)
+        trace = TraceNormalizer.normalize(trace)
+        root = next(e for e in trace.events if e.span_id == "root-span")
+        child = next(e for e in trace.events if e.span_id == "child-span")
+
+        assert trace.env.context_window_tokens == 64000
+        assert child.parent_event_id == root.event_id
+        assert child.type == EventType.TOOL_CALL
+        assert child.token_count == 77
+        assert child.error is not None

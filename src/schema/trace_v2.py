@@ -123,6 +123,7 @@ class EnvironmentInfo(BaseModel):
     agent_framework: str  # langgraph, langchain, autogen, crewai, other
     model: str | None = None
     tools_available: list[str] = Field(default_factory=list)
+    context_window_tokens: int | None = None
 
 
 class TraceStats(BaseModel):

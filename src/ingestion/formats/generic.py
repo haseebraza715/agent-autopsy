@@ -140,6 +140,7 @@ class GenericJSONParser(TraceParser):
     def _extract_environment(self, data: dict[str, Any]) -> EnvironmentInfo:
         """Extract environment info from various structures."""
         tools = []
+        context_window_tokens = None
 
         # Look for tools in common locations
         for key in ["tools", "functions", "available_tools", "tool_list"]:
@@ -173,10 +174,21 @@ class GenericJSONParser(TraceParser):
         elif "crewai" in data_str:
             framework = "crewai"
 
+        # Per-trace context window override (if available)
+        for key in ["context_window_tokens", "context_window", "context_limit", "max_context_tokens"]:
+            raw = data.get(key)
+            if isinstance(raw, (int, float, str)):
+                try:
+                    context_window_tokens = int(float(raw))
+                    break
+                except (TypeError, ValueError):
+                    continue
+
         return EnvironmentInfo(
             agent_framework=framework,
             model=model,
             tools_available=list(set(tools)),
+            context_window_tokens=context_window_tokens,
         )
 
     def _extract_task_context(self, data: dict[str, Any]) -> TaskContext | None:
@@ -315,7 +327,7 @@ class GenericJSONParser(TraceParser):
 
             event = TraceEvent(
                 event_id=event_id,
-                parent_event_id=raw.get("parent_id") or raw.get("parentId"),
+                parent_event_id=self._safe_parent_event_id(raw.get("parent_id") or raw.get("parentId")),
                 span_id=raw.get("span_id") or raw.get("spanId"),
                 type=event_type,
                 role=role,
@@ -332,6 +344,18 @@ class GenericJSONParser(TraceParser):
             event_id += 1
 
         return events
+
+    def _safe_parent_event_id(self, value: Any) -> int | None:
+        """Convert parent IDs to int when possible."""
+        if value is None:
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(value)
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+        return None
 
     def _determine_event_type(self, raw: dict[str, Any]) -> EventType:
         """Determine event type from raw data."""
