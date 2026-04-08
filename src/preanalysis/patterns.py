@@ -1,21 +1,17 @@
 """
 Pattern detection module.
 
-Detects common agent failure patterns in traces:
-- Infinite loops
-- Retry storms
-- Context overflow
-- Hallucinated tools
-- Empty responses
-- Error cascades
-- Goal drift
-- Stale context
+Detects common and advanced agent failure patterns in traces.
+All detectors are deterministic and run before LLM analysis.
 """
 
-from collections import Counter
 from dataclasses import dataclass, field
 from datetime import timedelta
 from enum import Enum
+from functools import lru_cache
+import json
+from pathlib import Path
+import re
 
 from src.schema import Trace, TraceEvent, EventType
 from src.utils.config import get_config
@@ -23,6 +19,7 @@ from src.utils.config import get_config
 
 class PatternType(str, Enum):
     """Types of detectable patterns."""
+
     INFINITE_LOOP = "infinite_loop"
     RETRY_STORM = "retry_storm"
     CONTEXT_OVERFLOW = "context_overflow"
@@ -31,11 +28,16 @@ class PatternType(str, Enum):
     ERROR_CASCADE = "error_cascade"
     GOAL_DRIFT = "goal_drift"
     STALE_CONTEXT = "stale_context"
+    TOKEN_WASTE = "token_waste"
+    AUTH_PERMISSION_FAILURE = "auth_permission_failure"
+    TIMEOUT_PATTERN = "timeout_pattern"
+    REDUNDANT_TOOL_CALL = "redundant_tool_call"
     TOOL_CONTRACT_MISMATCH = "tool_contract_mismatch"
 
 
 class Severity(str, Enum):
     """Severity level of detected patterns."""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -45,6 +47,7 @@ class Severity(str, Enum):
 @dataclass
 class PatternResult:
     """Result of pattern detection."""
+
     pattern_type: PatternType
     severity: Severity
     message: str
@@ -54,59 +57,57 @@ class PatternResult:
 
 
 class PatternDetector:
-    """
-    Detects common failure patterns in agent traces.
+    """Detects deterministic failure patterns in agent traces."""
 
-    All detection methods are deterministic and run before LLM analysis.
-    """
+    _AUTH_PERMISSION_RE = re.compile(
+        r"(unauthori[sz]ed|forbidden|permission denied|access denied|invalid api key|\bauth(?:entication|orization)?\b)",
+        flags=re.IGNORECASE,
+    )
+    _AUTH_STATUS_CODE_RE = re.compile(r"(?:^|[^\w-])(401|403)(?:$|[^\w-])")
+    _TIMEOUT_RE = re.compile(
+        r"(\btimeout\b|\btimed out\b|deadline exceeded|gateway timeout|request timeout)",
+        flags=re.IGNORECASE,
+    )
 
     def __init__(self, trace: Trace):
         self.trace = trace
 
     def detect_all(self) -> list[PatternResult]:
         """Run all pattern detectors and return results."""
-        results = []
-
+        results: list[PatternResult] = []
         results.extend(self.detect_loops())
         results.extend(self.detect_retry_storms())
+        results.extend(self.detect_redundant_tool_calls())
         results.extend(self.detect_empty_responses())
         results.extend(self.detect_error_cascades())
         results.extend(self.detect_hallucinated_tools())
+        results.extend(self.detect_auth_permission_failures())
+        results.extend(self.detect_timeout_patterns())
+        results.extend(self.detect_goal_drift())
+        results.extend(self.detect_stale_context())
+        results.extend(self.detect_token_waste())
         results.extend(self.detect_context_overflow())
-
         return results
 
     def detect_loops(self, threshold: int = 3) -> list[PatternResult]:
-        """
-        Detect infinite loops where the same tool+input is repeated consecutively.
-
-        Args:
-            threshold: Number of consecutive repetitions to trigger detection
-
-        Returns:
-            List of detected loop patterns
-        """
+        """Detect infinite loops where the same tool+input is repeated consecutively."""
         results = []
         tool_calls = self.trace.get_tool_calls()
 
         if len(tool_calls) < threshold:
             return results
 
-        # Track consecutive sequences of identical tool signatures
         consecutive_count = 1
         last_sig = None
-        sequence_start_id = None
-        sequence_event_ids = []
+        sequence_event_ids: list[int] = []
 
         for event in tool_calls:
             sig = event.get_tool_signature()
 
             if sig == last_sig and sig is not None:
-                # Continue the consecutive sequence
                 consecutive_count += 1
                 sequence_event_ids.append(event.event_id)
             else:
-                # Check if previous sequence exceeded threshold
                 if consecutive_count >= threshold and last_sig:
                     results.append(
                         PatternResult(
@@ -119,13 +120,11 @@ class PatternDetector:
                         )
                     )
 
-                # Start new sequence
                 consecutive_count = 1
                 sequence_event_ids = [event.event_id]
 
             last_sig = sig
 
-        # Check final sequence
         if consecutive_count >= threshold and last_sig:
             results.append(
                 PatternResult(
@@ -141,12 +140,7 @@ class PatternDetector:
         return results
 
     def detect_retry_storms(self, threshold: int = 3) -> list[PatternResult]:
-        """
-        Detect retry storms where the same tool is called repeatedly within a time window.
-
-        Uses configurable time window and checks for input similarity to distinguish
-        retries from legitimate varied calls to the same tool.
-        """
+        """Detect retry storms where the same tool is called repeatedly within a time window."""
         results = []
         config = get_config()
         tool_calls = self.trace.get_tool_calls()
@@ -156,55 +150,37 @@ class PatternDetector:
 
         window = timedelta(seconds=config.retry_window_seconds)
 
-        # Group calls by tool name
         tool_events: dict[str, list[TraceEvent]] = {}
         for event in tool_calls:
             if event.name:
-                if event.name not in tool_events:
-                    tool_events[event.name] = []
-                tool_events[event.name].append(event)
+                tool_events.setdefault(event.name, []).append(event)
 
-        # Check each tool for retry storms within time windows
+        loop_ids = {eid for p in self.detect_loops() for eid in p.event_ids}
+
         for tool_name, events in tool_events.items():
             if len(events) < threshold:
                 continue
 
-            # Find clusters of calls within time window
             i = 0
             while i < len(events):
                 cluster = [events[i]]
                 cluster_ids = [events[i].event_id]
 
-                # Look for calls within window of first call in cluster
                 for j in range(i + 1, len(events)):
-                    # Check time proximity if timestamps available
                     if events[i].timestamp and events[j].timestamp:
                         delta = events[j].timestamp - events[i].timestamp
                         if delta <= window:
                             cluster.append(events[j])
                             cluster_ids.append(events[j].event_id)
-                    else:
-                        # No timestamps - use event ID proximity as fallback
-                        if events[j].event_id - events[i].event_id <= 10:
-                            cluster.append(events[j])
-                            cluster_ids.append(events[j].event_id)
+                    elif events[j].event_id - events[i].event_id <= 10:
+                        cluster.append(events[j])
+                        cluster_ids.append(events[j].event_id)
 
                 if len(cluster) >= threshold:
-                    # Check input similarity (are these actual retries?)
                     inputs = [str(e.input) for e in cluster]
                     unique_inputs = len(set(inputs))
-
-                    # If inputs are similar (retries) or identical (loop)
-                    # and this wasn't already caught as a loop
                     if unique_inputs <= len(cluster) // 2 + 1:
-                        # Check not already detected as loop
-                        loop_results = self.detect_loops()
-                        is_loop = any(
-                            set(cluster_ids) & set(r.event_ids)
-                            for r in loop_results
-                        )
-
-                        if not is_loop:
+                        if not any(eid in loop_ids for eid in cluster_ids):
                             results.append(
                                 PatternResult(
                                     pattern_type=PatternType.RETRY_STORM,
@@ -220,11 +196,45 @@ class PatternDetector:
                                     },
                                 )
                             )
-                            # Skip past this cluster
                             i = i + len(cluster) - 1
                             break
 
                 i += 1
+
+        return results
+
+    def detect_redundant_tool_calls(self) -> list[PatternResult]:
+        """Detect repeated tool calls with identical inputs separated in time."""
+        results = []
+        calls_by_signature: dict[str, list[TraceEvent]] = {}
+
+        for event in self.trace.get_tool_calls():
+            sig = event.get_tool_signature()
+            if sig:
+                calls_by_signature.setdefault(sig, []).append(event)
+
+        for signature, events in calls_by_signature.items():
+            if len(events) < 2:
+                continue
+
+            event_ids = [e.event_id for e in events]
+            non_consecutive_ids = [
+                event_ids[i]
+                for i in range(1, len(event_ids))
+                if event_ids[i] - event_ids[i - 1] > 1
+            ]
+            if non_consecutive_ids:
+                tool_name = signature.split(":")[0]
+                results.append(
+                    PatternResult(
+                        pattern_type=PatternType.REDUNDANT_TOOL_CALL,
+                        severity=Severity.MEDIUM,
+                        message=f"Tool '{tool_name}' called repeatedly with the same input at different points",
+                        evidence="Identical tool signature appears in non-consecutive events",
+                        event_ids=event_ids,
+                        metadata={"signature": signature, "count": len(event_ids)},
+                    )
+                )
 
         return results
 
@@ -243,7 +253,6 @@ class PatternDetector:
                     or output == {}
                     or output == []
                 )
-
                 if is_empty:
                     empty_events.append(event.event_id)
 
@@ -268,13 +277,11 @@ class PatternDetector:
         if len(error_events) < 2:
             return results
 
-        # Look for consecutive or closely grouped errors
         error_ids = [e.event_id for e in error_events]
-        cascades = []
+        cascades: list[list[int]] = []
         current_cascade = [error_ids[0]]
 
         for i in range(1, len(error_ids)):
-            # If errors are within 3 events of each other, consider it a cascade
             if error_ids[i] - error_ids[i - 1] <= 3:
                 current_cascade.append(error_ids[i])
             else:
@@ -305,11 +312,9 @@ class PatternDetector:
         available_tools = set(self.trace.env.tools_available)
 
         if not available_tools:
-            # Can't detect if we don't know what tools are available
             return results
 
         hallucinated = []
-
         for event in self.trace.get_tool_calls():
             if event.name and event.name not in available_tools:
                 hallucinated.append(event.event_id)
@@ -328,49 +333,218 @@ class PatternDetector:
 
         return results
 
+    def detect_auth_permission_failures(self) -> list[PatternResult]:
+        """Detect repeated auth/permission failures that should trigger escalation."""
+        matches: list[int] = []
+        for event in self.trace.events:
+            text_parts = []
+            if event.error and event.error.message:
+                text_parts.append(event.error.message)
+            if event.output is not None:
+                text_parts.append(str(event.output))
+            if event.input is not None:
+                text_parts.append(str(event.input))
+            combined = " ".join(text_parts)
+            if self._AUTH_PERMISSION_RE.search(combined) or self._AUTH_STATUS_CODE_RE.search(combined):
+                matches.append(event.event_id)
+
+        if len(matches) >= 2:
+            return [
+                PatternResult(
+                    pattern_type=PatternType.AUTH_PERMISSION_FAILURE,
+                    severity=Severity.HIGH,
+                    message=f"Detected repeated authentication/permission failures ({len(matches)} events)",
+                    evidence="Auth/permission-related error signatures were repeated",
+                    event_ids=matches,
+                )
+            ]
+        return []
+
+    def detect_timeout_patterns(self) -> list[PatternResult]:
+        """Detect timeout-driven failures and slow-call bottlenecks."""
+        config = get_config()
+        timeout_ids: list[int] = []
+        slow_call_ids: list[int] = []
+
+        for event in self.trace.events:
+            if event.latency_ms and event.latency_ms >= config.timeout_seconds * 1000:
+                slow_call_ids.append(event.event_id)
+
+            text_parts = []
+            if event.error and event.error.message:
+                text_parts.append(event.error.message)
+            if event.output is not None:
+                text_parts.append(str(event.output))
+            if self._TIMEOUT_RE.search(" ".join(text_parts)):
+                timeout_ids.append(event.event_id)
+
+        all_ids = sorted(set(timeout_ids + slow_call_ids))
+        if len(all_ids) >= 1:
+            return [
+                PatternResult(
+                    pattern_type=PatternType.TIMEOUT_PATTERN,
+                    severity=Severity.HIGH,
+                    message=f"Detected timeout-related behavior across {len(all_ids)} events",
+                    evidence="Timeout errors and/or slow external calls indicate latency bottlenecks",
+                    event_ids=all_ids,
+                    metadata={
+                        "timeout_error_events": timeout_ids,
+                        "slow_call_events": slow_call_ids,
+                    },
+                )
+            ]
+        return []
+
+    def detect_goal_drift(self) -> list[PatternResult]:
+        """Detect semantic drift away from the original goal using token-overlap heuristics."""
+        if not self.trace.task or not self.trace.task.goal:
+            return []
+
+        goal_tokens = set(self._tokenize_text(self.trace.task.goal))
+        if not goal_tokens:
+            return []
+
+        scored_events: list[tuple[int, float]] = []
+        for event in self.trace.events:
+            if event.type not in [EventType.LLM_CALL, EventType.TOOL_CALL, EventType.DECISION]:
+                continue
+            text = self._event_text(event)
+            tokens = set(self._tokenize_text(text))
+            if not tokens:
+                continue
+            overlap = len(tokens & goal_tokens) / len(goal_tokens)
+            scored_events.append((event.event_id, overlap))
+
+        if len(scored_events) < 6:
+            return []
+
+        window = max(3, len(scored_events) // 3)
+        early_scores = [s for _, s in scored_events[:window]]
+        late_scores = [s for _, s in scored_events[-window:]]
+        early_avg = sum(early_scores) / len(early_scores)
+        late_avg = sum(late_scores) / len(late_scores)
+
+        if early_avg - late_avg >= 0.35 and late_avg <= 0.25:
+            late_ids = [eid for eid, _ in scored_events[-window:]]
+            return [
+                PatternResult(
+                    pattern_type=PatternType.GOAL_DRIFT,
+                    severity=Severity.MEDIUM,
+                    message="Agent behavior drifted away from the initial goal",
+                    evidence=f"Goal similarity dropped from {early_avg:.2f} to {late_avg:.2f}",
+                    event_ids=late_ids,
+                    metadata={
+                        "early_similarity": round(early_avg, 3),
+                        "late_similarity": round(late_avg, 3),
+                    },
+                )
+            ]
+        return []
+
+    def detect_stale_context(self) -> list[PatternResult]:
+        """Detect when repeated calls reuse old context despite changed tool outputs."""
+        results: list[PatternResult] = []
+        signatures: dict[str, list[TraceEvent]] = {}
+        for event in self.trace.get_tool_calls():
+            sig = event.get_tool_signature()
+            if sig:
+                signatures.setdefault(sig, []).append(event)
+
+        for sig, events in signatures.items():
+            if len(events) < 3:
+                continue
+            outputs = [str(e.output) for e in events if e.output is not None]
+            if len(set(outputs)) > 1:
+                results.append(
+                    PatternResult(
+                        pattern_type=PatternType.STALE_CONTEXT,
+                        severity=Severity.MEDIUM,
+                        message="Repeated tool calls used stale context after outputs changed",
+                        evidence="Same tool+input signature produced different outputs across retries",
+                        event_ids=[e.event_id for e in events],
+                        metadata={"signature": sig, "unique_outputs": len(set(outputs))},
+                    )
+                )
+        return results
+
+    def detect_token_waste(self) -> list[PatternResult]:
+        """Detect when token spend is high relative to useful state transitions."""
+        llm_events = [e for e in self.trace.get_llm_calls() if e.token_count]
+        total_llm_tokens = sum(e.token_count or 0 for e in llm_events)
+        if total_llm_tokens < 1500:
+            return []
+
+        useful_tokens = 0
+        for event in llm_events:
+            nearby = self.trace.get_events_in_range(max(0, event.event_id - 2), event.event_id + 2)
+            has_useful_transition = any(
+                e.type in [EventType.TOOL_CALL, EventType.ERROR, EventType.DECISION]
+                for e in nearby
+                if e.event_id != event.event_id
+            )
+            if has_useful_transition:
+                useful_tokens += event.token_count or 0
+
+        waste_tokens = total_llm_tokens - useful_tokens
+        waste_ratio = waste_tokens / total_llm_tokens if total_llm_tokens else 0
+
+        if waste_ratio >= 0.6:
+            top_events = sorted(llm_events, key=lambda e: e.token_count or 0, reverse=True)[:5]
+            return [
+                PatternResult(
+                    pattern_type=PatternType.TOKEN_WASTE,
+                    severity=Severity.MEDIUM,
+                    message=f"High token waste detected ({waste_ratio:.0%} of LLM tokens)",
+                    evidence=f"Useful-token ratio is low ({(1 - waste_ratio):.0%})",
+                    event_ids=[e.event_id for e in top_events],
+                    metadata={
+                        "total_llm_tokens": total_llm_tokens,
+                        "useful_llm_tokens": useful_tokens,
+                        "waste_tokens": waste_tokens,
+                        "waste_ratio": round(waste_ratio, 3),
+                    },
+                )
+            ]
+        return []
+
     def detect_context_overflow(self, threshold: int | None = None) -> list[PatternResult]:
         """
         Detect potential context overflow based on token counts.
 
-        Uses configurable threshold from Config, with optional override.
-        Also considers model-specific context limits when available.
+        Limit source precedence:
+        1) explicit threshold argument
+        2) per-trace context window override
+        3) model-specific context limits from config file
+        4) global config threshold
         """
         results = []
         config = get_config()
         total_tokens = self.trace.stats.total_tokens or 0
 
-        # Use config threshold if not overridden
-        if threshold is None:
-            threshold = config.context_overflow_threshold
-
-        # Check for model-specific limits and use the more restrictive
         model = self.trace.env.model
-        if model:
-            # Common model context limits
-            model_limits = {
-                "gpt-4": 128000,
-                "gpt-4-turbo": 128000,
-                "gpt-4o": 128000,
-                "gpt-3.5-turbo": 16000,
-                "gpt-3.5-turbo-16k": 16000,
-                "claude-3": 200000,
-                "claude-3-opus": 200000,
-                "claude-3-sonnet": 200000,
-                "claude-3-haiku": 200000,
-                "claude-2": 100000,
-                "llama-3": 8000,
-                "llama-3.1": 128000,
-                "mistral": 32000,
-            }
-            # Find matching model limit (partial match)
-            model_lower = model.lower()
-            for model_name, limit in model_limits.items():
-                if model_name in model_lower:
-                    threshold = min(threshold, limit)
-                    break
+        trace_context_limit = self.trace.env.context_window_tokens
+        model_limit = self._get_model_context_limit(model, config.model_context_limits_path)
+        metadata: dict[str, object] = {
+            "config_threshold": config.context_overflow_threshold,
+            "model": model,
+        }
 
-        if total_tokens >= threshold:
-            # Find which events contributed most to token usage
+        if threshold is not None:
+            limit = threshold
+            metadata["active_limit_source"] = "explicit_threshold"
+        elif trace_context_limit:
+            limit = trace_context_limit
+            metadata["trace_context_window_tokens"] = trace_context_limit
+            metadata["active_limit_source"] = "trace_context_window_tokens"
+        elif model_limit:
+            limit = model_limit
+            metadata["model_context_limit"] = model_limit
+            metadata["active_limit_source"] = "model_context_limits_config"
+        else:
+            limit = config.context_overflow_threshold
+            metadata["active_limit_source"] = "config_context_overflow_threshold"
+
+        if total_tokens >= limit:
             token_events = [
                 (e.event_id, e.token_count)
                 for e in self.trace.events
@@ -383,19 +557,69 @@ class PatternDetector:
                 PatternResult(
                     pattern_type=PatternType.CONTEXT_OVERFLOW,
                     severity=Severity.CRITICAL,
-                    message=f"Token count ({total_tokens}) approaching/exceeding limit",
-                    evidence=f"Total tokens: {total_tokens}, threshold: {threshold}" +
-                             (f" (model: {model})" if model else ""),
+                    message=f"Token count ({total_tokens}) approaching/exceeding context limit",
+                    evidence=f"Total tokens: {total_tokens}, threshold: {limit}"
+                    + (f" (model: {model})" if model else ""),
                     event_ids=top_events,
                     metadata={
                         "total_tokens": total_tokens,
-                        "threshold": threshold,
-                        "model": model,
+                        "threshold": limit,
+                        **metadata,
                     },
                 )
             )
 
         return results
+
+    def _event_text(self, event: TraceEvent) -> str:
+        """Build a compact semantic representation for an event."""
+        parts = [event.name or ""]
+        if event.input is not None:
+            parts.append(str(event.input))
+        if event.output is not None:
+            parts.append(str(event.output))
+        return " ".join(parts)
+
+    def _tokenize_text(self, text: str) -> list[str]:
+        """Lightweight tokenizer for lexical overlap heuristics."""
+        return re.findall(r"[a-z0-9_]{3,}", text.lower())
+
+    @classmethod
+    def _get_model_context_limit(cls, model: str | None, configured_path: str = "") -> int | None:
+        """Get model context limit from JSON config with partial model-name matching."""
+        if not model:
+            return None
+
+        limits = cls._load_model_context_limits(configured_path)
+        if not limits:
+            return None
+
+        model_lower = model.lower()
+        for model_name in sorted(limits.keys(), key=len, reverse=True):
+            if model_name.lower() in model_lower:
+                return limits[model_name]
+        return None
+
+    @classmethod
+    @lru_cache(maxsize=4)
+    def _load_model_context_limits(cls, configured_path: str = "") -> dict[str, int]:
+        """Load model limits from configured path or bundled defaults."""
+        paths: list[Path] = []
+        if configured_path:
+            paths.append(Path(configured_path))
+        paths.append(Path(__file__).with_name("model_context_limits.json"))
+
+        for path in paths:
+            if not path.exists():
+                continue
+            try:
+                raw = json.loads(path.read_text())
+                parsed = {str(k): int(v) for k, v in raw.items() if isinstance(v, (int, float, str))}
+                if parsed:
+                    return parsed
+            except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                continue
+        return {}
 
     def find_errors(self) -> list[TraceEvent]:
         """Get all error events from the trace."""

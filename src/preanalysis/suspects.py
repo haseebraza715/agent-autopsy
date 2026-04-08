@@ -272,6 +272,132 @@ class RootCauseBuilder:
                 )
             )
 
+        # Hypothesis: Goal drift
+        goal_drift_signals = [s for s in signals if "goal_drift" in s.type.lower()]
+        if goal_drift_signals:
+            all_events = []
+            for s in goal_drift_signals:
+                all_events.extend(s.event_ids)
+
+            hypotheses.append(
+                Hypothesis(
+                    description="Agent drifted away from the original objective",
+                    confidence=0.70,
+                    supporting_events=list(set(all_events)),
+                    category="prompt",
+                    suggested_fixes=[
+                        "Reinforce task objective and success criteria in system prompt",
+                        "Add periodic goal-check checkpoints in execution flow",
+                        "Terminate or escalate when progress diverges from goal",
+                    ],
+                )
+            )
+
+        # Hypothesis: Stale context use
+        stale_context_signals = [s for s in signals if "stale_context" in s.type.lower()]
+        if stale_context_signals:
+            all_events = []
+            for s in stale_context_signals:
+                all_events.extend(s.event_ids)
+
+            hypotheses.append(
+                Hypothesis(
+                    description="Agent reused stale context instead of adapting to new tool outputs",
+                    confidence=0.72,
+                    supporting_events=list(set(all_events)),
+                    category="code",
+                    suggested_fixes=[
+                        "Invalidate cached assumptions when tool outputs change",
+                        "Recompute plan after each materially different tool result",
+                        "Compare current state against latest tool output before retries",
+                    ],
+                )
+            )
+
+        # Hypothesis: Token waste
+        token_waste_signals = [s for s in signals if "token_waste" in s.type.lower()]
+        if token_waste_signals:
+            all_events = []
+            for s in token_waste_signals:
+                all_events.extend(s.event_ids)
+
+            hypotheses.append(
+                Hypothesis(
+                    description="Excessive token spend on low-value reasoning turns",
+                    confidence=0.68,
+                    supporting_events=list(set(all_events)),
+                    category="ops",
+                    suggested_fixes=[
+                        "Add token budget and early-stop criteria",
+                        "Trim verbose intermediate messages and repeated context",
+                        "Use concise tool outputs with structured summaries",
+                    ],
+                )
+            )
+
+        # Hypothesis: Auth or permission failures
+        auth_signals = [s for s in signals if "auth_permission_failure" in s.type.lower()]
+        if auth_signals:
+            all_events = []
+            for s in auth_signals:
+                all_events.extend(s.event_ids)
+
+            hypotheses.append(
+                Hypothesis(
+                    description="Authentication or permission issues blocked tool execution",
+                    confidence=0.85,
+                    supporting_events=list(set(all_events)),
+                    category="ops",
+                    suggested_fixes=[
+                        "Validate credentials and scopes before execution",
+                        "Escalate after repeated 401/403 failures instead of retrying",
+                        "Add explicit auth error handling with user-facing guidance",
+                    ],
+                )
+            )
+
+        # Hypothesis: Timeout bottleneck
+        timeout_signals = [s for s in signals if "timeout_pattern" in s.type.lower()]
+        if timeout_signals:
+            all_events = []
+            for s in timeout_signals:
+                all_events.extend(s.event_ids)
+
+            hypotheses.append(
+                Hypothesis(
+                    description="External dependency latency caused timeout-driven failures",
+                    confidence=0.78,
+                    supporting_events=list(set(all_events)),
+                    category="ops",
+                    suggested_fixes=[
+                        "Set per-tool timeout and retry budgets",
+                        "Introduce fallback providers for slow dependencies",
+                        "Cache expensive calls and short-circuit known slow paths",
+                    ],
+                )
+            )
+
+        # Hypothesis: Redundant tool calls
+        redundant_signals = [s for s in signals if "redundant_tool_call" in s.type.lower()]
+        if redundant_signals:
+            all_events = []
+            for s in redundant_signals:
+                all_events.extend(s.event_ids)
+
+            hypotheses.append(
+                Hypothesis(
+                    description="Repeated tool requests indicate missing memory or memoization",
+                    confidence=0.67,
+                    supporting_events=list(set(all_events)),
+                    category="code",
+                    suggested_fixes=[
+                        "Memoize tool outputs by tool name and normalized input",
+                        "Check prior tool results before dispatching a duplicate call",
+                        "Store and reuse resolved answers within the agent state",
+                    ],
+                )
+            )
+
         # Hypothesis: Contract violations
         contract_signals = [s for s in signals if "contract" in s.type.lower()]
         if contract_signals:

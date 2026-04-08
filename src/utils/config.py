@@ -33,12 +33,19 @@ class Config:
     loop_threshold: int = 3
     context_overflow_threshold: int = 100000
     retry_window_seconds: int = 60  # Time window for retry storm detection
+    model_context_limits_path: str = ""
 
     # Embedding settings (for Phase 3)
     embedding_model: str = "all-MiniLM-L6-v2"
 
     # Logging
     log_level: str = "INFO"
+
+    # Analysis agent controls (Phase 2)
+    analysis_max_iterations: int = 6
+    analysis_max_report_revisions: int = 2
+    analysis_report_quality_threshold: float = 0.65
+    analysis_token_budget: int = 12000
 
     # Paths
     output_dir: Path = field(default_factory=lambda: Path("./reports"))
@@ -69,9 +76,14 @@ class Config:
             fallback_model=os.getenv("FALLBACK_MODEL", "meta-llama/llama-3.1-8b-instruct:free"),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             embedding_model=os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2"),
+            model_context_limits_path=os.getenv("MODEL_CONTEXT_LIMITS_PATH", ""),
             trace_enabled=os.getenv("TRACE_ENABLED", "1").lower() in ("1", "true", "yes"),
             trace_dir=Path(os.getenv("TRACE_DIR", "./traces")),
             trace_max_chars=int(os.getenv("TRACE_MAX_CHARS", "5000")),
+            analysis_max_iterations=int(os.getenv("ANALYSIS_MAX_ITERATIONS", "6")),
+            analysis_max_report_revisions=int(os.getenv("ANALYSIS_MAX_REPORT_REVISIONS", "2")),
+            analysis_report_quality_threshold=float(os.getenv("ANALYSIS_REPORT_QUALITY_THRESHOLD", "0.65")),
+            analysis_token_budget=int(os.getenv("ANALYSIS_TOKEN_BUDGET", "12000")),
         )
 
     def get_model(self, override: str | None = None) -> str:
@@ -90,7 +102,14 @@ class Config:
             "timeout_seconds": self.timeout_seconds,
             "max_tokens": self.max_tokens,
             "loop_threshold": self.loop_threshold,
+            "context_overflow_threshold": self.context_overflow_threshold,
+            "retry_window_seconds": self.retry_window_seconds,
+            "model_context_limits_path": self.model_context_limits_path,
             "log_level": self.log_level,
+            "analysis_max_iterations": self.analysis_max_iterations,
+            "analysis_max_report_revisions": self.analysis_max_report_revisions,
+            "analysis_report_quality_threshold": self.analysis_report_quality_threshold,
+            "analysis_token_budget": self.analysis_token_budget,
             "has_api_key": bool(self.openrouter_api_key),
             "trace_enabled": self.trace_enabled,
             "trace_dir": str(self.trace_dir),
