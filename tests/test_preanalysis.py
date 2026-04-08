@@ -1,6 +1,9 @@
 """Tests for the pre-analysis module."""
 
 from datetime import datetime, timedelta
+import json
+import tempfile
+from pathlib import Path
 
 from src.preanalysis import (
     PatternDetector,
@@ -9,6 +12,7 @@ from src.preanalysis import (
     ContractValidator,
     RootCauseBuilder,
 )
+from src.utils.config import get_config
 from src.schema import (
     Trace,
     TraceEvent,
@@ -16,6 +20,7 @@ from src.schema import (
     EventType,
     EnvironmentInfo,
     EventError,
+    TaskContext,
 )
 
 
@@ -24,6 +29,8 @@ def _build_trace(
     *,
     tools_available: list[str] | None = None,
     status: TraceStatus = TraceStatus.SUCCESS,
+    model: str = "gpt-4",
+    context_window_tokens: int | None = None,
 ) -> Trace:
     """Create a normalized trace for deterministic unit tests."""
     trace = Trace(
@@ -33,8 +40,9 @@ def _build_trace(
         status=status,
         env=EnvironmentInfo(
             agent_framework="test",
-            model="gpt-4",
+            model=model,
             tools_available=tools_available or [],
+            context_window_tokens=context_window_tokens,
         ),
         events=events,
     )
@@ -157,6 +165,133 @@ class TestPatternDetector:
         all_patterns = detector.detect_all()
 
         assert all_patterns == []
+
+    def test_detect_auth_permission_failures(self):
+        events = [
+            TraceEvent(event_id=0, type=EventType.ERROR, error=EventError(message="401 unauthorized")),
+            TraceEvent(event_id=1, type=EventType.ERROR, error=EventError(message="403 forbidden")),
+        ]
+        detector = PatternDetector(_build_trace(events, status=TraceStatus.FAILED))
+
+        patterns = detector.detect_auth_permission_failures()
+
+        assert len(patterns) == 1
+        assert patterns[0].pattern_type == PatternType.AUTH_PERMISSION_FAILURE
+        assert patterns[0].event_ids == [0, 1]
+
+    def test_auth_detector_ignores_plain_numeric_event_text(self):
+        events = [
+            TraceEvent(event_id=401, type=EventType.MESSAGE, output="event-401"),
+            TraceEvent(event_id=403, type=EventType.MESSAGE, output="event-403"),
+        ]
+        detector = PatternDetector(_build_trace(events))
+        assert detector.detect_auth_permission_failures() == []
+
+    def test_detect_timeout_patterns(self):
+        events = [
+            TraceEvent(
+                event_id=0,
+                type=EventType.TOOL_CALL,
+                name="search",
+                latency_ms=125000,
+                error=EventError(message="request timeout"),
+            ),
+            TraceEvent(
+                event_id=1,
+                type=EventType.TOOL_CALL,
+                name="search",
+                latency_ms=130000,
+            ),
+        ]
+        detector = PatternDetector(_build_trace(events, tools_available=["search"], status=TraceStatus.FAILED))
+        patterns = detector.detect_timeout_patterns()
+        assert len(patterns) == 1
+        assert patterns[0].pattern_type == PatternType.TIMEOUT_PATTERN
+        assert set(patterns[0].event_ids) == {0, 1}
+
+    def test_detect_redundant_tool_calls(self):
+        events = [
+            TraceEvent(event_id=0, type=EventType.TOOL_CALL, name="search", input={"q": "budget"}, output={"ok": 1}),
+            TraceEvent(event_id=1, type=EventType.MESSAGE, output="thinking"),
+            TraceEvent(event_id=2, type=EventType.TOOL_CALL, name="search", input={"q": "budget"}, output={"ok": 2}),
+        ]
+        detector = PatternDetector(_build_trace(events, tools_available=["search"]))
+        patterns = detector.detect_redundant_tool_calls()
+        assert len(patterns) == 1
+        assert patterns[0].pattern_type == PatternType.REDUNDANT_TOOL_CALL
+        assert patterns[0].event_ids == [0, 2]
+
+    def test_detect_goal_drift(self):
+        events = [
+            TraceEvent(event_id=0, type=EventType.LLM_CALL, input="build quarterly budget", output="planning budget"),
+            TraceEvent(event_id=1, type=EventType.TOOL_CALL, name="search", input="quarterly budget template", output="data"),
+            TraceEvent(event_id=2, type=EventType.DECISION, input="budget plan"),
+            TraceEvent(event_id=3, type=EventType.LLM_CALL, input="favorite movies list", output="movie ranking"),
+            TraceEvent(event_id=4, type=EventType.TOOL_CALL, name="search", input="movie awards", output="awards"),
+            TraceEvent(event_id=5, type=EventType.DECISION, input="movie summary"),
+        ]
+        trace = _build_trace(events, tools_available=["search"])
+        trace.task = TaskContext(goal="Build a quarterly budget plan")
+        detector = PatternDetector(trace)
+
+        patterns = detector.detect_goal_drift()
+
+        assert len(patterns) == 1
+        assert patterns[0].pattern_type == PatternType.GOAL_DRIFT
+        assert len(patterns[0].event_ids) >= 3
+
+    def test_detect_stale_context(self):
+        events = [
+            TraceEvent(event_id=0, type=EventType.TOOL_CALL, name="search", input={"q": "weather"}, output={"temp": 22}),
+            TraceEvent(event_id=1, type=EventType.TOOL_CALL, name="search", input={"q": "weather"}, output={"temp": 24}),
+            TraceEvent(event_id=2, type=EventType.TOOL_CALL, name="search", input={"q": "weather"}, output={"temp": 25}),
+        ]
+        detector = PatternDetector(_build_trace(events, tools_available=["search"]))
+        patterns = detector.detect_stale_context()
+        assert len(patterns) == 1
+        assert patterns[0].pattern_type == PatternType.STALE_CONTEXT
+
+    def test_detect_token_waste(self):
+        events = [
+            TraceEvent(event_id=0, type=EventType.LLM_CALL, token_count=900, output="long reasoning"),
+            TraceEvent(event_id=1, type=EventType.LLM_CALL, token_count=800, output="more reasoning"),
+            TraceEvent(event_id=2, type=EventType.LLM_CALL, token_count=700, output="still reasoning"),
+            TraceEvent(event_id=3, type=EventType.MESSAGE, output="no progress"),
+        ]
+        detector = PatternDetector(_build_trace(events))
+        patterns = detector.detect_token_waste()
+        assert len(patterns) == 1
+        assert patterns[0].pattern_type == PatternType.TOKEN_WASTE
+        assert patterns[0].metadata["total_llm_tokens"] == 2400
+
+    def test_context_overflow_uses_trace_context_window_first(self):
+        events = [
+            TraceEvent(event_id=0, type=EventType.LLM_CALL, token_count=2500),
+        ]
+        detector = PatternDetector(_build_trace(events, context_window_tokens=2000))
+        patterns = detector.detect_context_overflow()
+        assert len(patterns) == 1
+        assert patterns[0].metadata["threshold"] == 2000
+        assert patterns[0].metadata["active_limit_source"] == "trace_context_window_tokens"
+
+    def test_context_overflow_uses_external_model_limit_file(self):
+        events = [TraceEvent(event_id=0, type=EventType.LLM_CALL, token_count=5000)]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            limits_path = Path(tmpdir) / "limits.json"
+            limits_path.write_text(json.dumps({"gpt-4": 4000}))
+            cfg = get_config()
+            original_path = cfg.model_context_limits_path
+            cfg.model_context_limits_path = str(limits_path)
+            PatternDetector._load_model_context_limits.cache_clear()
+
+            detector = PatternDetector(_build_trace(events, model="gpt-4"))
+            patterns = detector.detect_context_overflow()
+            cfg.model_context_limits_path = original_path
+            PatternDetector._load_model_context_limits.cache_clear()
+
+        assert len(patterns) == 1
+        assert patterns[0].metadata["threshold"] == 4000
+        assert patterns[0].metadata["active_limit_source"] == "model_context_limits_config"
 
 
 class TestContractValidator:
