@@ -24,6 +24,7 @@ class AutopsyReport:
     root_cause_chain: list[str]
     fix_recommendations: dict[str, list[str]]
     confidence: float
+    health_score: int
     evidence_events: list[int]
     raw_report: str
     preanalysis: dict = field(default_factory=dict)
@@ -52,6 +53,7 @@ class ReportGenerator:
             root_cause_chain=self._extract_root_causes(),
             fix_recommendations=self._extract_fixes(),
             confidence=self._extract_confidence(),
+            health_score=self._calculate_health_score(),
             evidence_events=self._extract_evidence_events(),
             raw_report=self.result.report,
             preanalysis=self.result.preanalysis,
@@ -67,11 +69,24 @@ class ReportGenerator:
             if end == -1:
                 end = len(report)
             return report[start:end].replace("## Summary", "").strip()
-        return f"Analysis of run {self.trace.run_id} - Status: {self.trace.status.value}"
+
+        signals = self.result.preanalysis.get("signals", [])
+        if not signals:
+            return f"Run {self.trace.run_id} completed with no high-risk deterministic signals."
+
+        first_signal = signals[0]
+        signal_type = str(first_signal.get("type", "issue")).replace("_", " ")
+        impacted = len(set(self._extract_evidence_events()))
+        total = max(1, len(self.trace.events))
+        return (
+            f"Run {self.trace.run_id} shows a primary '{signal_type}' failure pattern. "
+            f"{impacted}/{total} events were directly implicated by deterministic evidence."
+        )
 
     def _extract_timeline(self) -> list[str]:
         """Extract timeline from report or generate from trace."""
         timeline = []
+        evidence = set(self._extract_evidence_events())
 
         # Try to extract from report
         report = self.result.report
@@ -79,18 +94,27 @@ class ReportGenerator:
             # Parse timeline section
             pass
 
-        # Generate basic timeline from trace
+        # Generate deterministic timeline from trace
         if not timeline:
-            for event in self.trace.events[:10]:  # First 10 events
-                desc = f"Event {event.event_id}: {event.type.value}"
-                if event.name:
-                    desc += f" - {event.name}"
+            max_events = 20
+            for event in self.trace.events[:max_events]:
+                marker = "!"
                 if event.is_error():
-                    desc += " [ERROR]"
-                timeline.append(desc)
+                    marker = "X"
+                elif event.event_id in evidence:
+                    marker = "!"
+                elif event.type.value in {"tool_call", "decision"}:
+                    marker = ">"
+                else:
+                    marker = "."
 
-            if len(self.trace.events) > 10:
-                timeline.append(f"... ({len(self.trace.events) - 10} more events)")
+                label = event.type.value
+                if event.name:
+                    label += f" ({event.name})"
+                timeline.append(f"[{event.event_id:03d}] {marker} {label}")
+
+            if len(self.trace.events) > max_events:
+                timeline.append(f"... ({len(self.trace.events) - max_events} more events)")
 
         return timeline
 
@@ -124,9 +148,36 @@ class ReportGenerator:
             else:
                 fixes["code"].extend(suggested)
 
-        # Deduplicate
+        # Add pattern-based deterministic templates
+        pattern_templates = {
+            "infinite_loop": ("code", "Add `max_iterations` guard and explicit terminal transition in router logic."),
+            "retry_storm": ("ops", "Limit retries and apply exponential backoff with jitter for repeated failures."),
+            "context_overflow": ("ops", "Summarize or trim long context before each LLM call to stay under limit."),
+            "hallucinated_tool": ("prompt", "Constrain tool use to declared tool names and validate before dispatch."),
+            "empty_response": ("tool", "Validate tool/LLM outputs and retry with bounded fallback on empty results."),
+            "error_cascade": ("code", "Introduce localized error handling to stop one failure from propagating."),
+            "goal_drift": ("prompt", "Re-anchor every few turns to the original goal and success criteria."),
+            "stale_context": ("code", "Invalidate stale assumptions after each materially changed tool result."),
+            "token_waste": ("ops", "Track token budget and stop low-value reasoning loops early."),
+            "auth_permission_failure": ("ops", "Escalate repeated 401/403 failures and verify credential scopes."),
+            "timeout_pattern": ("ops", "Set strict timeouts and fallback behavior for slow external dependencies."),
+            "redundant_tool_call": ("code", "Memoize tool calls by normalized input to avoid duplicate work."),
+        }
+        for signal in self.result.preanalysis.get("signals", []):
+            stype = signal.get("type")
+            if stype in pattern_templates:
+                category, recommendation = pattern_templates[stype]
+                fixes[category].append(recommendation)
+
+        # Deduplicate while preserving order
         for category in fixes:
-            fixes[category] = list(set(fixes[category]))
+            deduped: list[str] = []
+            seen: set[str] = set()
+            for fix in fixes[category]:
+                if fix not in seen:
+                    seen.add(fix)
+                    deduped.append(fix)
+            fixes[category] = deduped
 
         return fixes
 
@@ -153,6 +204,28 @@ class ReportGenerator:
 
         return sorted(list(events))
 
+    def _calculate_health_score(self) -> int:
+        """Compute 0-100 health score from deterministic signals."""
+        score = 100
+        severity_penalties = {
+            "critical": 25,
+            "high": 15,
+            "medium": 8,
+            "low": 3,
+        }
+
+        signals = self.result.preanalysis.get("signals", [])
+        for signal in signals:
+            severity = str(signal.get("severity", "low")).lower()
+            score -= severity_penalties.get(severity, 5)
+
+        impacted_events = set(self._extract_evidence_events())
+        total_events = max(1, len(self.trace.events))
+        coverage_penalty = int((len(impacted_events) / total_events) * 20)
+        score -= coverage_penalty
+
+        return max(0, min(100, score))
+
     def to_markdown(self) -> str:
         """Generate markdown report."""
         report = self.generate()
@@ -167,6 +240,7 @@ class ReportGenerator:
             "## Summary",
             "",
             f"- **Status:** {report.status}",
+            f"- **Health Score:** {report.health_score}/100",
             f"- **Confidence:** {report.confidence:.0%}",
             "",
             report.summary,
@@ -264,6 +338,7 @@ class ReportGenerator:
             "root_cause_chain": report.root_cause_chain,
             "fix_recommendations": report.fix_recommendations,
             "confidence": report.confidence,
+            "health_score": report.health_score,
             "evidence_events": report.evidence_events,
             "trace_summary": report.trace_summary,
             "preanalysis": report.preanalysis,
