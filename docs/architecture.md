@@ -21,7 +21,7 @@ For detailed system flow, see [System Flow Diagram](../diagrams/system_flow.mmd)
 
 #### Ingestion Layer
 - **Format Detection**: Detects trace format (LangGraph, LangChain, OpenTelemetry, Generic JSON)
-- **Parsers**: Dedicated parser for LangGraph plus a generic fallback (LangChain/OpenTelemetry currently parsed generically)
+- **Parsers**: Dedicated parsers for LangGraph/LangChain/OpenTelemetry plus a generic fallback for unsupported structures
 - **Normalization**: Converts all formats to unified schema
 
 #### Pre-Analysis Engine

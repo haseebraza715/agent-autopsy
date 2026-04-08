@@ -5,14 +5,14 @@ Agent Autopsy supports multiple trace formats with automatic detection and norma
 ## Format Detection
 
 The system automatically detects trace format based on structure and field presence.
-Only LangGraph and Generic JSON have dedicated parsers; LangChain/OpenTelemetry are detected but currently parsed via the generic fallback.
+LangGraph, LangChain, and OpenTelemetry each have dedicated parsers. When an input shape is only partially compatible, the parser falls back to generic handling for unknown fields.
 
 1. **LangGraph**: Detects `thread_id`, `checkpoint`, or `runs` fields
 2. **LangChain**: Detects `run_type` or `callbacks` fields  
 3. **OpenTelemetry**: Detects `resourceSpans` or `traceId` fields
 4. **Generic**: Fallback for any JSON structure
 
-Format detection happens automatically when parsing a trace file. LangGraph has a dedicated parser; other detected formats fall back to the generic parser.
+Format detection happens automatically when parsing a trace file. If a dedicated parser cannot confidently map the payload, the system falls back to the generic parser.
 
 ## Supported Formats
 
@@ -44,7 +44,7 @@ Detected by presence of:
 - `run_type` field
 - `callbacks` array
 - LangChain-specific event structure
-Parsing currently falls back to the generic parser (no dedicated LangChain parser yet).
+Dedicated parser available; unsupported/unknown structures are handled by the generic fallback path.
 
 **Example structure:**
 ```json
@@ -61,7 +61,7 @@ Detected by presence of:
 - `resourceSpans` array
 - `traceId` field
 - OTEL span structure
-Parsing currently falls back to the generic parser (no dedicated OpenTelemetry parser yet).
+Dedicated parser available; unsupported/unknown structures are handled by the generic fallback path.
 
 **Example structure:**
 ```json

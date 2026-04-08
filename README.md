@@ -39,7 +39,7 @@ python -m src.cli analyze trace.json
 - **Web GUI** — Interactive Streamlit interface for trace analysis
 - **Pattern Detection** — Loops, error cascades, hallucinated tools, context overflow
 - **LLM Analysis** — AI-powered root cause analysis with event citations
-- **Multi-Format** — LangGraph, LangChain, OpenTelemetry, generic JSON
+- **Multi-Format** — LangGraph and generic JSON, plus experimental LangChain/OpenTelemetry parsing with graceful fallback
 - **Reports** — Structured markdown reports with fix recommendations
 - **Trace Capture** — Automatic trace collection from LangChain/LangGraph agents
 
