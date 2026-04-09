@@ -15,26 +15,53 @@
 
 ---
 
-## Quick Start
+## Overview
 
-### Web App (Recommended)
+Agent Autopsy helps debug AI agent runs by turning raw traces into actionable failure analysis.
 
-**[Use the live app](https://autopsyagent.streamlit.app/)**
+Core capabilities:
 
-Or run locally:
+- Deterministic pattern detection (loops, retries, context/auth/timeout issues, drift)
+- Optional LLM-assisted root cause analysis with cited evidence
+- CLI + Streamlit UI + MCP server workflows
+- Multi-agent trace support, comparison, benchmark mode, and live monitoring
+- Extensible plugin interfaces for custom parsers/detectors/reports/fixes
+
+## Setup
+
+Install dependencies:
+
 ```bash
 pip install -r requirements.txt
+```
+
+## Usage
+
+### Web App
+
+```bash
 streamlit run app.py
 ```
 
 ### CLI
+
 ```bash
 python -m src.cli analyze trace.json
 ```
 
 ### MCP Server
+
 ```bash
 python -m src.mcp --transport stdio
+```
+
+### Common Commands
+
+```bash
+python -m src.cli summary trace.json
+python -m src.cli compare baseline.json candidate.json
+python -m src.cli benchmark --traces-dir ./traces
+python -m src.cli fixes trace.json
 ```
 
 ---
@@ -101,7 +128,8 @@ end_trace(trace_handler)
 
 ## Documentation
 
-- [Architecture](docs/architecture.md) — System overview
+- [Architecture](ARCHITECTURE.md) — System overview with Mermaid diagram
+- [Architecture (Detailed)](docs/architecture.md) — Extended component details
 - [Quick Start](docs/quickstart.md) — Installation guide
 - [Patterns](docs/patterns.md) — Detected failure patterns
 - [MCP Server](docs/mcp.md) — MCP tools, resources, prompts, and transports
