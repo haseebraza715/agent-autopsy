@@ -438,14 +438,10 @@ def autopsy_run(
             reports_dir.mkdir(parents=True, exist_ok=True)
             output = reports_dir / f"{trace_file.stem}.md"
 
-        # Generate the report
+        # Generate and save the report
         report_gen = ReportGenerator(trace, result)
-        report_content = report_gen.generate()
-
-        # Write report
-        output.parent.mkdir(parents=True, exist_ok=True)
-        with open(output, "w") as f:
-            f.write(report_content)
+        output_format = "json" if output.suffix.lower() == ".json" else "markdown"
+        output = report_gen.save(output, format=output_format)
 
         progress.update(task, description="Report generated")
 
