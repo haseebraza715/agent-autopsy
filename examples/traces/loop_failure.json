@@ -1,0 +1,128 @@
+{
+  "run_id": "run_loop_001",
+  "status": "failed",
+  "start_time": "2024-01-15T10:00:00Z",
+  "end_time": "2024-01-15T10:05:00Z",
+  "model": "gpt-4",
+  "tools": ["web_search", "calculator", "file_reader"],
+  "input": {
+    "goal": "Find the current weather in New York and calculate the temperature in Fahrenheit"
+  },
+  "events": [
+    {
+      "type": "message",
+      "role": "system",
+      "content": "You are a helpful assistant with access to tools.",
+      "timestamp": "2024-01-15T10:00:00Z"
+    },
+    {
+      "type": "message",
+      "role": "user",
+      "content": "What's the weather in New York? Convert to Fahrenheit.",
+      "timestamp": "2024-01-15T10:00:01Z"
+    },
+    {
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "What's the weather in New York?",
+      "output": "I'll search for the weather.",
+      "token_count": 150,
+      "latency_ms": 500,
+      "timestamp": "2024-01-15T10:00:02Z"
+    },
+    {
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {"query": "weather New York"},
+      "output": null,
+      "latency_ms": 2000,
+      "timestamp": "2024-01-15T10:00:04Z",
+      "error": {
+        "message": "Connection timeout",
+        "type": "TimeoutError"
+      }
+    },
+    {
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {"query": "weather New York"},
+      "output": null,
+      "latency_ms": 2000,
+      "timestamp": "2024-01-15T10:00:06Z",
+      "error": {
+        "message": "Connection timeout",
+        "type": "TimeoutError"
+      }
+    },
+    {
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {"query": "weather New York"},
+      "output": null,
+      "latency_ms": 2000,
+      "timestamp": "2024-01-15T10:00:08Z",
+      "error": {
+        "message": "Connection timeout",
+        "type": "TimeoutError"
+      }
+    },
+    {
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {"query": "weather New York"},
+      "output": null,
+      "latency_ms": 2000,
+      "timestamp": "2024-01-15T10:00:10Z",
+      "error": {
+        "message": "Connection timeout",
+        "type": "TimeoutError"
+      }
+    },
+    {
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {"query": "weather New York"},
+      "output": null,
+      "latency_ms": 2000,
+      "timestamp": "2024-01-15T10:00:12Z",
+      "error": {
+        "message": "Connection timeout",
+        "type": "TimeoutError"
+      }
+    },
+    {
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {"query": "weather New York"},
+      "output": null,
+      "latency_ms": 2000,
+      "timestamp": "2024-01-15T10:00:14Z",
+      "error": {
+        "message": "Connection timeout",
+        "type": "TimeoutError"
+      }
+    },
+    {
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {"query": "weather New York"},
+      "output": null,
+      "latency_ms": 2000,
+      "timestamp": "2024-01-15T10:00:16Z",
+      "error": {
+        "message": "Connection timeout",
+        "type": "TimeoutError"
+      }
+    },
+    {
+      "type": "error",
+      "error": {
+        "message": "Maximum retries exceeded",
+        "type": "MaxRetriesError"
+      },
+      "timestamp": "2024-01-15T10:00:18Z"
+    }
+  ],
+  "error": "Maximum retries exceeded for web_search tool",
+  "final_output": null
+}
