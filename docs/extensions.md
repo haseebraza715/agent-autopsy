@@ -58,3 +58,17 @@ Checklist:
 - Return structured JSON payloads.
 - Keep tool behavior deterministic where possible.
 - Validate failure mode and error messages.
+
+## Build Plugins (Phase 5)
+
+Use the plugin interfaces in `src/plugins/base.py` to extend Agent Autopsy without editing core modules.
+
+Supported plugin categories:
+
+- Parsers (`ParserPlugin`)
+- Pattern detectors (`PatternDetectorPlugin`)
+- Report templates (`ReportTemplatePlugin`)
+- Fix generators (`FixGeneratorPlugin`)
+- Visualizations (`VisualizationPlugin`)
+
+For full setup and examples, see [Plugin System](plugins.md).

@@ -48,6 +48,8 @@ python -m src.mcp --transport stdio
 - **Reports** — Structured markdown reports with fix recommendations
 - **Trace Capture** — Automatic trace collection from LangChain/LangGraph agents
 - **MCP Integration** — Exposes analysis tools/resources/prompts for MCP-compatible clients
+- **Advanced Ops** — Trace comparison, benchmark mode, live monitoring alerts, and generated fix suggestions
+- **Extensible Plugins** — Custom parsers, detectors, report templates, fix generators, and visualizations
 
 ---
 
@@ -104,6 +106,7 @@ end_trace(trace_handler)
 - [Patterns](docs/patterns.md) — Detected failure patterns
 - [MCP Server](docs/mcp.md) — MCP tools, resources, prompts, and transports
 - [Extension Guide](docs/extensions.md) — Add parsers, detectors, reports, and MCP capabilities
+- [Plugin System](docs/plugins.md) — Build and register custom extensions
 - [Demo Playbook](docs/demo.md) — 5-minute project walkthrough
 - [Examples](examples/README.md) — Curated sample traces and expected outcomes
 
