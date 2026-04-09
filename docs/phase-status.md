@@ -102,7 +102,8 @@ Goal: Build contributor and adoption infrastructure.
 - [x] Add `CONTRIBUTING.md`, issue templates, PR template
 - [x] Add `CHANGELOG.md` and `CODE_OF_CONDUCT.md`
 - [x] Overhaul user-facing docs and extension guides
-- [x] Package and publish to PyPI with optional dependency groups
+- [x] Package project for PyPI with optional dependency groups
+- [ ] Publish to PyPI (pending maintainer credentials/release token)
 - [x] Add curated example traces and walkthroughs
 - [x] Improve project visibility and demo assets
 
@@ -114,6 +115,8 @@ Goal: Build contributor and adoption infrastructure.
   - [x] Issue templates (bug + feature request)
   - [x] PR template
 - [x] Added packaging metadata and optional dependency groups in `pyproject.toml`
+- [x] Verified editable install and console entrypoints from packaging metadata
+- [ ] PyPI upload not executed in this phase (credentials not available in local environment)
 - [x] Added docs:
   - [x] MCP interface guide (`docs/mcp.md`)
   - [x] Extension guide (`docs/extensions.md`)
