@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from src.schema import Trace
+from src.plugins import get_plugin_manager
 
 
 class TraceParser(ABC):
@@ -29,6 +30,14 @@ class TraceParser(ABC):
     @classmethod
     def detect_format(cls, data: dict[str, Any]) -> str:
         """Detect the format of the trace data."""
+        plugin_manager = get_plugin_manager()
+        for plugin in plugin_manager.parsers:
+            try:
+                if plugin.can_parse(data):
+                    return f"plugin:{plugin.name}"
+            except Exception:
+                continue
+
         # OpenTelemetry detection (check first to avoid false positives)
         if "resourceSpans" in data or "traceId" in data:
             return "opentelemetry"
@@ -101,7 +110,16 @@ def parse_trace_data(data: dict[str, Any]) -> Trace:
     if not isinstance(data, dict):
         raise TypeError("Trace data must be a dictionary")
 
-    # Detect format and select parser
+    # First let parser plugins try.
+    plugin_manager = get_plugin_manager()
+    for plugin in plugin_manager.parsers:
+        try:
+            if plugin.can_parse(data):
+                return plugin.parse(data)
+        except Exception:
+            continue
+
+    # Detect built-in format and select parser
     format_type = TraceParser.detect_format(data)
 
     parsers: dict[str, TraceParser] = {
