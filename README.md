@@ -42,7 +42,7 @@ python -m src.mcp --transport stdio
 ## Features
 
 - **Web GUI** — Interactive Streamlit interface for trace analysis
-- **Pattern Detection** — Loops, error cascades, hallucinated tools, context overflow
+- **Pattern Detection** — Loops, retries, auth/timeouts, drift, stale context, token waste, and more
 - **LLM Analysis** — AI-powered root cause analysis with event citations
 - **Multi-Format** — LangGraph and generic JSON, plus experimental LangChain/OpenTelemetry parsing with graceful fallback
 - **Reports** — Structured markdown reports with fix recommendations
@@ -103,12 +103,15 @@ end_trace(trace_handler)
 - [Quick Start](docs/quickstart.md) — Installation guide
 - [Patterns](docs/patterns.md) — Detected failure patterns
 - [MCP Server](docs/mcp.md) — MCP tools, resources, prompts, and transports
+- [Extension Guide](docs/extensions.md) — Add parsers, detectors, reports, and MCP capabilities
+- [Demo Playbook](docs/demo.md) — 5-minute project walkthrough
+- [Examples](examples/README.md) — Curated sample traces and expected outcomes
 
 ---
 
 ## Contributing
 
-PRs welcome! Feel free to submit issues or spread the word.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
