@@ -11,7 +11,7 @@ This file tracks roadmap execution from `docs/improvement-plan.md`.
 | Phase 1 - Clean Up What We Have | Completed | Implemented, tested, and committed |
 | Phase 2 - Deepen the Core | Completed | Implemented, tested, and committed |
 | Phase 3 - MCP Server Integration | Completed | Implemented, tested, and committed |
-| Phase 4 - Open Source Growth | Not Started | Pending |
+| Phase 4 - Open Source Growth | Completed | Implemented, tested, and committed |
 | Phase 5 - Advanced Features | Not Started | Pending |
 
 ## Phase 1 - Clean Up What We Have
@@ -94,17 +94,33 @@ Goal: Expose Agent Autopsy as MCP tools/resources/prompts.
 
 ## Phase 4 - Open Source Growth
 
-Status: Not Started
+Status: Completed
 Goal: Build contributor and adoption infrastructure.
 
 ### TODO
 
-- [ ] Add `CONTRIBUTING.md`, issue templates, PR template
-- [ ] Add `CHANGELOG.md` and `CODE_OF_CONDUCT.md`
-- [ ] Overhaul user-facing docs and extension guides
-- [ ] Package and publish to PyPI with optional dependency groups
-- [ ] Add curated example traces and walkthroughs
-- [ ] Improve project visibility and demo assets
+- [x] Add `CONTRIBUTING.md`, issue templates, PR template
+- [x] Add `CHANGELOG.md` and `CODE_OF_CONDUCT.md`
+- [x] Overhaul user-facing docs and extension guides
+- [x] Package and publish to PyPI with optional dependency groups
+- [x] Add curated example traces and walkthroughs
+- [x] Improve project visibility and demo assets
+
+### Completed in this phase
+
+- [x] Added contributor onboarding docs (`CONTRIBUTING.md`) and community standards (`CODE_OF_CONDUCT.md`)
+- [x] Added structured change tracking (`CHANGELOG.md`)
+- [x] Added GitHub contribution workflows:
+  - [x] Issue templates (bug + feature request)
+  - [x] PR template
+- [x] Added packaging metadata and optional dependency groups in `pyproject.toml`
+- [x] Added docs:
+  - [x] MCP interface guide (`docs/mcp.md`)
+  - [x] Extension guide (`docs/extensions.md`)
+  - [x] Demo playbook (`docs/demo.md`)
+  - [x] Updated quickstart/architecture/patterns/analysis docs
+- [x] Added curated example traces and walkthroughs in `examples/`
+- [x] Updated README navigation and contribution entry points
 
 ## Phase 5 - Advanced Features
 
@@ -127,3 +143,4 @@ Goal: Add intelligent and extensible debugging capabilities.
 - 2026-04-08: Completed Phase 1 implementation (dependency cleanup, docs honesty, stronger tests, error handling/logging, CI workflow).
 - 2026-04-08: Completed Phase 2 implementation (agent quality gate, parser depth, advanced pattern detectors, deterministic report improvements, configurable model limits).
 - 2026-04-09: Completed Phase 3 implementation (MCP server tools/resources/prompts, service layer, transports, docs, and tests).
+- 2026-04-09: Completed Phase 4 implementation (community docs/templates, packaging metadata, extension guides, curated examples, and demo assets).
