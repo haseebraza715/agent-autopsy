@@ -90,6 +90,20 @@ class TestGenericParser:
         assert trace.status == TraceStatus.SUCCESS
         assert len(trace.events) == 2
 
+    def test_parse_agent_ids_from_generic_fields(self):
+        parser = GenericJSONParser()
+        data = {
+            "run_id": "agent-generic-1",
+            "status": "success",
+            "events": [
+                {"type": "message", "content": "hello", "agent": "planner"},
+                {"type": "tool", "name": "search", "input": {"q": "x"}, "agent_id": "executor"},
+            ],
+        }
+        trace = parser.parse(data)
+
+        assert [event.agent_id for event in trace.events] == ["planner", "executor"]
+
 
 class TestTraceNormalizer:
     """Tests for trace normalization."""
@@ -145,6 +159,8 @@ class TestTraceNormalizer:
         assert summary["total_events"] == 11
         assert summary["tool_calls"] == 7
         assert summary["errors"] >= 1
+        assert "agent_count" in summary
+        assert "agents" in summary
 
 
 class TestAdditionalFormatParsers:
@@ -356,3 +372,32 @@ class TestAdditionalFormatParsers:
         assert child.type == EventType.TOOL_CALL
         assert child.token_count == 77
         assert child.error is not None
+
+    def test_parse_opentelemetry_agent_id_attributes(self):
+        parser = OpenTelemetryParser()
+        data = {
+            "resourceSpans": [
+                {
+                    "scopeSpans": [
+                        {
+                            "spans": [
+                                {
+                                    "traceId": "trace-otel-agent",
+                                    "spanId": "span-1",
+                                    "name": "llm.chat.completion",
+                                    "startTimeUnixNano": 1704067200000000000,
+                                    "endTimeUnixNano": 1704067200100000000,
+                                    "attributes": [
+                                        {"key": "agent.id", "value": {"stringValue": "planner"}},
+                                        {"key": "gen_ai.response", "value": {"stringValue": "ok"}},
+                                    ],
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+        trace = parser.parse(data)
+
+        assert trace.events[0].agent_id == "planner"

@@ -329,6 +329,13 @@ class GenericJSONParser(TraceParser):
                 event_id=event_id,
                 parent_event_id=self._safe_parent_event_id(raw.get("parent_id") or raw.get("parentId")),
                 span_id=raw.get("span_id") or raw.get("spanId"),
+                agent_id=(
+                    raw.get("agent_id")
+                    or raw.get("agentId")
+                    or raw.get("agent")
+                    or raw.get("sender")
+                    or raw.get("participant")
+                ),
                 type=event_type,
                 role=role,
                 name=raw.get("name") or raw.get("tool") or raw.get("function") or raw.get("node"),

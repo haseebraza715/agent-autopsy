@@ -50,6 +50,7 @@ class AnalysisToolkit:
         return {
             "event_id": event.event_id,
             "type": event.type.value,
+            "agent_id": event.agent_id,
             "role": event.role.value if event.role else None,
             "name": event.name,
             "input": event.input,
@@ -289,6 +290,7 @@ class AnalysisToolkit:
         return {
             "event_id": event.event_id,
             "type": event.type.value,
+            "agent_id": event.agent_id,
             "role": event.role.value if event.role else None,
             "name": event.name,
             "input": event.input,
