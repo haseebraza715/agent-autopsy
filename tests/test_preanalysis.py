@@ -264,6 +264,20 @@ class TestPatternDetector:
         assert patterns[0].pattern_type == PatternType.TOKEN_WASTE
         assert patterns[0].metadata["total_llm_tokens"] == 2400
 
+    def test_detect_inter_agent_failures(self):
+        events = [
+            TraceEvent(event_id=0, type=EventType.ERROR, agent_id="planner", error=EventError(message="bad handoff")),
+            TraceEvent(event_id=1, type=EventType.MESSAGE, agent_id="planner", output="retry"),
+            TraceEvent(event_id=2, type=EventType.ERROR, agent_id="executor", error=EventError(message="invalid input")),
+        ]
+        detector = PatternDetector(_build_trace(events, status=TraceStatus.FAILED))
+        patterns = detector.detect_inter_agent_failures()
+
+        assert len(patterns) == 1
+        assert patterns[0].pattern_type == PatternType.INTER_AGENT_FAILURE
+        assert patterns[0].event_ids == [0, 2]
+        assert patterns[0].metadata == {"from_agent": "planner", "to_agent": "executor"}
+
     def test_context_overflow_uses_trace_context_window_first(self):
         events = [
             TraceEvent(event_id=0, type=EventType.LLM_CALL, token_count=2500),

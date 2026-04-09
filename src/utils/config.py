@@ -46,6 +46,10 @@ class Config:
     analysis_max_report_revisions: int = 2
     analysis_report_quality_threshold: float = 0.65
     analysis_token_budget: int = 12000
+    semantic_drift_enabled: bool = True
+    semantic_drift_model: str = "all-MiniLM-L6-v2"
+    semantic_drift_delta_threshold: float = 0.35
+    semantic_drift_low_threshold: float = 0.25
 
     # Paths
     output_dir: Path = field(default_factory=lambda: Path("./reports"))
@@ -84,6 +88,10 @@ class Config:
             analysis_max_report_revisions=int(os.getenv("ANALYSIS_MAX_REPORT_REVISIONS", "2")),
             analysis_report_quality_threshold=float(os.getenv("ANALYSIS_REPORT_QUALITY_THRESHOLD", "0.65")),
             analysis_token_budget=int(os.getenv("ANALYSIS_TOKEN_BUDGET", "12000")),
+            semantic_drift_enabled=os.getenv("SEMANTIC_DRIFT_ENABLED", "1").lower() in ("1", "true", "yes"),
+            semantic_drift_model=os.getenv("SEMANTIC_DRIFT_MODEL", "all-MiniLM-L6-v2"),
+            semantic_drift_delta_threshold=float(os.getenv("SEMANTIC_DRIFT_DELTA_THRESHOLD", "0.35")),
+            semantic_drift_low_threshold=float(os.getenv("SEMANTIC_DRIFT_LOW_THRESHOLD", "0.25")),
         )
 
     def get_model(self, override: str | None = None) -> str:
@@ -110,6 +118,10 @@ class Config:
             "analysis_max_report_revisions": self.analysis_max_report_revisions,
             "analysis_report_quality_threshold": self.analysis_report_quality_threshold,
             "analysis_token_budget": self.analysis_token_budget,
+            "semantic_drift_enabled": self.semantic_drift_enabled,
+            "semantic_drift_model": self.semantic_drift_model,
+            "semantic_drift_delta_threshold": self.semantic_drift_delta_threshold,
+            "semantic_drift_low_threshold": self.semantic_drift_low_threshold,
             "has_api_key": bool(self.openrouter_api_key),
             "trace_enabled": self.trace_enabled,
             "trace_dir": str(self.trace_dir),
