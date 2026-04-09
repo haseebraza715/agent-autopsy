@@ -80,6 +80,27 @@ def parse_trace_file(file_path: str | Path) -> Trace:
     with open(path, "r") as f:
         data = json.load(f)
 
+    return parse_trace_data(data)
+
+
+def parse_trace_data(data: dict[str, Any]) -> Trace:
+    """
+    Parse raw trace JSON data and return a normalized Trace.
+
+    Args:
+        data: Parsed trace payload as dictionary
+
+    Returns:
+        Normalized Trace object
+    """
+    from .formats.langgraph import LangGraphParser
+    from .formats.langchain import LangChainParser
+    from .formats.opentelemetry import OpenTelemetryParser
+    from .formats.generic import GenericJSONParser
+
+    if not isinstance(data, dict):
+        raise TypeError("Trace data must be a dictionary")
+
     # Detect format and select parser
     format_type = TraceParser.detect_format(data)
 
