@@ -111,7 +111,7 @@ All formats are normalized to a unified schema:
 
 ## Trace Schema
 
-After normalization, all traces conform to the unified schema defined in `src/schema/trace_v2.py`:
+After normalization, all traces conform to the unified schema defined in [`src/schema/trace_v2.py`](../src/schema/trace_v2.py):
 
 - **Trace**: Top-level container with run_id, status, events
 - **TraceEvent**: Individual events with type, input, output, metadata

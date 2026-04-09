@@ -6,6 +6,8 @@ Agent Autopsy analyzes agent execution traces to identify failures, loops, and i
 
 ![Architecture](../diagrams/architecture.png)
 
+Open image: [`diagrams/architecture.png`](../diagrams/architecture.png)
+
 ## System Flow
 
 For detailed system flow, see [System Flow Diagram](../diagrams/system_flow.mmd).

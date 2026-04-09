@@ -4,12 +4,12 @@ This guide covers how to extend Agent Autopsy safely.
 
 ## Add a New Trace Parser
 
-1. Create a parser in `src/ingestion/formats/`.
+1. Create a parser in [`src/ingestion/formats/`](../src/ingestion/formats/).
 2. Implement:
    - `can_parse(data: dict) -> bool`
    - `parse(data: dict) -> Trace`
 3. Register parser selection logic in `TraceParser.detect_format`.
-4. Add ingestion tests in `tests/test_ingestion.py`.
+4. Add ingestion tests in [`tests/test_ingestion.py`](../tests/test_ingestion.py).
 
 Checklist:
 
@@ -20,11 +20,11 @@ Checklist:
 
 ## Add a New Pattern Detector
 
-1. Add enum value in `PatternType` (`src/preanalysis/patterns.py`).
+1. Add enum value in `PatternType` ([`src/preanalysis/patterns.py`](../src/preanalysis/patterns.py)).
 2. Implement `detect_*` method in `PatternDetector`.
 3. Wire method into `detect_all()`.
-4. Add/update hypotheses in `RootCauseBuilder` (`src/preanalysis/suspects.py`).
-5. Add deterministic tests in `tests/test_preanalysis.py`.
+4. Add/update hypotheses in `RootCauseBuilder` ([`src/preanalysis/suspects.py`](../src/preanalysis/suspects.py)).
+5. Add deterministic tests in [`tests/test_preanalysis.py`](../tests/test_preanalysis.py).
 
 Checklist:
 
@@ -35,9 +35,9 @@ Checklist:
 
 ## Extend Reporting
 
-1. Update report extraction/rendering in `src/output/report.py`.
+1. Update report extraction/rendering in [`src/output/report.py`](../src/output/report.py).
 2. Keep markdown and JSON outputs aligned.
-3. Add tests in `tests/test_report.py`.
+3. Add tests in [`tests/test_report.py`](../tests/test_report.py).
 
 Checklist:
 
@@ -47,10 +47,10 @@ Checklist:
 
 ## Extend MCP Interface
 
-1. Add pure service logic in `src/mcp/service.py`.
-2. Expose tool/resource/prompt in `src/mcp/server.py`.
-3. Add service tests in `tests/test_mcp_service.py`.
-4. Document changes in `docs/mcp.md`.
+1. Add pure service logic in [`src/mcp/service.py`](../src/mcp/service.py).
+2. Expose tool/resource/prompt in [`src/mcp/server.py`](../src/mcp/server.py).
+3. Add service tests in [`tests/test_mcp_service.py`](../tests/test_mcp_service.py).
+4. Document changes in [`docs/mcp.md`](mcp.md).
 
 Checklist:
 
@@ -61,7 +61,7 @@ Checklist:
 
 ## Build Plugins (Phase 5)
 
-Use the plugin interfaces in `src/plugins/base.py` to extend Agent Autopsy without editing core modules.
+Use the plugin interfaces in [`src/plugins/base.py`](../src/plugins/base.py) to extend Agent Autopsy without editing core modules.
 
 Supported plugin categories:
 

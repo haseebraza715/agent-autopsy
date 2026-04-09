@@ -179,7 +179,7 @@ A) Graph/Code Fixes:
 
 ## Batch Analysis Reports
 
-When analyzing multiple traces (using `scripts/analyze_traces.py`), a summary report is generated:
+When analyzing multiple traces (using [`scripts/analyze_traces.py`](../scripts/analyze_traces.py)), a summary report is generated:
 
 - Overview statistics
 - Pattern detection summary
@@ -189,4 +189,3 @@ When analyzing multiple traces (using `scripts/analyze_traces.py`), a summary re
 - Detailed pattern analysis grouped by type
 
 See [Scripts](../scripts/README.md) for more information on batch analysis.
-

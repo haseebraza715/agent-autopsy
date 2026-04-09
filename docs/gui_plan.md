@@ -109,7 +109,7 @@ The GUI should call existing Python entry points:
 - `src.cli analyze` for single trace analysis.
 - `src.cli summary` for quick summary.
 - `src.cli validate` for format validation.
-- `scripts/analyze_traces.py` for batch analysis (or call its module API).
+- [`scripts/analyze_traces.py`](../scripts/analyze_traces.py) for batch analysis (or call its module API).
 
 Prefer a thin API layer to invoke the same functions the CLI uses:
 - `parse_trace_file`, `TraceNormalizer`, `RootCauseBuilder`, `run_analysis`,

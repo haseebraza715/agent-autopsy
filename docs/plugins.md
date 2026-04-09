@@ -10,7 +10,7 @@ Agent Autopsy supports extension plugins for advanced customization without modi
 - `FixGeneratorPlugin`: add framework-specific fix suggestion generation
 - `VisualizationPlugin`: add custom visualization payloads
 
-Interfaces are defined in `src/plugins/base.py`.
+Interfaces are defined in [`src/plugins/base.py`](../src/plugins/base.py).
 
 ## Registration Options
 
@@ -69,6 +69,6 @@ def register(plugin_manager):
 ## Introspection
 
 - MCP resource: `agent-autopsy://plugins/active`
-- Service helper: `src.mcp.service.plugin_resource()`
+- Service helper: [`src/mcp/service.py`](../src/mcp/service.py) (`plugin_resource()`)
 
 Both expose loaded plugin names and plugin-load errors.

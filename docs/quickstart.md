@@ -71,6 +71,10 @@ python scripts/analyze_traces.py --traces-dir ./traces --reports-dir ./reports
 
 ### Example Traces
 
+Example files:
+- [`examples/traces/successful_run.json`](../examples/traces/successful_run.json)
+- [`examples/traces/loop_failure.json`](../examples/traces/loop_failure.json)
+
 ```bash
 python -m src.cli summary examples/traces/successful_run.json
 python -m src.cli analyze examples/traces/loop_failure.json --no-llm -o /tmp/loop_report.md
@@ -97,9 +101,9 @@ python -m src.mcp --transport streamable-http --mount-path /mcp
 
 ### Batch Trace Analysis
 
-1. **Generate traces**: Run `scripts/generate_traces.py` to create test traces
-2. **Verify traces**: Run `scripts/verify_traces.py` to check for failures
-3. **Analyze all**: Run `scripts/analyze_traces.py` to generate comprehensive reports
+1. **Generate traces**: Run [`scripts/generate_traces.py`](../scripts/generate_traces.py) to create test traces
+2. **Verify traces**: Run [`scripts/verify_traces.py`](../scripts/verify_traces.py) to check for failures
+3. **Analyze all**: Run [`scripts/analyze_traces.py`](../scripts/analyze_traces.py) to generate comprehensive reports
 4. **Review summary**: Check `reports/analysis_summary.md` for patterns across all traces
 
 ## Next Steps
