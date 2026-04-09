@@ -164,6 +164,26 @@ class TestTrace:
         assert stats.total_tokens == 250
         assert stats.total_latency_ms == 50
 
+    def test_agent_helpers(self):
+        """Agent helper methods should expose IDs, events, and handoffs."""
+        events = [
+            TraceEvent(event_id=0, type=EventType.MESSAGE, agent_id="planner"),
+            TraceEvent(event_id=1, type=EventType.TOOL_CALL, agent_id="planner", name="search"),
+            TraceEvent(event_id=2, type=EventType.ERROR, agent_id="executor", error=EventError(message="boom")),
+            TraceEvent(event_id=3, type=EventType.MESSAGE, agent_id="reviewer"),
+        ]
+        trace = Trace(
+            run_id="test-agents-001",
+            timestamp_start=datetime.now(),
+            status=TraceStatus.FAILED,
+            env=EnvironmentInfo(agent_framework="multi"),
+            events=events,
+        )
+
+        assert trace.get_agent_ids() == ["executor", "planner", "reviewer"]
+        assert [e.event_id for e in trace.get_events_by_agent("planner")] == [0, 1]
+        assert trace.get_agent_handoffs() == [(2, "planner", "executor"), (3, "executor", "reviewer")]
+
 
 class TestTaskContext:
     """Tests for TaskContext model."""

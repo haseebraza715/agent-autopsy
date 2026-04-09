@@ -395,6 +395,15 @@ class OpenTelemetryParser(TraceParser):
                 event_id=i,
                 parent_event_id=parent_event_id,
                 span_id=span.get("spanId"),
+                agent_id=(
+                    str(attrs.get("agent.id"))
+                    if attrs.get("agent.id") is not None
+                    else (
+                        str(attrs.get("gen_ai.agent.name"))
+                        if attrs.get("gen_ai.agent.name") is not None
+                        else None
+                    )
+                ),
                 type=event_type,
                 name=name,
                 input=input_data,

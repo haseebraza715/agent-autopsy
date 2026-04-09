@@ -465,6 +465,11 @@ class LangChainParser(TraceParser):
             event_id=start_id,
             parent_event_id=parent_id,
             span_id=run.get("id") or run.get("run_id"),
+            agent_id=(
+                run.get("agent_id")
+                or run.get("agent")
+                or run.get("name")
+            ),
             type=event_type,
             role=EventRole.ASSISTANT if event_type == EventType.LLM_CALL else None,
             name=name,
@@ -508,6 +513,7 @@ class LangChainParser(TraceParser):
             event_id=start_id,
             parent_event_id=self._safe_parent_event_id(parent_value),
             span_id=raw.get("run_id") or raw.get("id"),
+            agent_id=raw.get("agent_id") or raw.get("agent") or raw.get("name"),
             type=event_type,
             role=role,
             name=raw.get("name") or raw.get("tool"),

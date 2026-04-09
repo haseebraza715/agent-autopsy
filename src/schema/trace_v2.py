@@ -59,6 +59,7 @@ class TraceEvent(BaseModel):
     event_id: int
     parent_event_id: int | None = None
     span_id: str | None = None
+    agent_id: str | None = None
 
     type: EventType
     role: EventRole | None = None
@@ -186,6 +187,31 @@ class Trace(BaseModel):
     def get_events_by_type(self, event_type: EventType) -> list[TraceEvent]:
         """Get all events of a specific type."""
         return [e for e in self.events if e.type == event_type]
+
+    def get_agent_ids(self) -> list[str]:
+        """Get all unique agent IDs present in the trace."""
+        return sorted({e.agent_id for e in self.events if e.agent_id})
+
+    def get_events_by_agent(self, agent_id: str) -> list[TraceEvent]:
+        """Get all events for a given agent ID."""
+        return [e for e in self.events if e.agent_id == agent_id]
+
+    def get_agent_handoffs(self) -> list[tuple[int, str, str]]:
+        """
+        Detect agent handoff boundaries.
+
+        Returns:
+            List of tuples: (event_id, from_agent, to_agent)
+        """
+        handoffs: list[tuple[int, str, str]] = []
+        last_agent: str | None = None
+        for event in self.events:
+            current = event.agent_id
+            if current and last_agent and current != last_agent:
+                handoffs.append((event.event_id, last_agent, current))
+            if current:
+                last_agent = current
+        return handoffs
 
     def get_error_events(self) -> list[TraceEvent]:
         """Get all events that are errors or contain errors."""

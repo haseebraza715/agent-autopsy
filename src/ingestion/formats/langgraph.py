@@ -299,6 +299,12 @@ class LangGraphParser(TraceParser):
             event_id=start_id,
             parent_event_id=self._safe_parent_event_id(raw.get("parent_id")),
             span_id=raw.get("span_id"),
+            agent_id=(
+                raw.get("agent_id")
+                or raw.get("agent")
+                or raw.get("node")
+                or raw.get("sender")
+            ),
             type=event_type,
             role=role,
             name=name,
@@ -319,6 +325,7 @@ class LangGraphParser(TraceParser):
                 nested_event = TraceEvent(
                     event_id=start_id + 1 + i,
                     parent_event_id=start_id,
+                    agent_id=raw.get("agent_id") or raw.get("agent") or raw.get("node"),
                     type=EventType.TOOL_CALL,
                     role=EventRole.TOOL,
                     name=tool_call.get("name") or tool_call.get("function", {}).get("name"),

@@ -123,6 +123,7 @@ class TraceNormalizer:
     @staticmethod
     def get_summary(trace: Trace) -> dict:
         """Get a human-readable summary of the trace."""
+        agent_ids = trace.get_agent_ids()
         return {
             "run_id": trace.run_id,
             "status": trace.status.value,
@@ -136,4 +137,6 @@ class TraceNormalizer:
             "available_tools": len(trace.env.tools_available),
             "framework": trace.env.agent_framework,
             "model": trace.env.model,
+            "agent_count": len(agent_ids),
+            "agents": agent_ids,
         }
