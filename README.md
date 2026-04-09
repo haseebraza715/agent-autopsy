@@ -32,6 +32,11 @@ streamlit run app.py
 python -m src.cli analyze trace.json
 ```
 
+### MCP Server
+```bash
+python -m src.mcp --transport stdio
+```
+
 ---
 
 ## Features
@@ -42,6 +47,7 @@ python -m src.cli analyze trace.json
 - **Multi-Format** — LangGraph and generic JSON, plus experimental LangChain/OpenTelemetry parsing with graceful fallback
 - **Reports** — Structured markdown reports with fix recommendations
 - **Trace Capture** — Automatic trace collection from LangChain/LangGraph agents
+- **MCP Integration** — Exposes analysis tools/resources/prompts for MCP-compatible clients
 
 ---
 
@@ -96,6 +102,7 @@ end_trace(trace_handler)
 - [Architecture](docs/architecture.md) — System overview
 - [Quick Start](docs/quickstart.md) — Installation guide
 - [Patterns](docs/patterns.md) — Detected failure patterns
+- [MCP Server](docs/mcp.md) — MCP tools, resources, prompts, and transports
 
 ---
 

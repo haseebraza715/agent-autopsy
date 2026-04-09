@@ -14,6 +14,7 @@ For detailed system flow, see [System Flow Diagram](../diagrams/system_flow.mmd)
 
 ### Input Layer
 - **CLI Interface**: Command-line interface for user interaction
+- **MCP Interface**: MCP server tools/resources/prompts for IDE/chat clients
 - **Trace Files**: Pre-recorded trace files in various formats
 - **Live Agents**: Real-time trace capture from running agents
 
