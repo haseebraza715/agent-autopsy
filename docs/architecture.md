@@ -4,7 +4,7 @@ Agent Autopsy analyzes agent execution traces to identify failures, loops, and i
 
 ## High-Level Architecture
 
-![Architecture](diagrams/architecture.png)
+![Architecture](../diagrams/architecture.png)
 
 ## System Flow
 
