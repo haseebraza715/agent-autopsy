@@ -102,3 +102,66 @@ def test_analyze_trace_and_health_check_deterministic():
     assert analysis["run_id"] == "health-1"
     assert "report" in analysis
     assert isinstance(health["health_score"], int)
+
+
+def test_benchmark_runs_for_directory(tmp_path: Path):
+    trace_1 = {
+        "run_id": "bench-ok",
+        "status": "success",
+        "events": [{"type": "message", "content": "ok"}],
+    }
+    trace_2 = {
+        "run_id": "bench-fail",
+        "status": "failed",
+        "events": [{"type": "error", "error": "boom"}],
+    }
+    (tmp_path / "a.json").write_text(json.dumps(trace_1))
+    (tmp_path / "b.json").write_text(json.dumps(trace_2))
+
+    result = service.benchmark_runs(directory=str(tmp_path), limit=10)
+
+    assert result["total_runs"] == 2
+    assert 0.0 <= result["success_rate"] <= 1.0
+
+
+def test_conversation_flow_tracks_agents_and_handoffs():
+    flow = service.conversation_flow(
+        trace_json={
+            "run_id": "flow-1",
+            "status": "failed",
+            "events": [
+                {"type": "message", "agent_id": "planner", "content": "plan"},
+                {"type": "tool", "agent_id": "planner", "name": "search", "input": {"q": "budget"}},
+                {"type": "error", "agent_id": "executor", "error": "invalid state"},
+            ],
+        }
+    )
+
+    assert flow["agents"] == ["executor", "planner"]
+    assert flow["handoff_count"] == 1
+    assert flow["flow_edges"][0]["from_agent"] == "planner"
+    assert flow["flow_edges"][0]["to_agent"] == "executor"
+
+
+def test_monitor_traces_returns_alerts(tmp_path: Path):
+    trace = {
+        "run_id": "mon-1",
+        "status": "failed",
+        "tools": ["search"],
+        "events": [
+            {"type": "tool", "name": "search", "input": {"q": "x"}, "output": {"ok": 1}},
+            {"type": "tool", "name": "search", "input": {"q": "x"}, "output": {"ok": 1}},
+            {"type": "tool", "name": "search", "input": {"q": "x"}, "output": {"ok": 1}},
+        ],
+    }
+    (tmp_path / "trace.json").write_text(json.dumps(trace))
+
+    result = service.monitor_traces(
+        trace_dir=str(tmp_path),
+        duration_seconds=0.05,
+        poll_interval_seconds=0.01,
+        max_alerts=10,
+    )
+
+    assert result["alert_count"] >= 1
+    assert any(alert["pattern_type"] == "infinite_loop" for alert in result["alerts"])

@@ -145,6 +145,38 @@ def create_mcp_server() -> Any:
         """Return health score and one-line summary for a trace."""
         return service.health_check(trace_file=trace_file, trace_json=trace_json)
 
+    @mcp.tool()
+    def benchmark_runs(
+        trace_files: list[str] | None = None,
+        directory: str | None = None,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        """Run evaluation metrics across traces and detect degradation trends."""
+        return service.benchmark_runs(trace_files=trace_files, directory=directory, limit=limit)
+
+    @mcp.tool()
+    def monitor_traces(
+        trace_dir: str | None = None,
+        duration_seconds: float = 5.0,
+        poll_interval_seconds: float = 1.0,
+        max_alerts: int = 100,
+    ) -> dict[str, Any]:
+        """Monitor traces in near-real-time and emit pattern alerts."""
+        return service.monitor_traces(
+            trace_dir=trace_dir,
+            duration_seconds=duration_seconds,
+            poll_interval_seconds=poll_interval_seconds,
+            max_alerts=max_alerts,
+        )
+
+    @mcp.tool()
+    def conversation_flow(
+        trace_file: str | None = None,
+        trace_json: dict[str, Any] | str | None = None,
+    ) -> dict[str, Any]:
+        """Build inter-agent communication and handoff flow from a trace."""
+        return service.conversation_flow(trace_file=trace_file, trace_json=trace_json)
+
     @mcp.resource("agent-autopsy://traces/recent")
     def resource_recent_traces() -> str:
         """Resource: recently available traces."""
@@ -164,6 +196,11 @@ def create_mcp_server() -> Any:
     def resource_config() -> str:
         """Resource: current Agent Autopsy configuration."""
         return json.dumps(service.config_resource(), indent=2, default=str)
+
+    @mcp.resource("agent-autopsy://plugins/active")
+    def resource_plugins() -> str:
+        """Resource: active plugin registry and load errors."""
+        return json.dumps(service.plugin_resource(), indent=2, default=str)
 
     @mcp.prompt()
     def debug_my_agent(trace_reference: str = "") -> str:
