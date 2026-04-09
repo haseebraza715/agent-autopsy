@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 *.so
 .Python
+*.egg-info/
+dist/
+build/
 venv/
 env/
 ENV/
@@ -38,4 +41,3 @@ htmlcov/
 
 # Logs
 *.log
-
