@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from src.plugins import get_plugin_manager
 from src.schema import Trace
 from src.analysis.agent import AnalysisResult
 
@@ -111,6 +112,8 @@ class ReportGenerator:
                 label = event.type.value
                 if event.name:
                     label += f" ({event.name})"
+                if event.agent_id:
+                    label += f" @{event.agent_id}"
                 timeline.append(f"[{event.event_id:03d}] {marker} {label}")
 
             if len(self.trace.events) > max_events:
@@ -344,21 +347,42 @@ class ReportGenerator:
             "preanalysis": report.preanalysis,
         }
 
+    def render(self, format_name: str = "markdown") -> str | dict[str, Any]:
+        """
+        Render report using built-ins or plugin templates.
+
+        Built-ins:
+            - markdown
+            - json
+        """
+        normalized = format_name.lower().strip()
+        if normalized == "markdown":
+            return self.to_markdown()
+        if normalized == "json":
+            return self.to_json()
+
+        plugin_manager = get_plugin_manager()
+        for plugin in plugin_manager.report_templates:
+            if getattr(plugin, "format_name", "").lower() == normalized:
+                return plugin.render(self.trace, self.result)
+
+        raise ValueError(f"Unknown report format: {format_name}")
+
     def save(self, path: str | Path, format: str = "markdown") -> Path:
         """Save report to file."""
         path = Path(path)
 
-        if format == "markdown":
-            content = self.to_markdown()
-            if not path.suffix:
-                path = path.with_suffix(".md")
-        elif format == "json":
+        rendered = self.render(format)
+        if isinstance(rendered, dict):
             import json
-            content = json.dumps(self.to_json(), indent=2, default=str)
+
+            content = json.dumps(rendered, indent=2, default=str)
             if not path.suffix:
                 path = path.with_suffix(".json")
         else:
-            raise ValueError(f"Unknown format: {format}")
+            content = str(rendered)
+            if not path.suffix and format == "markdown":
+                path = path.with_suffix(".md")
 
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
