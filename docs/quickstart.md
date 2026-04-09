@@ -15,6 +15,9 @@ pip install -r requirements.txt
 # Configure environment
 cp .env.example .env
 # Edit .env with your OPENROUTER_API_KEY
+
+# Optional: editable install with extras
+pip install -e ".[full]"
 ```
 
 ## Basic Usage
@@ -66,6 +69,13 @@ python scripts/verify_traces.py
 python scripts/analyze_traces.py --traces-dir ./traces --reports-dir ./reports
 ```
 
+### Example Traces
+
+```bash
+python -m src.cli summary examples/traces/successful_run.json
+python -m src.cli analyze examples/traces/loop_failure.json --no-llm -o /tmp/loop_report.md
+```
+
 ### MCP Server
 
 ```bash
@@ -98,4 +108,6 @@ python -m src.mcp --transport streamable-http --mount-path /mcp
 - See [Patterns](patterns.md) for detected failure types
 - Check [Analysis](analysis.md) for analysis pipeline details
 - See [MCP Server](mcp.md) for MCP tools/resources/prompts
+- See [Extension Guide](extensions.md) for extending parsers/detectors/reports
+- See [Examples](../examples/README.md) for curated walkthrough traces
 - Review [Scripts](../scripts/README.md) for trace generation tools

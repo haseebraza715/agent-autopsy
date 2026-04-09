@@ -42,6 +42,38 @@ For detailed pattern detection flow, see [Pattern Detection Diagram](../diagrams
 - **Detection**: Checks for null, empty strings, or empty arrays
 - **Impact**: Agent cannot proceed with empty data
 
+**Goal Drift**
+- **Description**: Agent behavior diverges from the original task objective
+- **Detection**: Compares early vs late lexical overlap with task goal
+- **Impact**: Agent may complete irrelevant work
+
+**Stale Context**
+- **Description**: Agent repeats calls using outdated assumptions
+- **Detection**: Identifies same tool+input producing changed outputs across retries
+- **Impact**: Slow recovery and repeated wrong actions
+
+**Token Waste**
+- **Description**: High token spend with low useful transition ratio
+- **Detection**: Compares LLM token usage against nearby useful transitions
+- **Impact**: Increased cost and latency with limited progress
+
+**Redundant Tool Calls**
+- **Description**: Same tool+input invoked repeatedly at different points
+- **Detection**: Detects identical non-consecutive tool signatures
+- **Impact**: Duplicate work and wasted latency budget
+
+### High Severity (Additional)
+
+**Permission/Auth Failures**
+- **Description**: Repeated authentication/authorization failures
+- **Detection**: Matches auth-related failure signatures in event text
+- **Impact**: Agent remains blocked until credentials/scopes are corrected
+
+**Timeout Patterns**
+- **Description**: Timeout errors or slow-call bottlenecks dominate execution
+- **Detection**: Combines timeout-signature matching with latency threshold checks
+- **Impact**: Latency-driven failures and unstable execution
+
 ## Detection Methods
 
 - **Infinite Loop**: Tracks tool signatures (name + input hash) across consecutive events
@@ -50,12 +82,19 @@ For detailed pattern detection flow, see [Pattern Detection Diagram](../diagrams
 - **Hallucinated Tool**: Validates tool names against available tools list from environment
 - **Empty Response**: Checks for null/empty outputs in LLM and tool responses
 - **Context Overflow**: Compares cumulative token count to model's context window limit
+- **Goal Drift**: Measures drop in task-goal similarity across execution windows
+- **Stale Context**: Detects changed outputs for repeated identical calls
+- **Token Waste**: Evaluates useful-token ratio from event transitions
+- **Permission/Auth Failures**: Detects repeated auth signature failures
+- **Timeout Patterns**: Correlates timeout messages and slow latency events
+- **Redundant Tool Calls**: Detects identical non-consecutive tool call signatures
 
 ## Severity Levels
 
 - **CRITICAL**: Infinite loops, context overflow - immediate action required
 - **HIGH**: Retry storms, error cascades, hallucinated tools - significant issues
 - **MEDIUM**: Empty responses - moderate impact
+- **MEDIUM**: Goal drift, stale context, token waste, redundant calls
 - **LOW**: Minor issues - low priority
 
 ## Pattern Signals
@@ -66,4 +105,3 @@ Each detected pattern generates a signal containing:
 - **Evidence**: Description of what was detected
 - **Event IDs**: Specific events involved in the pattern
 - **Confidence**: Detection confidence score
-

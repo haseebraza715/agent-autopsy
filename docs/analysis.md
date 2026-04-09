@@ -51,6 +51,16 @@ The system chooses between two analysis modes:
 - Builds root cause chain step-by-step
 - Cites specific events in analysis
 
+**Quality Gate**
+- Enforces required report sections (summary, timeline, root cause, fixes, confidence)
+- Scores report quality on completeness, specificity, and actionability
+- Revises low-quality reports with deterministic feedback before finalizing
+
+**Budget Controls**
+- Iteration limit for investigation loop
+- Report revision limit for synthesis loop
+- Token budget awareness and controlled synthesis fallback
+
 **OpenRouter Integration**
 - Sends prompts to OpenRouter API
 - Receives LLM responses
@@ -90,3 +100,5 @@ The LLM analysis uses a ReAct (Reasoning + Acting) agent pattern:
 - Step-by-step root cause analysis
 - Categorized fix recommendations
 - Confidence scoring
+- Report quality validation loop
+- Token/iteration budget controls
