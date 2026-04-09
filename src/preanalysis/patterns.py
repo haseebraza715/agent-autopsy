@@ -10,9 +10,11 @@ from datetime import timedelta
 from enum import Enum
 from functools import lru_cache
 import json
+import math
 from pathlib import Path
 import re
 
+from src.plugins import get_plugin_manager
 from src.schema import Trace, TraceEvent, EventType
 from src.utils.config import get_config
 
@@ -32,6 +34,7 @@ class PatternType(str, Enum):
     AUTH_PERMISSION_FAILURE = "auth_permission_failure"
     TIMEOUT_PATTERN = "timeout_pattern"
     REDUNDANT_TOOL_CALL = "redundant_tool_call"
+    INTER_AGENT_FAILURE = "inter_agent_failure"
     TOOL_CONTRACT_MISMATCH = "tool_contract_mismatch"
 
 
@@ -86,7 +89,16 @@ class PatternDetector:
         results.extend(self.detect_goal_drift())
         results.extend(self.detect_stale_context())
         results.extend(self.detect_token_waste())
+        results.extend(self.detect_inter_agent_failures())
         results.extend(self.detect_context_overflow())
+
+        # Run community/plugin detectors.
+        plugin_manager = get_plugin_manager()
+        for plugin in plugin_manager.pattern_detectors:
+            try:
+                results.extend(plugin.detect(self.trace))
+            except Exception:
+                continue
         return results
 
     def detect_loops(self, threshold: int = 3) -> list[PatternResult]:
@@ -396,35 +408,25 @@ class PatternDetector:
         return []
 
     def detect_goal_drift(self) -> list[PatternResult]:
-        """Detect semantic drift away from the original goal using token-overlap heuristics."""
+        """Detect semantic drift away from the original goal."""
         if not self.trace.task or not self.trace.task.goal:
             return []
 
-        goal_tokens = set(self._tokenize_text(self.trace.task.goal))
-        if not goal_tokens:
+        scored_events = self._semantic_similarity_series(self.trace.task.goal)
+        if not scored_events:
             return []
-
-        scored_events: list[tuple[int, float]] = []
-        for event in self.trace.events:
-            if event.type not in [EventType.LLM_CALL, EventType.TOOL_CALL, EventType.DECISION]:
-                continue
-            text = self._event_text(event)
-            tokens = set(self._tokenize_text(text))
-            if not tokens:
-                continue
-            overlap = len(tokens & goal_tokens) / len(goal_tokens)
-            scored_events.append((event.event_id, overlap))
 
         if len(scored_events) < 6:
             return []
 
+        config = get_config()
         window = max(3, len(scored_events) // 3)
         early_scores = [s for _, s in scored_events[:window]]
         late_scores = [s for _, s in scored_events[-window:]]
         early_avg = sum(early_scores) / len(early_scores)
         late_avg = sum(late_scores) / len(late_scores)
 
-        if early_avg - late_avg >= 0.35 and late_avg <= 0.25:
+        if early_avg - late_avg >= config.semantic_drift_delta_threshold and late_avg <= config.semantic_drift_low_threshold:
             late_ids = [eid for eid, _ in scored_events[-window:]]
             return [
                 PatternResult(
@@ -434,8 +436,13 @@ class PatternDetector:
                     evidence=f"Goal similarity dropped from {early_avg:.2f} to {late_avg:.2f}",
                     event_ids=late_ids,
                     metadata={
+                        "method": "semantic_embeddings" if self._embedding_backend_available() else "lexical_overlap",
                         "early_similarity": round(early_avg, 3),
                         "late_similarity": round(late_avg, 3),
+                        "series": [
+                            {"event_id": event_id, "similarity": round(score, 3)}
+                            for event_id, score in scored_events
+                        ],
                     },
                 )
             ]
@@ -506,6 +513,38 @@ class PatternDetector:
                 )
             ]
         return []
+
+    def detect_inter_agent_failures(self) -> list[PatternResult]:
+        """Detect cascades where failures propagate between different agents."""
+        if len(self.trace.get_agent_ids()) < 2:
+            return []
+
+        results: list[PatternResult] = []
+        for i, event in enumerate(self.trace.events[:-1]):
+            if not event.is_error() or not event.agent_id:
+                continue
+            for next_event in self.trace.events[i + 1 : i + 4]:
+                if not next_event.agent_id or next_event.agent_id == event.agent_id:
+                    continue
+                if next_event.is_error():
+                    results.append(
+                        PatternResult(
+                            pattern_type=PatternType.INTER_AGENT_FAILURE,
+                            severity=Severity.HIGH,
+                            message="Failure appears to propagate across agent handoff",
+                            evidence=(
+                                f"Agent '{event.agent_id}' errored, followed by agent "
+                                f"'{next_event.agent_id}' error shortly after"
+                            ),
+                            event_ids=[event.event_id, next_event.event_id],
+                            metadata={
+                                "from_agent": event.agent_id,
+                                "to_agent": next_event.agent_id,
+                            },
+                        )
+                    )
+                    break
+        return results
 
     def detect_context_overflow(self, threshold: int | None = None) -> list[PatternResult]:
         """
@@ -578,11 +617,80 @@ class PatternDetector:
             parts.append(str(event.input))
         if event.output is not None:
             parts.append(str(event.output))
+        if event.agent_id:
+            parts.append(event.agent_id)
         return " ".join(parts)
 
     def _tokenize_text(self, text: str) -> list[str]:
         """Lightweight tokenizer for lexical overlap heuristics."""
         return re.findall(r"[a-z0-9_]{3,}", text.lower())
+
+    def _semantic_similarity_series(self, goal: str) -> list[tuple[int, float]]:
+        """
+        Build event->similarity series using embeddings when available,
+        otherwise lexical overlap fallback.
+        """
+        content_events = [
+            event
+            for event in self.trace.events
+            if event.type in [EventType.LLM_CALL, EventType.TOOL_CALL, EventType.DECISION]
+        ]
+        event_texts = [self._event_text(event) for event in content_events]
+
+        if self._embedding_backend_available():
+            try:
+                model = self._get_embedding_model(get_config().semantic_drift_model)
+                embeddings = model.encode([goal] + event_texts)
+                goal_vec = embeddings[0]
+                series: list[tuple[int, float]] = []
+                for event, vec in zip(content_events, embeddings[1:]):
+                    similarity = self._cosine_similarity(goal_vec, vec)
+                    series.append((event.event_id, similarity))
+                if series:
+                    return series
+            except Exception:
+                pass
+
+        # Lexical fallback.
+        goal_tokens = set(self._tokenize_text(goal))
+        if not goal_tokens:
+            return []
+        series = []
+        for event, text in zip(content_events, event_texts):
+            tokens = set(self._tokenize_text(text))
+            if not tokens:
+                continue
+            overlap = len(tokens & goal_tokens) / len(goal_tokens)
+            series.append((event.event_id, overlap))
+        return series
+
+    def _embedding_backend_available(self) -> bool:
+        """Return True when semantic embedding backend can be used."""
+        if not get_config().semantic_drift_enabled:
+            return False
+        try:
+            import sentence_transformers  # noqa: F401
+            return True
+        except Exception:
+            return False
+
+    @classmethod
+    @lru_cache(maxsize=2)
+    def _get_embedding_model(cls, model_name: str):
+        """Lazily load sentence-transformers model."""
+        from sentence_transformers import SentenceTransformer
+
+        return SentenceTransformer(model_name)
+
+    @staticmethod
+    def _cosine_similarity(a, b) -> float:
+        """Compute cosine similarity for vector-like iterables."""
+        dot = sum(float(x) * float(y) for x, y in zip(a, b))
+        norm_a = math.sqrt(sum(float(x) * float(x) for x in a))
+        norm_b = math.sqrt(sum(float(y) * float(y) for y in b))
+        if norm_a == 0 or norm_b == 0:
+            return 0.0
+        return dot / (norm_a * norm_b)
 
     @classmethod
     def _get_model_context_limit(cls, model: str | None, configured_path: str = "") -> int | None:

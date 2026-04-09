@@ -398,6 +398,27 @@ class RootCauseBuilder:
                 )
             )
 
+        # Hypothesis: Multi-agent handoff failure
+        inter_agent_signals = [s for s in signals if "inter_agent_failure" in s.type.lower()]
+        if inter_agent_signals:
+            all_events = []
+            for s in inter_agent_signals:
+                all_events.extend(s.event_ids)
+
+            hypotheses.append(
+                Hypothesis(
+                    description="Inter-agent handoff propagated invalid state or errors",
+                    confidence=0.74,
+                    supporting_events=list(set(all_events)),
+                    category="code",
+                    suggested_fixes=[
+                        "Add schema validation at agent handoff boundaries",
+                        "Include explicit handoff contracts for cross-agent messages",
+                        "Isolate failures so downstream agents can degrade gracefully",
+                    ],
+                )
+            )
+
         # Hypothesis: Contract violations
         contract_signals = [s for s in signals if "contract" in s.type.lower()]
         if contract_signals:
