@@ -9,7 +9,7 @@ import os
 import re
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -130,6 +130,8 @@ class TraceSaver(BaseCallbackHandler):
     into a structured trace format suitable for autopsy analysis.
     """
 
+    _event_listeners: list = []
+
     def __init__(
         self,
         run_id: str | None = None,
@@ -145,7 +147,7 @@ class TraceSaver(BaseCallbackHandler):
 
     def _get_timestamp(self) -> str:
         """Get current timestamp in ISO format."""
-        return datetime.utcnow().isoformat() + "Z"
+        return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     def _add_event(
         self,
@@ -183,8 +185,23 @@ class TraceSaver(BaseCallbackHandler):
             event["error"] = error
 
         self.events.append(event)
+        for listener in self._event_listeners:
+            try:
+                listener(event)
+            except Exception:
+                continue
         self._event_counter += 1
         return event
+
+    @classmethod
+    def register_event_listener(cls, listener) -> None:
+        """Register an in-process listener callback(event_dict)."""
+        cls._event_listeners.append(listener)
+
+    @classmethod
+    def clear_event_listeners(cls) -> None:
+        """Clear registered in-process listeners."""
+        cls._event_listeners.clear()
 
     # -------------------------------------------------------------------------
     # LLM Callbacks
