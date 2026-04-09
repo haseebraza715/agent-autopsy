@@ -66,6 +66,16 @@ python scripts/verify_traces.py
 python scripts/analyze_traces.py --traces-dir ./traces --reports-dir ./reports
 ```
 
+### MCP Server
+
+```bash
+# Run MCP server over stdio (for local MCP clients)
+python -m src.mcp --transport stdio
+
+# Run MCP server over streamable HTTP
+python -m src.mcp --transport streamable-http --mount-path /mcp
+```
+
 ## Example Workflows
 
 ### Single Trace Analysis
@@ -87,5 +97,5 @@ python scripts/analyze_traces.py --traces-dir ./traces --reports-dir ./reports
 - Read [Architecture](architecture.md) for system overview
 - See [Patterns](patterns.md) for detected failure types
 - Check [Analysis](analysis.md) for analysis pipeline details
+- See [MCP Server](mcp.md) for MCP tools/resources/prompts
 - Review [Scripts](../scripts/README.md) for trace generation tools
-
