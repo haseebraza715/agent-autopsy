@@ -4,15 +4,15 @@ This folder contains starter traces and walkthroughs for evaluating Agent Autops
 
 ## Traces
 
-- `traces/successful_run.json`
-- `traces/loop_failure.json`
-- `traces/hallucinated_tool.json`
+- [`traces/successful_run.json`](traces/successful_run.json)
+- [`traces/loop_failure.json`](traces/loop_failure.json)
+- [`traces/hallucinated_tool.json`](traces/hallucinated_tool.json)
 
 ## Walkthroughs
 
-- `walkthroughs/successful_run.md`
-- `walkthroughs/loop_failure.md`
-- `walkthroughs/hallucinated_tool.md`
+- [`walkthroughs/successful_run.md`](walkthroughs/successful_run.md)
+- [`walkthroughs/loop_failure.md`](walkthroughs/loop_failure.md)
+- [`walkthroughs/hallucinated_tool.md`](walkthroughs/hallucinated_tool.md)
 
 ## Try It
 

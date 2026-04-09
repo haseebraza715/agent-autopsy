@@ -2,7 +2,7 @@
 
 Last updated: 2026-04-09
 
-This file tracks roadmap execution from `docs/improvement-plan.md`.
+This file tracks roadmap execution from [`docs/improvement-plan.md`](improvement-plan.md).
 
 ## Phase Overview
 
@@ -22,7 +22,7 @@ Goal: Remove ghost features, fix tests, and improve reliability.
 ### TODO
 
 - [x] Remove unused dependency (`sentence-transformers`) from `requirements.txt`
-- [x] Make docs/README honest about LangChain/OpenTelemetry support status
+- [x] Make [`README.md`](../README.md) and docs honest about LangChain/OpenTelemetry support status
 - [x] Strengthen weak tests that cannot fail meaningfully
 - [x] Add negative tests for clean traces
 - [x] Add edge-case tests (empty trace, single event trace, large trace)
@@ -63,7 +63,7 @@ Goal: Improve analysis quality, parser depth, and deterministic report quality.
 - [x] Upgraded LangChain parser for callback traces, parent/child run reconstruction, retriever mapping, and token extraction
 - [x] Upgraded OpenTelemetry parser for OTLP structures (`resourceSpans/scopeSpans/spans`), semantic-convention attributes, and robust parent linking
 - [x] Added deterministic detectors for goal drift, stale context, token waste, auth/permission failures, timeout patterns, and redundant tool calls
-- [x] Moved model context limits to `src/preanalysis/model_context_limits.json` with configurable override path and per-trace context-window support
+- [x] Moved model context limits to [`src/preanalysis/model_context_limits.json`](../src/preanalysis/model_context_limits.json) with configurable override path and per-trace context-window support
 - [x] Enhanced deterministic report rendering with health score, evidence-aware timeline, and templated fix recommendations
 - [x] Expanded automated tests for parser depth, quality gate logic, deterministic reporting, and advanced detectors
 
@@ -82,14 +82,14 @@ Goal: Expose Agent Autopsy as MCP tools/resources/prompts.
 
 ### Completed in this phase
 
-- [x] Added MCP SDK dependency and created `src/mcp` package with runtime entry point (`python -m src.mcp`)
-- [x] Implemented MCP server wrapper with 10 core tools in `src/mcp/server.py`
-- [x] Added MCP service layer (`src/mcp/service.py`) for reusable, testable tool logic
+- [x] Added MCP SDK dependency and created [`src/mcp`](../src/mcp) package with runtime entry point (`python -m src.mcp`)
+- [x] Implemented MCP server wrapper with 10 core tools in [`src/mcp/server.py`](../src/mcp/server.py)
+- [x] Added MCP service layer ([`src/mcp/service.py`](../src/mcp/service.py)) for reusable, testable tool logic
 - [x] Added raw-trace JSON parsing entrypoint (`parse_trace_data`) to ingestion layer for MCP tool inputs
 - [x] Exposed MCP resources for recent traces, report archive, pattern catalog, and active config
 - [x] Exposed MCP prompt templates for debug, health check, compare runs, and failure explanation workflows
-- [x] Added documentation page `docs/mcp.md` and README integration notes
-- [x] Added service-level tests for MCP behavior (`tests/test_mcp_service.py`)
+- [x] Added documentation page [`docs/mcp.md`](mcp.md) and README integration notes
+- [x] Added service-level tests for MCP behavior ([`tests/test_mcp_service.py`](../tests/test_mcp_service.py))
 - [x] Validated local transports: `stdio` and `streamable-http` startup/shutdown
 
 ## Phase 4 - Open Source Growth
@@ -109,8 +109,8 @@ Goal: Build contributor and adoption infrastructure.
 
 ### Completed in this phase
 
-- [x] Added contributor onboarding docs (`CONTRIBUTING.md`) and community standards (`CODE_OF_CONDUCT.md`)
-- [x] Added structured change tracking (`CHANGELOG.md`)
+- [x] Added contributor onboarding docs ([`CONTRIBUTING.md`](../CONTRIBUTING.md)) and community standards ([`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md))
+- [x] Added structured change tracking ([`CHANGELOG.md`](../CHANGELOG.md))
 - [x] Added GitHub contribution workflows:
   - [x] Issue templates (bug + feature request)
   - [x] PR template
@@ -118,11 +118,11 @@ Goal: Build contributor and adoption infrastructure.
 - [x] Verified editable install and console entrypoints from packaging metadata
 - [ ] PyPI upload not executed in this phase (credentials not available in local environment)
 - [x] Added docs:
-  - [x] MCP interface guide (`docs/mcp.md`)
-  - [x] Extension guide (`docs/extensions.md`)
-  - [x] Demo playbook (`docs/demo.md`)
+  - [x] MCP interface guide ([`docs/mcp.md`](mcp.md))
+  - [x] Extension guide ([`docs/extensions.md`](extensions.md))
+  - [x] Demo playbook ([`docs/demo.md`](demo.md))
   - [x] Updated quickstart/architecture/patterns/analysis docs
-- [x] Added curated example traces and walkthroughs in `examples/`
+- [x] Added curated example traces and walkthroughs in [`examples/`](../examples/)
 - [x] Updated README navigation and contribution entry points
 
 ## Phase 5 - Advanced Features
@@ -157,5 +157,5 @@ Goal: Add intelligent and extensible debugging capabilities.
 - 2026-04-08: Completed Phase 1 implementation (dependency cleanup, docs honesty, stronger tests, error handling/logging, CI workflow).
 - 2026-04-08: Completed Phase 2 implementation (agent quality gate, parser depth, advanced pattern detectors, deterministic report improvements, configurable model limits).
 - 2026-04-09: Completed Phase 3 implementation (MCP server tools/resources/prompts, service layer, transports, docs, and tests).
-- 2026-04-09: Completed Phase 4 implementation (community docs/templates, packaging metadata, extension guides, curated examples, and demo assets).
+- 2026-04-09: Completed Phase 4 implementation (community docs and GitHub templates, packaging metadata, extension guides, curated examples, and demo assets).
 - 2026-04-09: Completed Phase 5 implementation (advanced comparison/monitoring/fix generation, multi-agent support, benchmark mode, plugin system, and expanded validation tests).

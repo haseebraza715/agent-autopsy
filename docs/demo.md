@@ -4,6 +4,8 @@ Use this script to demo Agent Autopsy in under 5 minutes.
 
 ## 1) Quick Summary
 
+Use sample trace: [`examples/traces/loop_failure.json`](../examples/traces/loop_failure.json)
+
 ```bash
 python -m src.cli summary examples/traces/loop_failure.json
 ```
@@ -15,6 +17,8 @@ Show:
 - Framework/model metadata
 
 ## 2) Deterministic Analysis
+
+Analyze the same trace: [`examples/traces/loop_failure.json`](../examples/traces/loop_failure.json)
 
 ```bash
 python -m src.cli analyze examples/traces/loop_failure.json --no-llm -o /tmp/demo_report.md
