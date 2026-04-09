@@ -41,3 +41,6 @@ htmlcov/
 
 # Logs
 *.log
+
+# Local agent instructions
+AGENT.MD
