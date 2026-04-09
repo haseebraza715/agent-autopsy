@@ -21,8 +21,8 @@ def _trace_with_events() -> Trace:
         status=TraceStatus.FAILED,
         env=EnvironmentInfo(agent_framework="test", model="gpt-4"),
         events=[
-            TraceEvent(event_id=0, type=EventType.DECISION, name="router"),
-            TraceEvent(event_id=1, type=EventType.TOOL_CALL, name="search", input={"q": "x"}, output=None),
+            TraceEvent(event_id=0, type=EventType.DECISION, name="router", agent_id="planner"),
+            TraceEvent(event_id=1, type=EventType.TOOL_CALL, name="search", input={"q": "x"}, output=None, agent_id="executor"),
             TraceEvent(event_id=2, type=EventType.ERROR, name="search", output="timeout"),
         ],
     )
@@ -65,6 +65,7 @@ class TestReportGenerator:
         assert 0 <= report.health_score <= 100
         assert report.health_score < 100
         assert any(line.startswith("[001] !") or line.startswith("[002] X") for line in report.timeline)
+        assert any("@planner" in line or "@executor" in line for line in report.timeline)
 
     def test_pattern_templates_are_added_to_fixes(self):
         trace = _trace_with_events()

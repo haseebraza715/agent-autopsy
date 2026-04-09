@@ -12,10 +12,12 @@ import json
 from pathlib import Path
 from typing import Any
 
+from src.advanced import benchmark_trace_directory, benchmark_traces, compare_traces_advanced, LiveTraceMonitor
 from src.analysis import run_analysis
 from src.analysis.agent import AnalysisResult, run_analysis_without_llm
 from src.ingestion import TraceNormalizer, parse_trace_data, parse_trace_file, TraceParser
-from src.output import ReportGenerator
+from src.output import ReportGenerator, FixSuggestionGenerator
+from src.plugins import get_plugin_manager
 from src.preanalysis import PatternDetector, PatternType, RootCauseBuilder
 from src.schema import Trace, TraceEvent
 from src.tracing import get_trace_config
@@ -93,11 +95,7 @@ def analyze_trace(
 
     report_generator = ReportGenerator(trace, analysis)
     autopsy_report = report_generator.generate()
-    rendered_report = (
-        report_generator.to_json()
-        if output_format == "json"
-        else report_generator.to_markdown()
-    )
+    rendered_report = report_generator.render(output_format)
 
     return {
         "source": source,
@@ -201,13 +199,7 @@ def compare_traces(
     patterns_b = PatternDetector(trace_b).detect_all()
     counts_a = _pattern_counts(patterns_a)
     counts_b = _pattern_counts(patterns_b)
-    pattern_delta = {
-        ptype: counts_b.get(ptype, 0) - counts_a.get(ptype, 0)
-        for ptype in sorted(set(counts_a.keys()) | set(counts_b.keys()))
-    }
-
-    improved = [ptype for ptype, delta in pattern_delta.items() if delta < 0]
-    regressed = [ptype for ptype, delta in pattern_delta.items() if delta > 0]
+    advanced = compare_traces_advanced(trace_a, trace_b)
 
     return {
         "trace_a": {"source": source_a, "format": format_a, "run_id": trace_a.run_id, "status": trace_a.status.value},
@@ -216,9 +208,7 @@ def compare_traces(
         "metric_delta": metric_delta,
         "pattern_counts_a": counts_a,
         "pattern_counts_b": counts_b,
-        "pattern_delta": pattern_delta,
-        "improved_patterns": improved,
-        "regressed_patterns": regressed,
+        **advanced.to_dict(),
     }
 
 
@@ -357,6 +347,21 @@ def suggest_fixes(
             success=True,
         ),
     ).generate()
+    generated = FixSuggestionGenerator(trace, preanalysis).to_dict()
+
+    plugin_manager = get_plugin_manager()
+    plugin_fixes: list[dict[str, Any]] = []
+    for plugin in plugin_manager.fix_generators:
+        try:
+            payload = plugin.generate(trace, preanalysis)
+            plugin_fixes.append(
+                {
+                    "plugin": getattr(plugin, "name", plugin.__class__.__name__),
+                    "payload": payload,
+                }
+            )
+        except Exception:
+            continue
 
     return {
         "source": source,
@@ -364,6 +369,8 @@ def suggest_fixes(
         "run_id": trace.run_id,
         "status": trace.status.value,
         "fix_recommendations": report.fix_recommendations,
+        "generated_fix_suggestions": generated,
+        "plugin_fix_suggestions": plugin_fixes,
         "top_hypotheses": [
             {
                 "hypothesis": h.description,
@@ -406,6 +413,83 @@ def health_check(
         "health_score": report.health_score,
         "summary": one_line,
         "status": trace.status.value,
+    }
+
+
+def benchmark_runs(
+    trace_files: list[str] | None = None,
+    directory: str | None = None,
+    limit: int = 100,
+) -> dict[str, Any]:
+    """Run benchmark/evaluation mode over trace files."""
+    if trace_files:
+        result = benchmark_traces(trace_files)
+    else:
+        trace_dir = directory or str(get_config().trace_dir)
+        result = benchmark_trace_directory(trace_dir, limit=limit)
+    return result.to_dict()
+
+
+def monitor_traces(
+    trace_dir: str | None = None,
+    duration_seconds: float = 5.0,
+    poll_interval_seconds: float = 1.0,
+    max_alerts: int = 100,
+) -> dict[str, Any]:
+    """Run live trace monitoring for a bounded interval and return alerts."""
+    monitor = LiveTraceMonitor(
+        trace_dir=trace_dir or get_config().trace_dir,
+        poll_interval_seconds=poll_interval_seconds,
+    )
+    alerts = []
+    for alert in monitor.stream(duration_seconds=duration_seconds):
+        alerts.append(
+            {
+                "trace_file": alert.trace_file,
+                "run_id": alert.run_id,
+                "pattern_type": alert.pattern_type,
+                "severity": alert.severity,
+                "message": alert.message,
+                "event_ids": alert.event_ids,
+            }
+        )
+        if len(alerts) >= max_alerts:
+            break
+    return {
+        "trace_dir": str(monitor.trace_dir),
+        "duration_seconds": duration_seconds,
+        "alerts": alerts,
+        "alert_count": len(alerts),
+    }
+
+
+def conversation_flow(
+    trace_file: str | None = None,
+    trace_json: dict[str, Any] | str | None = None,
+) -> dict[str, Any]:
+    """Build inter-agent conversation/handoff flow view."""
+    trace, source, detected_format = resolve_trace(trace_file=trace_file, trace_json=trace_json)
+    agents = trace.get_agent_ids()
+    handoffs = trace.get_agent_handoffs()
+    edges: dict[tuple[str, str], int] = {}
+    for _, src, dst in handoffs:
+        key = (src, dst)
+        edges[key] = edges.get(key, 0) + 1
+
+    return {
+        "source": source,
+        "format": detected_format,
+        "run_id": trace.run_id,
+        "agents": agents,
+        "handoff_count": len(handoffs),
+        "handoffs": [
+            {"event_id": event_id, "from_agent": src, "to_agent": dst}
+            for event_id, src, dst in handoffs
+        ],
+        "flow_edges": [
+            {"from_agent": src, "to_agent": dst, "count": count}
+            for (src, dst), count in sorted(edges.items(), key=lambda item: item[1], reverse=True)
+        ],
     }
 
 
@@ -453,6 +537,19 @@ def config_resource() -> dict[str, Any]:
     """Resource payload for current application config."""
     cfg = get_config()
     return cfg.to_dict()
+
+
+def plugin_resource() -> dict[str, Any]:
+    """Resource payload for active plugin registry."""
+    pm = get_plugin_manager()
+    return {
+        "parsers": [getattr(plugin, "name", plugin.__class__.__name__) for plugin in pm.parsers],
+        "pattern_detectors": [getattr(plugin, "name", plugin.__class__.__name__) for plugin in pm.pattern_detectors],
+        "report_templates": [getattr(plugin, "format_name", plugin.__class__.__name__) for plugin in pm.report_templates],
+        "fix_generators": [getattr(plugin, "name", plugin.__class__.__name__) for plugin in pm.fix_generators],
+        "visualizations": [getattr(plugin, "name", plugin.__class__.__name__) for plugin in pm.visualizations],
+        "errors": pm.errors,
+    }
 
 
 def debug_my_agent_prompt(trace_reference: str = "") -> str:
@@ -505,6 +602,7 @@ def _serialize_event(event: TraceEvent) -> dict[str, Any]:
         "event_id": event.event_id,
         "parent_event_id": event.parent_event_id,
         "span_id": event.span_id,
+        "agent_id": event.agent_id,
         "type": event.type.value,
         "role": event.role.value if event.role else None,
         "name": event.name,

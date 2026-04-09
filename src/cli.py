@@ -15,11 +15,12 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
+from src.advanced import benchmark_trace_directory, compare_traces_advanced, LiveTraceMonitor
 from src.ingestion import parse_trace_file, TraceNormalizer
 from src.preanalysis import RootCauseBuilder
 from src.analysis import run_analysis
 from src.analysis.agent import run_analysis_without_llm
-from src.output import ReportGenerator, ArtifactGenerator
+from src.output import ReportGenerator, ArtifactGenerator, FixSuggestionGenerator
 from src.utils.config import get_config
 
 app = typer.Typer(
@@ -255,6 +256,144 @@ def config():
     console.print(table)
 
 
+@app.command()
+def compare(
+    trace_a: Path = typer.Argument(..., exists=True, readable=True, help="First trace file"),
+    trace_b: Path = typer.Argument(..., exists=True, readable=True, help="Second trace file"),
+):
+    """Compare two traces and highlight regressions/improvements."""
+    try:
+        a = TraceNormalizer.normalize(parse_trace_file(trace_a))
+        b = TraceNormalizer.normalize(parse_trace_file(trace_b))
+    except Exception as e:
+        console.print(f"[red]Error parsing traces:[/red] {e}")
+        raise typer.Exit(1)
+
+    result = compare_traces_advanced(a, b)
+    table = Table(title="Trace Comparison")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="white")
+    table.add_row("Trace A", a.run_id)
+    table.add_row("Trace B", b.run_id)
+    table.add_row("New Tool Signatures", str(len(result.new_tool_signatures)))
+    table.add_row("Removed Tool Signatures", str(len(result.removed_tool_signatures)))
+    table.add_row("Changed LLM Outputs", str(len(result.changed_llm_outputs)))
+    table.add_row("Regressions", ", ".join(result.regressions) if result.regressions else "None")
+    table.add_row("Improvements", ", ".join(result.improvements) if result.improvements else "None")
+    console.print(table)
+
+
+@app.command()
+def benchmark(
+    traces_dir: Path = typer.Option(
+        Path("./traces"),
+        "--traces-dir",
+        help="Directory containing trace JSON files",
+    ),
+    limit: int = typer.Option(100, "--limit", help="Maximum number of traces to include"),
+):
+    """Run benchmark/evaluation metrics across traces."""
+    result = benchmark_trace_directory(traces_dir, limit=limit).to_dict()
+    table = Table(title="Benchmark Summary")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="white")
+    table.add_row("Total Runs", str(result["total_runs"]))
+    table.add_row("Success Rate", f"{result['success_rate']:.0%}")
+    table.add_row("Average Tokens", str(result["average_tokens"]))
+    table.add_row("Average Latency (ms)", str(result["average_latency_ms"]))
+    table.add_row("Average Errors", str(result["average_errors"]))
+    table.add_row(
+        "Top Patterns",
+        ", ".join(f"{p['pattern']}({p['count']})" for p in result["top_failure_patterns"]) or "None",
+    )
+    table.add_row(
+        "Degradation Alerts",
+        "; ".join(result["degradation_alerts"]) if result["degradation_alerts"] else "None",
+    )
+    console.print(table)
+
+
+@app.command()
+def monitor(
+    traces_dir: Path = typer.Option(Path("./traces"), "--traces-dir", help="Trace directory to monitor"),
+    duration: float = typer.Option(10.0, "--duration", help="Monitor duration in seconds"),
+    poll_interval: float = typer.Option(1.0, "--poll-interval", help="Polling interval in seconds"),
+    max_alerts: int = typer.Option(50, "--max-alerts", help="Maximum alerts to print"),
+):
+    """Monitor traces in near real-time and print pattern alerts."""
+    mon = LiveTraceMonitor(traces_dir, poll_interval_seconds=poll_interval)
+    alert_count = 0
+    for alert in mon.stream(duration_seconds=duration):
+        console.print(
+            f"[yellow]alert[/yellow] {alert.severity.upper()} "
+            f"{alert.pattern_type} run={alert.run_id} events={alert.event_ids} "
+            f"file={alert.trace_file}"
+        )
+        alert_count += 1
+        if alert_count >= max_alerts:
+            break
+    console.print(f"Monitoring complete. Alerts emitted: {alert_count}")
+
+
+@app.command()
+def fixes(
+    trace_file: Path = typer.Argument(..., exists=True, readable=True, help="Trace file path"),
+):
+    """Generate advanced fix suggestions for a trace."""
+    try:
+        trace = TraceNormalizer.normalize(parse_trace_file(trace_file))
+    except Exception as e:
+        console.print(f"[red]Error parsing trace:[/red] {e}")
+        raise typer.Exit(1)
+
+    preanalysis = RootCauseBuilder(trace).build()
+    suggestions = FixSuggestionGenerator(trace, preanalysis).to_dict()
+    if not suggestions:
+        console.print("No advanced fix suggestions generated.")
+        return
+
+    for idx, suggestion in enumerate(suggestions, 1):
+        console.print(Panel.fit(
+            f"[bold]{suggestion['title']}[/bold]\n"
+            f"Category: {suggestion['category']}\n"
+            f"Events: {suggestion['event_ids']}\n\n"
+            f"Rationale: {suggestion['rationale']}\n\n"
+            f"Patch snippet:\n{suggestion['patch_snippet']}",
+            title=f"Fix Suggestion {idx}",
+            border_style="blue",
+        ))
+
+
+@app.command("agent-flow")
+def agent_flow(
+    trace_file: Path = typer.Argument(..., exists=True, readable=True, help="Trace file path"),
+):
+    """Show inter-agent communication and handoff flow."""
+    try:
+        trace = TraceNormalizer.normalize(parse_trace_file(trace_file))
+    except Exception as e:
+        console.print(f"[red]Error parsing trace:[/red] {e}")
+        raise typer.Exit(1)
+
+    agent_ids = trace.get_agent_ids()
+    handoffs = trace.get_agent_handoffs()
+    table = Table(title="Agent Flow")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="white")
+    table.add_row("Agents", ", ".join(agent_ids) if agent_ids else "None")
+    table.add_row("Handoffs", str(len(handoffs)))
+    console.print(table)
+
+    if handoffs:
+        detail = Table(title="Handoff Details")
+        detail.add_column("Event ID", style="cyan")
+        detail.add_column("From", style="white")
+        detail.add_column("To", style="white")
+        for event_id, src, dst in handoffs:
+            detail.add_row(str(event_id), src, dst)
+        console.print(detail)
+
+
 def _print_trace_summary(summary: dict):
     """Print trace summary table."""
     table = Table(title="Trace Summary", show_header=False)
@@ -271,6 +410,7 @@ def _print_trace_summary(summary: dict):
     table.add_row("Errors", str(summary.get("errors", 0)))
     table.add_row("Total Tokens", str(summary.get("total_tokens", "N/A")))
     table.add_row("Duration (ms)", str(summary.get("duration_ms", "N/A")))
+    table.add_row("Agent Count", str(summary.get("agent_count", 0)))
 
     console.print(table)
 
@@ -301,6 +441,11 @@ def _print_preanalysis(preanalysis):
         for i, hyp in enumerate(preanalysis.hypotheses[:3], 1):
             console.print(f"  {i}. {hyp.description}")
             console.print(f"     Confidence: {hyp.confidence:.0%} | Category: {hyp.category}")
+
+
+def _print_preanalysis_summary(preanalysis):
+    """Backward-compatible alias for concise pre-analysis output."""
+    _print_preanalysis(preanalysis)
 
 
 def _print_result_summary(result, preanalysis):
