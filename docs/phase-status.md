@@ -10,7 +10,7 @@ This file tracks roadmap execution from `docs/improvement-plan.md`.
 |---|---|---|
 | Phase 1 - Clean Up What We Have | Completed | Implemented, tested, and committed |
 | Phase 2 - Deepen the Core | Completed | Implemented, tested, and committed |
-| Phase 3 - MCP Server Integration | Not Started | Pending |
+| Phase 3 - MCP Server Integration | Completed | Implemented, tested, and committed |
 | Phase 4 - Open Source Growth | Not Started | Pending |
 | Phase 5 - Advanced Features | Not Started | Pending |
 
@@ -69,16 +69,28 @@ Goal: Improve analysis quality, parser depth, and deterministic report quality.
 
 ## Phase 3 - MCP Server Integration
 
-Status: Not Started
+Status: Completed
 Goal: Expose Agent Autopsy as MCP tools/resources/prompts.
 
 ### TODO
 
-- [ ] Implement MCP server using official Python SDK
-- [ ] Expose core tools (`analyze_trace`, `detect_patterns`, `validate_trace`, `get_trace_summary`, etc.)
-- [ ] Expose MCP resources (recent traces, report archive, pattern catalog, config)
-- [ ] Expose MCP prompt templates (debug my agent, quick health check, compare runs, explain failure)
-- [ ] Support stdio and SSE/HTTP transports
+- [x] Implement MCP server using official Python SDK
+- [x] Expose core tools (`analyze_trace`, `detect_patterns`, `validate_trace`, `get_trace_summary`, etc.)
+- [x] Expose MCP resources (recent traces, report archive, pattern catalog, config)
+- [x] Expose MCP prompt templates (debug my agent, quick health check, compare runs, explain failure)
+- [x] Support stdio and SSE/HTTP transports
+
+### Completed in this phase
+
+- [x] Added MCP SDK dependency and created `src/mcp` package with runtime entry point (`python -m src.mcp`)
+- [x] Implemented MCP server wrapper with 10 core tools in `src/mcp/server.py`
+- [x] Added MCP service layer (`src/mcp/service.py`) for reusable, testable tool logic
+- [x] Added raw-trace JSON parsing entrypoint (`parse_trace_data`) to ingestion layer for MCP tool inputs
+- [x] Exposed MCP resources for recent traces, report archive, pattern catalog, and active config
+- [x] Exposed MCP prompt templates for debug, health check, compare runs, and failure explanation workflows
+- [x] Added documentation page `docs/mcp.md` and README integration notes
+- [x] Added service-level tests for MCP behavior (`tests/test_mcp_service.py`)
+- [x] Validated local transports: `stdio` and `streamable-http` startup/shutdown
 
 ## Phase 4 - Open Source Growth
 
@@ -114,3 +126,4 @@ Goal: Add intelligent and extensible debugging capabilities.
 - 2026-04-08: Initialized phase tracking file and seeded TODOs for all phases.
 - 2026-04-08: Completed Phase 1 implementation (dependency cleanup, docs honesty, stronger tests, error handling/logging, CI workflow).
 - 2026-04-08: Completed Phase 2 implementation (agent quality gate, parser depth, advanced pattern detectors, deterministic report improvements, configurable model limits).
+- 2026-04-09: Completed Phase 3 implementation (MCP server tools/resources/prompts, service layer, transports, docs, and tests).
