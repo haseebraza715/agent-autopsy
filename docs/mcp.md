@@ -34,6 +34,9 @@ python -m src.mcp --transport sse --mount-path /mcp
 - `get_event_details`
 - `suggest_fixes`
 - `health_check`
+- `benchmark_runs`
+- `monitor_traces`
+- `conversation_flow`
 
 All tools accept trace input as a file path (`trace_file`) or inline JSON (`trace_json`) where relevant.
 
@@ -43,6 +46,7 @@ All tools accept trace input as a file path (`trace_file`) or inline JSON (`trac
 - `agent-autopsy://reports/archive`
 - `agent-autopsy://patterns/catalog`
 - `agent-autopsy://config/current`
+- `agent-autopsy://plugins/active`
 
 ## Prompts
 
