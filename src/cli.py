@@ -2,22 +2,28 @@
 CLI interface for Agent Autopsy.
 
 Provides commands for analyzing traces and generating reports.
+
+Exit codes: 0 = no issues detected, 1 = issues or analysis findings, 2 = tool / parse error.
 """
 
+import fnmatch
 import json
 import logging
-from datetime import datetime
+import sys
+import time
 from pathlib import Path
 from typing import Optional
 
 import typer
 from rich.console import Console
+from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from src import api
-from src.advanced import benchmark_trace_directory, compare_traces_advanced, LiveTraceMonitor
+from src.advanced import benchmark_trace_directory, LiveTraceMonitor
+from src.advanced.comparison import trace_diff_detail
 from src.errors import ParseError, PluginError, SchemaValidationError
 from src.ingestion import TraceNormalizer
 from src.output import ArtifactGenerator, FixSuggestionGenerator, ReportGenerator
@@ -28,9 +34,18 @@ logger = logging.getLogger(__name__)
 app = typer.Typer(
     name="autopsy",
     help="Agent Autopsy - Debug and analyze agent execution traces",
-    add_completion=False,
+    add_completion=True,
 )
 console = Console()
+
+
+def _trace_has_findings(trace, preanalysis) -> bool:
+    """Whether the run should be treated as having actionable findings (non-zero exit)."""
+    if getattr(trace.stats, "num_errors", 0) > 0:
+        return True
+    if preanalysis.signals:
+        return True
+    return False
 
 
 @app.command()
@@ -56,6 +71,11 @@ def analyze(
         "--model",
         help="Model to use for analysis (overrides default)",
     ),
+    provider: Optional[str] = typer.Option(
+        None,
+        "--provider",
+        help="LLM provider override: openrouter | openai | anthropic | ollama",
+    ),
     verbose: bool = typer.Option(
         False,
         "-v", "--verbose",
@@ -71,10 +91,25 @@ def analyze(
         "--no-embeddings",
         help="Do not load sentence-transformers for semantic drift (saves memory)",
     ),
+    no_cache: bool = typer.Option(
+        False,
+        "--no-cache",
+        help="Bypass LLM response disk cache (only applies with LLM analysis)",
+    ),
+    stream: bool = typer.Option(
+        False,
+        "--stream",
+        help="Stream LLM output to the terminal (LLM path only)",
+    ),
+    quiet: bool = typer.Option(
+        False,
+        "-q", "--quiet",
+        help="Minimal output (no spinners/banners); faster for scripts",
+    ),
     format: str = typer.Option(
-        "markdown",
+        "text",
         "-f", "--format",
-        help="Output format: markdown or json",
+        help="Output format: text | markdown | json",
     ),
 ):
     """
@@ -86,108 +121,148 @@ def analyze(
     """
     config = get_config()
     prev_skip = config.skip_embeddings
+    prev_provider = config.llm_provider
     if no_embeddings:
         config.skip_embeddings = True
+    if provider:
+        config.llm_provider = provider.strip().lower()
 
+    exit_code = 0
     try:
-        console.print(Panel.fit(
-            "[bold blue]Agent Autopsy[/bold blue]\n"
-            "Analyzing agent execution trace...",
-            border_style="blue",
-        ))
+        if not quiet:
+            console.print(Panel.fit(
+                "[bold blue]Agent Autopsy[/bold blue]\n"
+                "Analyzing agent execution trace...",
+                border_style="blue",
+            ))
 
-        # Step 1: Parse trace
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Parsing trace file...", total=None)
+        def _progress_ctx():
+            if quiet:
+                from contextlib import nullcontext
 
+                return nullcontext()
+            return Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            )
+
+        with _progress_ctx() as progress:
+            if not quiet:
+                task = progress.add_task("Parsing trace file...", total=None)
             try:
                 trace = api.load_trace(trace_file)
                 api.apply_embedding_defaults_for_trace(trace)
             except (ParseError, SchemaValidationError, PluginError) as e:
                 console.print(f"[red]Error parsing trace:[/red] {e}")
-                raise typer.Exit(1)
+                raise typer.Exit(2)
             except Exception:
                 logger.exception("Unexpected error while parsing trace file")
                 console.print("[red]Error parsing trace (see logs for details).[/red]")
-                raise typer.Exit(1)
+                raise typer.Exit(2)
+            if not quiet:
+                progress.update(task, description="Trace parsed successfully")
 
-            progress.update(task, description="Trace parsed successfully")
-
-        # Show trace summary
         summary = api.trace_summary(trace)
-        _print_trace_summary(summary)
+        if not quiet:
+            _print_trace_summary(summary)
 
-        # Step 2: Run pre-analysis
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Running pre-analysis...", total=None)
-
+        with _progress_ctx() as progress:
+            if not quiet:
+                task = progress.add_task("Running pre-analysis...", total=None)
             preanalysis = api.run_preanalysis(trace)
-            progress.update(task, description="Pre-analysis complete")
+            if not quiet:
+                progress.update(task, description="Pre-analysis complete")
 
-        # Show pre-analysis results
-        if verbose:
+        if verbose and not quiet:
             _print_preanalysis(preanalysis)
 
-        # Step 3: Run analysis
+        fmt = format.lower().strip()
+        if fmt not in ("text", "markdown", "json"):
+            console.print(f"[red]Unknown format:[/red] {format} (use text, markdown, or json)")
+            raise typer.Exit(2)
+
         if no_llm or not api.llm_credentials_configured(config):
-            if not no_llm:
-                console.print("[yellow]Warning:[/yellow] No API key configured for the selected LLM provider. Running without LLM.")
-
+            if not no_llm and not quiet:
+                console.print(
+                    "[yellow]Warning:[/yellow] No API key configured for the selected LLM provider. "
+                    "Running without LLM."
+                )
             result = api.run_deterministic_analysis(trace)
+        elif stream:
+            result_holder: dict = {}
+            try:
+                for chunk in api.stream_llm_analysis_text(
+                    trace,
+                    result_holder,
+                    model=model,
+                    verbose=verbose,
+                ):
+                    sys.stdout.write(chunk)
+                    sys.stdout.flush()
+                result = result_holder.get("result") or api.run_deterministic_analysis(trace)
+            except Exception as e:
+                logger.exception("Streaming LLM analysis failed")
+                console.print(f"\n[yellow]Streaming failed:[/yellow] {e}")
+                result = api.run_deterministic_analysis(trace)
         else:
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                console=console,
-            ) as progress:
-                task = progress.add_task(f"Running LLM analysis with {model or config.default_model}...", total=None)
-
+            with _progress_ctx() as progress:
+                if not quiet:
+                    task = progress.add_task(
+                        f"Running LLM analysis with {model or config.default_model}...",
+                        total=None,
+                    )
                 try:
-                    result = api.run_llm_analysis(trace, model=model, verbose=verbose)
+                    result = api.run_llm_analysis(
+                        trace,
+                        model=model,
+                        verbose=verbose,
+                        use_cache=not no_cache,
+                    )
                 except Exception as e:
                     logger.exception("LLM analysis failed")
                     console.print(f"[yellow]LLM analysis failed:[/yellow] {e}")
                     console.print("Falling back to deterministic analysis...")
                     result = api.run_deterministic_analysis(trace)
+                if not quiet:
+                    progress.update(task, description="Analysis complete")
 
-                progress.update(task, description="Analysis complete")
-
-        # Step 4: Generate report
         report_generator = api.generate_report(trace, result)
 
         if output:
-            saved_path = report_generator.save(output, format=format)
-            console.print(f"\n[green]Report saved to:[/green] {saved_path}")
+            save_fmt = fmt if fmt in ("json", "markdown", "text") else "markdown"
+            saved_path = report_generator.save(output, format=save_fmt)
+            if not quiet:
+                console.print(f"\n[green]Report saved to:[/green] {saved_path}")
         else:
-            # Print to console
             console.print("\n")
-            if format == "json":
-                console.print_json(json.dumps(report_generator.to_json(), default=str))
+            if fmt == "json":
+                sys.stdout.write(json.dumps(report_generator.to_json(), indent=2, default=str))
+                console.print()
+            elif fmt == "markdown":
+                console.print(Markdown(report_generator.to_markdown()))
             else:
-                console.print(report_generator.to_markdown())
+                console.print(report_generator.render("text"))
 
-        # Step 5: Generate artifacts if requested
         if artifacts:
             artifact_generator = ArtifactGenerator(trace, preanalysis)
             saved_artifacts = artifact_generator.save_all(artifacts)
+            if not quiet:
+                console.print(f"\n[green]Artifacts saved to:[/green] {artifacts}")
+                for path in saved_artifacts:
+                    console.print(f"  - {path.name}")
 
-            console.print(f"\n[green]Artifacts saved to:[/green] {artifacts}")
-            for path in saved_artifacts:
-                console.print(f"  - {path.name}")
+        if not quiet:
+            console.print("\n")
+            _print_result_summary(result, preanalysis)
 
-        # Print summary
-        console.print("\n")
-        _print_result_summary(result, preanalysis)
+        if _trace_has_findings(trace, preanalysis):
+            exit_code = 1
     finally:
         config.skip_embeddings = prev_skip
+        config.llm_provider = prev_provider
+
+    raise typer.Exit(exit_code)
 
 
 @app.command()
@@ -280,35 +355,151 @@ def config():
     console.print(table)
 
 
-@app.command()
-def compare(
+@app.command("compare")
+@app.command("diff")
+def compare_traces(
     trace_a: Path = typer.Argument(..., exists=True, readable=True, help="First trace file"),
     trace_b: Path = typer.Argument(..., exists=True, readable=True, help="Second trace file"),
+    out_format: str = typer.Option(
+        "text",
+        "-f",
+        "--format",
+        help="text (human) or json (pipe to jq)",
+    ),
 ):
-    """Compare two traces and highlight regressions/improvements."""
+    """Compare two traces: patterns, tool deltas, timing (alias: diff)."""
     try:
         a = api.load_trace(trace_a)
         b = api.load_trace(trace_b)
     except (ParseError, SchemaValidationError, PluginError) as e:
         console.print(f"[red]Error parsing traces:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(2)
     except Exception:
         logger.exception("Unexpected error parsing traces for compare")
         console.print("[red]Error parsing traces (see logs for details).[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(2)
 
-    result = compare_traces_advanced(a, b)
-    table = Table(title="Trace Comparison")
+    detail = trace_diff_detail(a, b)
+    fmt = out_format.lower().strip()
+    if fmt == "json":
+        sys.stdout.write(json.dumps(detail, indent=2, default=str))
+        console.print()
+        return
+
+    adv = detail["advanced"]
+    table = Table(title="Trace comparison")
     table.add_column("Metric", style="cyan")
     table.add_column("Value", style="white")
-    table.add_row("Trace A", a.run_id)
-    table.add_row("Trace B", b.run_id)
-    table.add_row("New Tool Signatures", str(len(result.new_tool_signatures)))
-    table.add_row("Removed Tool Signatures", str(len(result.removed_tool_signatures)))
-    table.add_row("Changed LLM Outputs", str(len(result.changed_llm_outputs)))
-    table.add_row("Regressions", ", ".join(result.regressions) if result.regressions else "None")
-    table.add_row("Improvements", ", ".join(result.improvements) if result.improvements else "None")
+    table.add_row("Trace A", detail["run_id_a"])
+    table.add_row("Trace B", detail["run_id_b"])
+    table.add_row("Event IDs only in A", str(detail["event_ids_only_in_a"][:20]))
+    table.add_row("Event IDs only in B", str(detail["event_ids_only_in_b"][:20]))
+    table.add_row("Patterns only in A", ", ".join(detail["patterns_only_in_a"]) or "None")
+    table.add_row("Patterns only in B", ", ".join(detail["patterns_only_in_b"]) or "None")
+    table.add_row("New tool signatures", str(len(adv["new_tool_signatures"])))
+    table.add_row("Removed tool signatures", str(len(adv["removed_tool_signatures"])))
+    table.add_row("Tool arg/name diffs", str(len(detail["tool_call_arg_or_name_diffs"])))
     console.print(table)
+
+
+@app.command("watch")
+def watch_traces(
+    directory: Path = typer.Argument(
+        ...,
+        exists=True,
+        file_okay=False,
+        help="Directory to watch for new .json traces",
+    ),
+    pattern: str = typer.Option("*.json", "--pattern", help="Filename glob"),
+    bell: bool = typer.Option(False, "--bell", help="Terminal bell on critical findings"),
+    quiet: bool = typer.Option(False, "-q", "--quiet", help="Only print analysis lines"),
+):
+    """Watch a directory and analyze new trace JSON files as they appear."""
+    from watchdog.events import FileSystemEventHandler
+    from watchdog.observers import Observer
+
+    seen: set[str] = set()
+
+    class Handler(FileSystemEventHandler):
+        def on_created(self, event):  # type: ignore[override]
+            if event.is_directory:
+                return
+            path = Path(str(event.src_path))
+            if not fnmatch.fnmatch(path.name, pattern):
+                return
+            key = str(path.resolve())
+            if key in seen:
+                return
+            seen.add(key)
+            try:
+                trace = api.load_trace(path)
+            except Exception as exc:
+                console.print(f"[red]watch:[/red] failed to load {path}: {exc}")
+                return
+            pre = api.run_preanalysis(trace)
+            crit = any(s.severity == "critical" for s in pre.signals)
+            if not quiet:
+                console.print(f"[cyan]new[/cyan] {path.name} run={trace.run_id} signals={len(pre.signals)}")
+            else:
+                console.print(f"{path.name}\tsignals={len(pre.signals)}")
+            if crit and bell:
+                sys.stdout.write("\a")
+                sys.stdout.flush()
+            if pre.signals and not quiet:
+                for s in pre.signals[:8]:
+                    sev = "red" if s.severity == "critical" else "yellow"
+                    console.print(f"  [{sev}]{s.severity}[/{sev}] {s.type}: {s.evidence[:120]}")
+
+    obs = Observer()
+    obs.schedule(Handler(), str(directory), recursive=False)
+    obs.start()
+    console.print(f"[green]Watching[/green] {directory} for {pattern} (Ctrl+C to stop)")
+    try:
+        while obs.is_alive():
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        obs.stop()
+        obs.join()
+
+
+@app.command("replay")
+def replay_trace(
+    trace_file: Path = typer.Argument(..., exists=True, readable=True, help="Trace JSON"),
+    start_from: int = typer.Option(0, "--from", help="Only show events with id >= this"),
+    delay: float = typer.Option(0.35, "--delay", help="Seconds between steps (before speed)"),
+    speed: float = typer.Option(1.0, "--speed", help="Delay divisor (2 = twice as fast)"),
+    step: bool = typer.Option(False, "--step", help="Wait for Enter after each event"),
+    until_regex: Optional[str] = typer.Option(None, "--until", help="Stop when event text matches regex"),
+):
+    """Print trace events step-by-step like a debugger."""
+    import re as re_mod
+
+    try:
+        trace = api.load_trace(trace_file)
+    except (ParseError, SchemaValidationError, PluginError) as e:
+        console.print(f"[red]Error parsing trace:[/red] {e}")
+        raise typer.Exit(2)
+    until_c = re_mod.compile(until_regex) if until_regex else None
+    sp = max(0.01, speed)
+    for ev in trace.events:
+        if ev.event_id < start_from:
+            continue
+        line = f"[{ev.event_id:04d}] {ev.type.value}"
+        if ev.name:
+            line += f" {ev.name}"
+        if ev.agent_id:
+            line += f" @{ev.agent_id}"
+        console.print(line)
+        blob = f"{ev.input!s} {ev.output!s}"
+        if until_c and until_c.search(blob):
+            console.print("[green]--until matched, stopping--[/green]")
+            break
+        if step:
+            input()
+        else:
+            time.sleep(delay / sp)
 
 
 @app.command()
