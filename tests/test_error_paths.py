@@ -25,7 +25,7 @@ def test_parse_truncated_json_raises(tmp_path: Path) -> None:
         text=True,
         timeout=60,
     )
-    assert proc.returncode == 1
+    assert proc.returncode == 2
 
 
 def test_parse_trace_data_type_error() -> None:
