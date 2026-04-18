@@ -1,12 +1,5 @@
-Summary
-Retry loop on web_search — Events 3–7 repeat the same failing calls.
+LLM: retry storm on web_search (Events 3–7).
 
-Root cause
-No retry cap; empty tool responses did not stop the graph.
+Fix: cap retries + backoff; treat empty tool output as error.
 
-Fixes
-• Cap retries + exponential backoff on web_search
-• Surface “empty output” as an error before the next LLM turn
-
-Confidence
-0.82 (matches repeated tool_call + error rows in the trace)
+Confidence 0.82
