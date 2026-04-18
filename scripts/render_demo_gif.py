@@ -54,12 +54,10 @@ def _mono_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
         "/Library/Fonts/Menlo.ttc",
     ]
     for path in candidates:
-        p = Path(path)
-        if p.is_file():
-            try:
-                return ImageFont.truetype(str(p), size=size)
-            except OSError:
-                continue
+        try:
+            return ImageFont.truetype(path, size=size)
+        except (OSError, ValueError):
+            continue
     return ImageFont.load_default()
 
 
