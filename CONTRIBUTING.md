@@ -65,6 +65,17 @@ See:
 - `docs/patterns.md`
 - `docs/extensions.md`
 
+### Add a new pattern in ~15 minutes
+
+1. Add a value to `PatternType` in `src/preanalysis/patterns.py` and implement `detect_*` on `PatternDetector`, then append it from `detect_all()`.
+2. Wire human-readable lines in `src/output/deterministic_report.py` (`PATTERN_DESCRIPTIONS` and `LIKELY_CAUSE`).
+3. Add or extend an entry in `tests/fixtures/real_traces/_manifest.yaml` with `must_include` / `clean` expectations.
+4. Run `python scripts/eval_detectors.py` and `pytest tests/test_preanalysis.py`.
+
+## Detector corpus
+
+Real traces for regression testing live under `tests/fixtures/real_traces/` with `_manifest.yaml`. CI runs `scripts/eval_detectors.py` after unit tests.
+
 ## Code of Conduct
 
 By participating, you agree to follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
