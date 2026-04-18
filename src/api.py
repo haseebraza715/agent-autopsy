@@ -3,6 +3,9 @@ Public facade for Agent Autopsy.
 
 CLI, Streamlit, and MCP should depend on this module instead of reaching into
 ingestion, preanalysis, and analysis internals.
+
+LangChain/LangGraph are imported only inside :func:`run_llm_analysis` and
+:func:`stream_llm_analysis_text` so deterministic paths avoid loading heavy deps.
 """
 
 from __future__ import annotations
@@ -13,8 +16,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from src.analysis import run_analysis
-from src.analysis.agent import AnalysisResult, run_analysis_stream, run_analysis_without_llm
+from src.analysis.agent import AnalysisResult, run_analysis_without_llm
+from src.analysis.llm_cache import load_cached, save_cached
 from src.ingestion import TraceNormalizer, parse_trace_file
 from src.ingestion.parser import parse_trace_data
 from src.output import ReportGenerator
@@ -98,9 +101,23 @@ def run_llm_analysis(
     model: str | None = None,
     verbose: bool = False,
     enable_tracing: bool | None = None,
+    use_cache: bool = True,
 ) -> AnalysisResult:
     """LLM-assisted analysis (requires provider API keys)."""
-    return run_analysis(trace, model=model, verbose=verbose, enable_tracing=enable_tracing)
+    cfg = get_config()
+    resolved_model = model or cfg.default_model
+
+    if use_cache:
+        cached = load_cached(trace, resolved_model)
+        if cached is not None and cached.success and cached.report:
+            return cached
+
+    from src.analysis.llm_agent import run_analysis as _run_llm
+
+    result = _run_llm(trace, model=model, verbose=verbose, enable_tracing=enable_tracing)
+    if use_cache and result.success and result.report:
+        save_cached(trace, resolved_model, result)
+    return result
 
 
 def stream_llm_analysis_text(
@@ -117,7 +134,9 @@ def stream_llm_analysis_text(
     When the iterator completes, ``result_holder['result']`` contains the final
     :class:`AnalysisResult` (unless the outer caller interrupted before completion).
     """
-    yield from run_analysis_stream(
+    from src.analysis.llm_agent import run_analysis_stream as _stream
+
+    yield from _stream(
         trace,
         result_holder,
         model=model,
@@ -139,6 +158,7 @@ def analyze(
     model: str | None = None,
     verbose: bool = False,
     enable_tracing: bool | None = None,
+    use_llm_cache: bool = True,
 ) -> Report:
     """
     Full pipeline: load trace, pre-analyze, optional LLM, wrap report generator.
@@ -162,6 +182,7 @@ def analyze(
                 model=model,
                 verbose=verbose,
                 enable_tracing=enable_tracing,
+                use_cache=use_llm_cache,
             )
 
         gen = generate_report(trace, analysis)
@@ -172,14 +193,14 @@ def analyze(
 
 def render_report(
     report: Report,
-    format: Literal["markdown", "json"] = "markdown",
+    format: Literal["markdown", "json", "text"] = "markdown",
 ) -> str:
-    """Render a :class:`Report` to markdown or JSON text."""
+    """Render a :class:`Report` to markdown, plain text, or JSON text."""
     if format == "json":
         import json
 
         return json.dumps(report.report_generator.to_json(), indent=2, default=str)
-    return report.report_generator.to_markdown()
+    return str(report.report_generator.render(format))
 
 
 def trace_summary(trace: Trace) -> dict[str, Any]:
