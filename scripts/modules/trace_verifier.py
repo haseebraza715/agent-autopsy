@@ -3,8 +3,11 @@ Module for verifying and validating traces.
 """
 
 import json
+import logging
 from collections import defaultdict
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 class TraceVerifier:
@@ -51,6 +54,7 @@ class TraceVerifier:
                 "start_time": trace_data.get("start_time", "unknown"),
             }
         except Exception as e:
+            logger.exception("TraceVerifier failed on %s", trace_file)
             return {
                 "file": trace_file.name,
                 "error": str(e),

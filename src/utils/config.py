@@ -20,6 +20,12 @@ class Config:
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
 
+    # LLM provider: openrouter | openai | anthropic | ollama
+    llm_provider: str = "openrouter"
+    openai_api_key: str = ""
+    openai_api_base: str = ""
+    ollama_base_url: str = "http://127.0.0.1:11434"
+
     # Model settings
     default_model: str = "meta-llama/llama-3.1-8b-instruct"
     fallback_model: str = "meta-llama/llama-3.1-8b-instruct:free"
@@ -51,6 +57,9 @@ class Config:
     semantic_drift_delta_threshold: float = 0.35
     semantic_drift_low_threshold: float = 0.25
 
+    # When True, never load sentence-transformers (CLI --no-embeddings or no goal on trace).
+    skip_embeddings: bool = False
+
     # Paths
     output_dir: Path = field(default_factory=lambda: Path("./reports"))
 
@@ -66,8 +75,8 @@ class Config:
             load_dotenv()
             self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY", "")
 
-        if not self.openrouter_api_key:
-            print("Warning: OPENROUTER_API_KEY not set. LLM analysis will be unavailable.")
+        if (self.llm_provider or "openrouter").lower() == "openrouter" and not self.openrouter_api_key:
+            print("Warning: OPENROUTER_API_KEY not set. OpenRouter-backed LLM analysis will be unavailable.")
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -92,6 +101,11 @@ class Config:
             semantic_drift_model=os.getenv("SEMANTIC_DRIFT_MODEL", "all-MiniLM-L6-v2"),
             semantic_drift_delta_threshold=float(os.getenv("SEMANTIC_DRIFT_DELTA_THRESHOLD", "0.35")),
             semantic_drift_low_threshold=float(os.getenv("SEMANTIC_DRIFT_LOW_THRESHOLD", "0.25")),
+            llm_provider=os.getenv("PROVIDER", os.getenv("LLM_PROVIDER", "openrouter")).strip().lower(),
+            openai_api_key=os.getenv("OPENAI_API_KEY", ""),
+            openai_api_base=os.getenv("OPENAI_API_BASE", ""),
+            ollama_base_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"),
+            skip_embeddings=os.getenv("AUTOPSY_NO_EMBEDDINGS", "").lower() in ("1", "true", "yes"),
         )
 
     def get_model(self, override: str | None = None) -> str:
@@ -104,6 +118,7 @@ class Config:
         """Convert config to dictionary (hiding sensitive values)."""
         return {
             "openrouter_base_url": self.openrouter_base_url,
+            "llm_provider": self.llm_provider,
             "default_model": self.default_model,
             "fallback_model": self.fallback_model,
             "max_retries": self.max_retries,
@@ -122,6 +137,7 @@ class Config:
             "semantic_drift_model": self.semantic_drift_model,
             "semantic_drift_delta_threshold": self.semantic_drift_delta_threshold,
             "semantic_drift_low_threshold": self.semantic_drift_low_threshold,
+            "skip_embeddings": self.skip_embeddings,
             "has_api_key": bool(self.openrouter_api_key),
             "trace_enabled": self.trace_enabled,
             "trace_dir": str(self.trace_dir),

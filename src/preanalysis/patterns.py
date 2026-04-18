@@ -10,13 +10,17 @@ from datetime import timedelta
 from enum import Enum
 from functools import lru_cache
 import json
+import logging
 import math
 from pathlib import Path
 import re
 
+from src.errors import PluginError
 from src.plugins import get_plugin_manager
 from src.schema import Trace, TraceEvent, EventType
 from src.utils.config import get_config
+
+logger = logging.getLogger(__name__)
 
 
 class PatternType(str, Enum):
@@ -95,9 +99,13 @@ class PatternDetector:
         # Run community/plugin detectors.
         plugin_manager = get_plugin_manager()
         for plugin in plugin_manager.pattern_detectors:
+            pname = getattr(plugin, "name", type(plugin).__name__)
             try:
                 results.extend(plugin.detect(self.trace))
+            except PluginError:
+                raise
             except Exception:
+                logger.exception("Pattern detector plugin %r failed; skipping plugin", pname)
                 continue
         return results
 
@@ -436,7 +444,11 @@ class PatternDetector:
                     evidence=f"Goal similarity dropped from {early_avg:.2f} to {late_avg:.2f}",
                     event_ids=late_ids,
                     metadata={
-                        "method": "semantic_embeddings" if self._embedding_backend_available() else "lexical_overlap",
+                        "method": (
+                            "semantic_embeddings"
+                            if self._embedding_backend_available(self.trace.task.goal)
+                            else "lexical_overlap"
+                        ),
                         "early_similarity": round(early_avg, 3),
                         "late_similarity": round(late_avg, 3),
                         "series": [
@@ -637,7 +649,7 @@ class PatternDetector:
         ]
         event_texts = [self._event_text(event) for event in content_events]
 
-        if self._embedding_backend_available():
+        if self._should_use_sentence_embeddings(goal) and self._embedding_backend_available(goal):
             try:
                 model = self._get_embedding_model(get_config().semantic_drift_model)
                 embeddings = model.encode([goal] + event_texts)
@@ -649,7 +661,9 @@ class PatternDetector:
                 if series:
                     return series
             except Exception:
-                pass
+                logger.exception(
+                    "Sentence embedding similarity failed; falling back to lexical overlap for goal drift"
+                )
 
         # Lexical fallback.
         goal_tokens = set(self._tokenize_text(goal))
@@ -664,14 +678,26 @@ class PatternDetector:
             series.append((event.event_id, overlap))
         return series
 
-    def _embedding_backend_available(self) -> bool:
-        """Return True when semantic embedding backend can be used."""
-        if not get_config().semantic_drift_enabled:
+    def _should_use_sentence_embeddings(self, goal: str) -> bool:
+        """Load embeddings only when drift is enabled, goal exists, and user did not opt out."""
+        cfg = get_config()
+        if getattr(cfg, "skip_embeddings", False):
+            return False
+        if not cfg.semantic_drift_enabled:
+            return False
+        return bool(goal and goal.strip())
+
+    def _embedding_backend_available(self, goal: str) -> bool:
+        """Return True when sentence-transformers is importable (no model load)."""
+        if not self._should_use_sentence_embeddings(goal):
             return False
         try:
             import sentence_transformers  # noqa: F401
             return True
+        except ImportError:
+            return False
         except Exception:
+            logger.exception("Unexpected error while probing sentence-transformers backend")
             return False
 
     @classmethod

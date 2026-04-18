@@ -5,6 +5,7 @@ Captures agent execution events and saves them as machine-readable JSON traces.
 """
 
 import json
+import logging
 import os
 import re
 import time
@@ -24,6 +25,8 @@ SECRET_KEYS_PATTERN = re.compile(
     r"(api_key|authorization|token|secret|password|credential|openrouter_api_key)",
     re.IGNORECASE
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -118,7 +121,11 @@ def _safe_serialize(obj: Any, max_chars: int = 5000) -> Any:
             if len(repr_str) > max_chars:
                 return repr_str[:max_chars] + f"... [truncated]"
             return repr_str
+    except (TypeError, ValueError, RecursionError, AttributeError, KeyError) as e:
+        logger.warning("Trace serialization issue: %s", e, exc_info=True)
+        return f"<serialization error: {e}>"
     except Exception as e:
+        logger.exception("Unexpected trace serialization failure")
         return f"<serialization error: {e}>"
 
 
@@ -189,7 +196,7 @@ class TraceSaver(BaseCallbackHandler):
             try:
                 listener(event)
             except Exception:
-                continue
+                logger.exception("TraceSaver event listener failed")
         self._event_counter += 1
         return event
 

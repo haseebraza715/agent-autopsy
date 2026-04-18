@@ -29,10 +29,23 @@ Core capabilities:
 
 ## Setup
 
-Install dependencies:
+Install the smallest set you need (see `pyproject.toml` optional groups):
 
 ```bash
-pip install -r requirements.txt
+pip install -e ".[cli]"            # CLI only (Typer/Rich + core)
+pip install -e ".[llm]"            # + LangGraph / LangChain / OpenAI client
+pip install -e ".[gui]"            # + Streamlit
+pip install -e ".[mcp]"            # + MCP SDK
+pip install -e ".[embeddings]"     # + sentence-transformers (semantic drift)
+pip install -e ".[dev]"            # + pytest
+pip install -e ".[full]"          # everything (largest install)
+```
+
+Quick try without any LLM API key:
+
+```bash
+pip install -e ".[cli]"
+autopsy analyze examples/traces/loop_failure.json --no-llm --no-embeddings
 ```
 
 ## Usage
@@ -40,13 +53,15 @@ pip install -r requirements.txt
 ### Web App
 
 ```bash
+pip install -e ".[gui]"
 streamlit run app.py
 ```
 
 ### CLI
 
 ```bash
-python -m src.cli analyze trace.json
+autopsy analyze examples/traces/loop_failure.json --no-llm
+# or: python -m src.cli analyze trace.json --no-llm
 ```
 
 ### MCP Server
@@ -68,7 +83,7 @@ python -m src.cli fixes trace.json
 
 ## Features
 
-- **Web GUI** — Interactive Streamlit interface for trace analysis
+- **Web GUI** — Interactive Streamlit interface for trace analysis (optional live LLM stream via LangGraph `stream_mode`)
 - **Pattern Detection** — Loops, retries, auth/timeouts, drift, stale context, token waste, and more
 - **LLM Analysis** — AI-powered root cause analysis with event citations
 - **Multi-Format** — LangGraph and generic JSON, plus experimental LangChain/OpenTelemetry parsing with graceful fallback

@@ -8,19 +8,53 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from typing import Any
+
+from pydantic import AnyHttpUrl
 
 from . import service
 
 
-def create_mcp_server() -> Any:
+class _StaticMcpTokenVerifier:
+    """Bearer token check for MCP HTTP/SSE when ``MCP_SSE_TOKEN`` is set."""
+
+    def __init__(self, secret: str) -> None:
+        self._secret = secret
+
+    async def verify_token(self, token: str) -> Any:
+        import secrets
+
+        from mcp.server.auth.provider import AccessToken
+
+        if not token or not self._secret:
+            return None
+        if secrets.compare_digest(token.strip(), self._secret):
+            return AccessToken(token=token, client_id="agent-autopsy-mcp", scopes=["mcp"])
+        return None
+
+
+def create_mcp_server(transport: str = "stdio") -> Any:
     """Create and configure the FastMCP server instance."""
     try:
+        from mcp.server.auth.settings import AuthSettings
         from mcp.server.fastmcp import FastMCP
     except ImportError as exc:
         raise RuntimeError(
             "MCP SDK is not installed. Install dependency `mcp` to run the MCP server."
         ) from exc
+
+    auth_settings = None
+    token_verifier = None
+    secret = os.getenv("MCP_SSE_TOKEN", "").strip()
+    if transport in ("sse", "streamable-http") and secret:
+        # Minimal resource-server metadata so FastMCP can install bearer auth on HTTP transports.
+        auth_settings = AuthSettings(
+            issuer_url=AnyHttpUrl("http://127.0.0.1:9/"),
+            resource_server_url=AnyHttpUrl("http://127.0.0.1:9/"),
+            required_scopes=["mcp"],
+        )
+        token_verifier = _StaticMcpTokenVerifier(secret)
 
     mcp = FastMCP(
         "Agent Autopsy MCP",
@@ -28,6 +62,8 @@ def create_mcp_server() -> Any:
             "Use these tools to analyze agent traces, detect failure patterns, "
             "validate trace structure, compare runs, and generate fix guidance."
         ),
+        auth=auth_settings,
+        token_verifier=token_verifier,
     )
 
     @mcp.tool()
@@ -241,7 +277,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    mcp = create_mcp_server()
+    mcp = create_mcp_server(transport=args.transport)
     run_kwargs: dict[str, Any] = {"transport": args.transport}
     if args.mount_path:
         run_kwargs["mount_path"] = args.mount_path
