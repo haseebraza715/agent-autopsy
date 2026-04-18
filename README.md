@@ -9,7 +9,7 @@
 
 *Automatically detect failures, loops, and issues in agent execution traces*
 
-![Deterministic autopsy demo: autopsy analyze loop_failure.json --no-llm](docs/images/autopsy-demo.gif)
+![HD demo: deterministic pre-analysis + LLM synthesis on loop_failure.json](docs/images/autopsy-demo.gif)
 
 **[Try it live](https://autopsyagent.streamlit.app/)** | [Documentation](docs/) | [Report Issue](https://github.com/haseebraza715/agent-autopsy/issues)
 
