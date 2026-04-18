@@ -8,22 +8,27 @@ This agent analyzes traces using a combination of:
 """
 
 import json
+import logging
+import os
 import re
-from typing import Any, Annotated, TypedDict
+from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import Annotated, Any, TypedDict
 
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, SystemMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 
-from src.schema import Trace
 from src.ingestion import TraceNormalizer
+from src.schema import Trace
 from src.preanalysis import RootCauseBuilder
 from src.tracing import TraceSaver, start_trace, end_trace, get_trace_config
 from .tools import AnalysisToolkit, TOOL_DEFINITIONS
 from .prompts import SYSTEM_PROMPT, get_analysis_prompt, get_final_report_prompt
 from src.utils.config import get_config
+
+logger = logging.getLogger(__name__)
 
 
 class AgentState(TypedDict):
@@ -162,14 +167,71 @@ class AnalysisAgent:
         # Build the agent graph
         self.graph = self._build_graph()
 
-    def _create_llm(self) -> ChatOpenAI:
-        """Create the LLM client."""
+    def _create_llm(self) -> Any:
+        """Create the LLM client (OpenRouter-compatible OpenAI API or other providers)."""
+        cfg = self.config
+        provider = (cfg.llm_provider or "openrouter").lower().strip()
+        temperature = 0.1
+        max_tokens = cfg.max_tokens
+        timeout = cfg.timeout_seconds
+
+        try:
+            from langchain.chat_models import init_chat_model
+        except ImportError:
+            init_chat_model = None
+
+        if init_chat_model is not None:
+            if provider == "openrouter":
+                return init_chat_model(
+                    f"openai:{self.model_name}",
+                    model_provider="openai",
+                    api_key=cfg.openrouter_api_key or None,
+                    base_url=cfg.openrouter_base_url,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    timeout=timeout,
+                )
+            if provider == "openai":
+                key = cfg.openai_api_key or os.getenv("OPENAI_API_KEY", "")
+                base = cfg.openai_api_base or os.getenv("OPENAI_API_BASE") or None
+                return init_chat_model(
+                    f"openai:{self.model_name}",
+                    model_provider="openai",
+                    api_key=key or None,
+                    base_url=base,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    timeout=timeout,
+                )
+            if provider == "anthropic":
+                key = os.getenv("ANTHROPIC_API_KEY", "")
+                return init_chat_model(
+                    f"anthropic:{self.model_name}",
+                    api_key=key or None,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    timeout=timeout,
+                )
+            if provider == "ollama":
+                return init_chat_model(
+                    f"ollama:{self.model_name}",
+                    base_url=cfg.ollama_base_url,
+                    temperature=temperature,
+                )
+
+        if provider not in ("openrouter", "openai"):
+            logger.warning(
+                "langchain package not installed or provider %r unsupported without it; "
+                "using OpenRouter-compatible OpenAI client",
+                provider,
+            )
         return ChatOpenAI(
             model=self.model_name,
-            openai_api_key=self.config.openrouter_api_key,
-            openai_api_base=self.config.openrouter_base_url,
-            max_tokens=self.config.max_tokens,
-            temperature=0.1,  # Low temperature for analysis
+            openai_api_key=cfg.openrouter_api_key,
+            openai_api_base=cfg.openrouter_base_url,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            timeout=timeout,
         )
 
     def _build_graph(self) -> StateGraph:
@@ -236,7 +298,7 @@ class AnalysisAgent:
                 "token_budget_warning": token_usage_estimate >= int(budget * 0.85),
             }
         except Exception as e:
-            # Handle LLM errors gracefully
+            logger.exception("LLM invoke failed in analysis node (investigation pass)")
             error_msg = f"LLM error: {str(e)}"
             if self.verbose:
                 print(f"Warning: {error_msg}")
@@ -307,6 +369,7 @@ class AnalysisAgent:
         try:
             return tool_map[tool_name]()
         except Exception as e:
+            logger.exception("Analysis toolkit tool %r failed", tool_name)
             return {"error": f"Tool execution failed: {str(e)}"}
 
     def _generate_report_node(self, state: AgentState) -> AgentState:
@@ -377,6 +440,7 @@ class AnalysisAgent:
                 "analysis_complete": True,
             }
         except Exception as e:
+            logger.exception("LLM report generation node failed")
             return {
                 "final_report": f"Report generation failed: {str(e)}",
                 "analysis_complete": True,
@@ -428,16 +492,28 @@ class AnalysisAgent:
             return 0
         return max(1, len(text) // 4)
 
-    def run(self, trace_handler: TraceSaver | None = None) -> AnalysisResult:
-        """Run the analysis and return results.
+    @staticmethod
+    def _stringify_stream_content(content: Any) -> str:
+        """Normalize streamed message content blocks to plain text."""
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts: list[str] = []
+            for block in content:
+                if isinstance(block, str):
+                    parts.append(block)
+                elif isinstance(block, dict):
+                    if block.get("type") == "text" and isinstance(block.get("text"), str):
+                        parts.append(block["text"])
+            return "".join(parts)
+        return ""
 
-        Args:
-            trace_handler: Optional TraceSaver callback for capturing execution trace.
-        """
-        # Prepare initial state
+    def _prepare_graph_run(
+        self,
+    ) -> tuple[AgentState, dict[str, Any], dict[str, Any], Any]:
+        """Build initial LangGraph state, run config, trace summary, and preanalysis bundle."""
         trace_summary = TraceNormalizer.get_summary(self.trace)
         preanalysis = RootCauseBuilder(self.trace).build()
-
         initial_prompt = get_analysis_prompt(trace_summary, preanalysis.summary)
 
         initial_state: AgentState = {
@@ -455,12 +531,94 @@ class AnalysisAgent:
             "analysis_complete": False,
             "final_report": "",
         }
+        return initial_state, trace_summary, preanalysis
 
-        # Build config with callbacks if trace handler provided
-        config = {}
+    def _graph_run_config(self, trace_handler: TraceSaver | None) -> dict[str, Any]:
+        cfg: dict[str, Any] = {}
         if trace_handler:
-            config["callbacks"] = [trace_handler]
-            config["run_name"] = "agent_autopsy_analysis"
+            cfg["callbacks"] = [trace_handler]
+            cfg["run_name"] = "agent_autopsy_analysis"
+        return cfg
+
+    def iter_stream_report_text(
+        self,
+        trace_handler: TraceSaver | None,
+        result_holder: dict[str, Any],
+    ) -> Iterator[str]:
+        """
+        Stream human-readable LLM output while the analysis graph runs.
+
+        Uses LangGraph ``stream_mode=['messages','values']`` so token chunks (when the
+        provider streams) and the final report state are captured. On completion,
+        sets ``result_holder['result']`` to an :class:`AnalysisResult`.
+        """
+        initial_state, trace_summary, preanalysis = self._prepare_graph_run()
+        run_cfg = self._graph_run_config(trace_handler)
+        config = run_cfg if run_cfg else None
+
+        last_values: dict[str, Any] | None = None
+        last_node: str | None = None
+        budget_notice = False
+
+        def finish_from_state(final_state: dict[str, Any]) -> AnalysisResult:
+            report = final_state.get("final_report") or ""
+            return AnalysisResult(
+                report=report,
+                trace_summary=trace_summary,
+                preanalysis=preanalysis.to_dict(),
+                success=True,
+            )
+
+        try:
+            for mode, chunk in self.graph.stream(
+                initial_state,
+                config=config,
+                stream_mode=["messages", "values"],
+            ):
+                if mode == "messages":
+                    msg, meta = chunk
+                    node = meta.get("langgraph_node", "") if isinstance(meta, dict) else ""
+                    if node and node != last_node:
+                        last_node = node
+                        yield f"\n\n**[{node}]**\n\n"
+                    if isinstance(msg, AIMessageChunk):
+                        text = self._stringify_stream_content(msg.content)
+                        if text:
+                            yield text
+                    elif isinstance(msg, AIMessage) and isinstance(msg.content, str) and msg.content:
+                        yield msg.content
+                elif mode == "values" and isinstance(chunk, dict):
+                    last_values = chunk
+                    if chunk.get("token_budget_warning") and not budget_notice:
+                        budget_notice = True
+                        yield "\n\n_⚠ Token budget warning — investigation may wrap up soon._\n\n"
+
+            final_state = last_values
+            if final_state is None:
+                final_state = self.graph.invoke(initial_state, config=config)
+
+            result_holder["result"] = finish_from_state(final_state)
+        except Exception as e:
+            logger.exception("Streaming analysis graph failed")
+            if trace_handler:
+                trace_handler.add_error_event(e, context="agent_stream")
+            result_holder["result"] = AnalysisResult(
+                report="",
+                trace_summary=trace_summary,
+                preanalysis=preanalysis.to_dict(),
+                success=False,
+                error=str(e),
+            )
+            yield f"\n\n**Analysis failed:** {e}\n"
+
+    def run(self, trace_handler: TraceSaver | None = None) -> AnalysisResult:
+        """Run the analysis and return results.
+
+        Args:
+            trace_handler: Optional TraceSaver callback for capturing execution trace.
+        """
+        initial_state, trace_summary, preanalysis = self._prepare_graph_run()
+        config = self._graph_run_config(trace_handler)
 
         try:
             # Run the graph with optional tracing
@@ -473,7 +631,7 @@ class AnalysisAgent:
                 success=True,
             )
         except Exception as e:
-            # Record error in trace if handler provided
+            logger.exception("Analysis graph invocation failed")
             if trace_handler:
                 trace_handler.add_error_event(e, context="agent_run")
             return AnalysisResult(
@@ -517,12 +675,56 @@ def run_analysis(
         result = agent.run(trace_handler=trace_handler)
         return result
     except Exception as e:
-        # Ensure error is captured
+        logger.exception("run_analysis failed before trace teardown")
         if trace_handler:
             trace_handler.add_error_event(e, context="run_analysis")
         raise
     finally:
         # Always save trace, even on exception
+        if trace_handler:
+            end_trace(trace_handler)
+
+
+def run_analysis_stream(
+    trace: Trace,
+    result_holder: dict[str, Any],
+    model: str | None = None,
+    verbose: bool = False,
+    enable_tracing: bool | None = None,
+) -> Iterator[str]:
+    """
+    Run LLM analysis while streaming text fragments (for UIs).
+
+    Mutates ``result_holder['result']`` to the final :class:`AnalysisResult` when the
+    graph finishes (or on failure). Trace capture lifecycle matches :func:`run_analysis`.
+    """
+    agent = AnalysisAgent(trace, model=model, verbose=verbose)
+
+    trace_config = get_trace_config()
+    should_trace = enable_tracing if enable_tracing is not None else trace_config.enabled
+
+    trace_handler = None
+    if should_trace:
+        trace_handler, _run_id = start_trace()
+
+    try:
+        yield from agent.iter_stream_report_text(trace_handler, result_holder)
+    except Exception as e:
+        logger.exception("run_analysis_stream failed before trace teardown")
+        if trace_handler:
+            trace_handler.add_error_event(e, context="run_analysis_stream")
+        if "result" not in result_holder:
+            ts = TraceNormalizer.get_summary(trace)
+            pa = RootCauseBuilder(trace).build()
+            result_holder["result"] = AnalysisResult(
+                report="",
+                trace_summary=ts,
+                preanalysis=pa.to_dict(),
+                success=False,
+                error=str(e),
+            )
+        raise
+    finally:
         if trace_handler:
             end_trace(trace_handler)
 

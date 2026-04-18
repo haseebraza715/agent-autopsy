@@ -1,0 +1,31 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {"key": "service.name", "value": {"stringValue": "agent-service"}},
+          {"key": "gen_ai.model", "value": {"stringValue": "gpt-4o"}}
+        ]
+      },
+      "scopeSpans": [
+        {
+          "spans": [
+            {
+              "traceId": "e2e-otel-trace",
+              "spanId": "span-1",
+              "name": "llm.chat.completion",
+              "startTimeUnixNano": 1704067200000000000,
+              "endTimeUnixNano": 1704067201000000000,
+              "attributes": [
+                {"key": "gen_ai.prompt", "value": {"stringValue": "Hello"}},
+                {"key": "gen_ai.response", "value": {"stringValue": "Hi"}},
+                {"key": "gen_ai.usage.total_tokens", "value": {"intValue": 42}}
+              ],
+              "status": {"code": 1}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

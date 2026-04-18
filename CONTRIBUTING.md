@@ -7,13 +7,7 @@ Thanks for your interest in contributing.
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-Optional modern workflow:
-
-```bash
-pip install -e ".[dev]"
+pip install -e ".[full]"
 ```
 
 ## Local Checks

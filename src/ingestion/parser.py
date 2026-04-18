@@ -6,12 +6,18 @@ and a factory function to select the appropriate parser based on format.
 """
 
 import json
+import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
+from pydantic import ValidationError as PydanticValidationError
+
+from src.errors import ParseError, PluginError, SchemaValidationError
 from src.schema import Trace
 from src.plugins import get_plugin_manager
+
+logger = logging.getLogger(__name__)
 
 
 class TraceParser(ABC):
@@ -35,7 +41,13 @@ class TraceParser(ABC):
             try:
                 if plugin.can_parse(data):
                     return f"plugin:{plugin.name}"
+            except PluginError:
+                raise
             except Exception:
+                logger.exception(
+                    "Plugin parser %r failed during format detection; skipping plugin",
+                    getattr(plugin, "name", type(plugin).__name__),
+                )
                 continue
 
         # OpenTelemetry detection (check first to avoid false positives)
@@ -86,8 +98,18 @@ def parse_trace_file(file_path: str | Path) -> Trace:
     if not path.exists():
         raise FileNotFoundError(f"Trace file not found: {path}")
 
-    with open(path, "r") as f:
-        data = json.load(f)
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ParseError(f"Could not read trace file {path}: {exc}") from exc
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ParseError(f"Invalid JSON in trace file {path}: {exc}") from exc
+
+    if not isinstance(data, dict):
+        raise ParseError(f"Trace file {path} must contain a JSON object at the root")
 
     return parse_trace_data(data)
 
@@ -108,15 +130,32 @@ def parse_trace_data(data: dict[str, Any]) -> Trace:
     from .formats.generic import GenericJSONParser
 
     if not isinstance(data, dict):
-        raise TypeError("Trace data must be a dictionary")
+        raise ParseError("Trace data must be a dictionary")
 
     # First let parser plugins try.
     plugin_manager = get_plugin_manager()
     for plugin in plugin_manager.parsers:
+        pname = getattr(plugin, "name", type(plugin).__name__)
         try:
             if plugin.can_parse(data):
-                return plugin.parse(data)
+                try:
+                    return plugin.parse(data)
+                except PydanticValidationError as exc:
+                    raise SchemaValidationError(
+                        f"Plugin parser {pname!r} produced invalid trace schema: {exc}"
+                    ) from exc
+                except ParseError:
+                    raise
+                except Exception as exc:
+                    raise PluginError(f"Plugin parser {pname!r} failed while parsing trace") from exc
+        except PluginError:
+            raise
+        except SchemaValidationError:
+            raise
+        except ParseError:
+            raise
         except Exception:
+            logger.exception("Plugin parser %r failed during can_parse; skipping plugin", pname)
             continue
 
     # Detect built-in format and select parser
@@ -135,4 +174,11 @@ def parse_trace_data(data: dict[str, Any]) -> Trace:
         # Fallback to generic parser
         parser = GenericJSONParser()
 
-    return parser.parse(data)
+    try:
+        return parser.parse(data)
+    except PydanticValidationError as exc:
+        raise SchemaValidationError(f"Trace failed schema validation ({format_type}): {exc}") from exc
+    except ParseError:
+        raise
+    except Exception as exc:
+        raise ParseError(f"Failed to parse trace as format {format_type!r}: {exc}") from exc

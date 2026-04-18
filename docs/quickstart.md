@@ -9,15 +9,12 @@ Get started with Agent Autopsy in minutes.
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install (pick extras you need; full includes CLI+GUI+LLM+MCP+tests+embeddings)
+pip install -e ".[full]"
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your OPENROUTER_API_KEY
-
-# Optional: editable install with extras
-pip install -e ".[full]"
+# Edit .env with your API keys and PROVIDER
 ```
 
 ## Basic Usage

@@ -3,6 +3,7 @@ Module for generating traces by running the analysis agent.
 """
 
 import json
+import logging
 import sys
 from pathlib import Path
 
@@ -14,6 +15,8 @@ from src.ingestion import parse_trace_file, TraceNormalizer
 from src.analysis import run_analysis
 from src.analysis.agent import run_analysis_without_llm
 from src.utils.config import get_config
+
+logger = logging.getLogger(__name__)
 
 
 class TraceGenerator:
@@ -34,7 +37,11 @@ class TraceGenerator:
             error_count = sum(1 for e in events if e.get("type") == "error")
             
             return error_count > 0, error_count
+        except (json.JSONDecodeError, OSError, TypeError) as e:
+            logger.debug("check_trace_for_failure could not read %s: %s", trace_file, e)
+            return False, 0
         except Exception:
+            logger.exception("check_trace_for_failure unexpected error for %s", trace_file)
             return False, 0
     
     def generate_traces(
@@ -86,6 +93,7 @@ class TraceGenerator:
                 trace = parse_trace_file(trace_path)
                 trace = TraceNormalizer.normalize(trace)
             except Exception as e:
+                logger.exception("TraceGenerator failed to parse %s", trace_file)
                 if verbose:
                     print(f"Error parsing {trace_file}: {e}")
                 trace_index += 1
@@ -175,6 +183,7 @@ class TraceGenerator:
                                     print(f"  → Trace: {latest_trace}")
                             
             except Exception as e:
+                logger.exception("TraceGenerator analysis loop error")
                 if verbose:
                     print(f"  ✗ Error during analysis: {e}")
                 # Still check if a trace was saved

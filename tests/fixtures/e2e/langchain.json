@@ -1,0 +1,19 @@
+{
+  "run_id": "e2e-langchain",
+  "run_type": "chain",
+  "name": "root_chain",
+  "start_time": "2024-01-01T00:00:00Z",
+  "end_time": "2024-01-01T00:00:01Z",
+  "tools": [{"name": "search"}],
+  "child_runs": [
+    {
+      "id": "child-tool-1",
+      "run_type": "tool",
+      "name": "search",
+      "inputs": {"query": "agent autopsy"},
+      "outputs": {"result": "ok"},
+      "start_time": "2024-01-01T00:00:00Z",
+      "end_time": "2024-01-01T00:00:00.500Z"
+    }
+  ]
+}

@@ -1,24 +1,12 @@
-# Core
-pydantic>=2.0,<3.0
-typer>=0.9,<1.0
-rich>=13.0,<14.0
-
-# LLM & Agent
-langgraph>=0.2,<1.0
-langchain-core>=0.3,<1.0
-langchain-openai>=0.2,<1.0
-openai>=1.0,<3.0
-
-# HTTP
-httpx>=0.25,<1.0
-mcp>=1.0,<2.0
-
-# Testing
-pytest>=7.0,<9.0
-pytest-asyncio>=0.21,<1.0
-
-# Environment
-python-dotenv>=1.0,<2.0
-
-# GUI
-streamlit>=1.29,<2.0
+# This file is intentionally minimal. Install from pyproject optional groups, for example:
+#
+#   pip install "agent-autopsy[cli]"          # Typer/Rich CLI only (default package deps)
+#   pip install "agent-autopsy[llm]"         # + LangGraph / LangChain / OpenAI client
+#   pip install "agent-autopsy[gui]"        # + Streamlit
+#   pip install "agent-autopsy[mcp]"        # + MCP SDK
+#   pip install "agent-autopsy[embeddings]" # + sentence-transformers (semantic drift)
+#   pip install "agent-autopsy[dev]"        # + pytest
+#   pip install "agent-autopsy[full]"       # everything above (largest install)
+#
+# Editable local install:
+#   pip install -e ".[full]"

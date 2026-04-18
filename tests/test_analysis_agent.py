@@ -1,6 +1,6 @@
 """Tests for analysis-agent quality validation helpers."""
 
-from src.analysis.agent import ReportQualityValidator
+from src.analysis.agent import AnalysisAgent, ReportQualityValidator
 
 
 class TestReportQualityValidator:
@@ -40,3 +40,14 @@ Root cause: missing retry policy guard. Event 12 retried after the same timeout.
         assert quality["overall_score"] < 0.5
         assert len(quality["missing_sections"]) >= 3
         assert "missing sections" in feedback.lower()
+
+
+class TestAnalysisAgentStreamHelpers:
+    """Helpers used by LangGraph streaming UI."""
+
+    def test_stringify_stream_content(self) -> None:
+        assert AnalysisAgent._stringify_stream_content("hi") == "hi"
+        assert AnalysisAgent._stringify_stream_content(
+            [{"type": "text", "text": "ab"}]
+        ) == "ab"
+        assert AnalysisAgent._stringify_stream_content(["x", "y"]) == "xy"

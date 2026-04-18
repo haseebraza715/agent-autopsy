@@ -1,0 +1,187 @@
+"""
+Public facade for Agent Autopsy.
+
+CLI, Streamlit, and MCP should depend on this module instead of reaching into
+ingestion, preanalysis, and analysis internals.
+"""
+
+from __future__ import annotations
+
+import os
+from collections.abc import Iterator
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Literal
+
+from src.analysis import run_analysis
+from src.analysis.agent import AnalysisResult, run_analysis_stream, run_analysis_without_llm
+from src.ingestion import TraceNormalizer, parse_trace_file
+from src.ingestion.parser import parse_trace_data
+from src.output import ReportGenerator
+from src.preanalysis import PatternDetector, PatternResult, RootCauseBuilder
+from src.preanalysis.suspects import PreAnalysisBundle
+from src.schema import Trace
+from src.utils.config import Config, get_config
+
+
+def llm_credentials_configured(cfg: Config | None = None) -> bool:
+    """Return True when the configured provider has credentials to call an LLM."""
+    cfg = cfg or get_config()
+    prov = (cfg.llm_provider or "openrouter").lower().strip()
+    if prov == "openrouter":
+        return bool(cfg.openrouter_api_key)
+    if prov == "openai":
+        return bool(cfg.openai_api_key or os.getenv("OPENAI_API_KEY", "").strip())
+    if prov == "anthropic":
+        return bool(os.getenv("ANTHROPIC_API_KEY", "").strip())
+    if prov == "ollama":
+        return True
+    return bool(cfg.openrouter_api_key)
+
+
+@dataclass
+class Report:
+    """Rendered autopsy report and pipeline outputs."""
+
+    trace: Trace
+    preanalysis: PreAnalysisBundle
+    analysis: AnalysisResult
+    report_generator: ReportGenerator
+
+    def markdown(self) -> str:
+        return self.report_generator.to_markdown()
+
+    def json_dict(self) -> dict[str, Any]:
+        return self.report_generator.to_json()
+
+
+def apply_embedding_defaults_for_trace(trace: Trace) -> None:
+    """Skip sentence embeddings when the trace has no task goal (saves memory)."""
+    cfg = get_config()
+    goal = ""
+    if trace.task and trace.task.goal:
+        goal = str(trace.task.goal).strip()
+    if not goal:
+        cfg.skip_embeddings = True
+
+
+def load_trace(path: str | Path) -> Trace:
+    """Parse and normalize a trace from disk."""
+    trace = parse_trace_file(path)
+    return TraceNormalizer.normalize(trace)
+
+
+def load_trace_from_dict(data: dict[str, Any]) -> Trace:
+    """Parse and normalize a trace from an already-loaded JSON object."""
+    trace = parse_trace_data(data)
+    return TraceNormalizer.normalize(trace)
+
+
+def run_preanalysis(trace: Trace) -> PreAnalysisBundle:
+    """Deterministic root-cause and signal pass."""
+    return RootCauseBuilder(trace).build()
+
+
+def detect_patterns(trace: Trace) -> list[PatternResult]:
+    """Run all deterministic pattern detectors."""
+    return PatternDetector(trace).detect_all()
+
+
+def generate_report(trace: Trace, analysis: AnalysisResult) -> ReportGenerator:
+    """Build a report generator for markdown/JSON rendering."""
+    return ReportGenerator(trace, analysis)
+
+
+def run_llm_analysis(
+    trace: Trace,
+    *,
+    model: str | None = None,
+    verbose: bool = False,
+    enable_tracing: bool | None = None,
+) -> AnalysisResult:
+    """LLM-assisted analysis (requires provider API keys)."""
+    return run_analysis(trace, model=model, verbose=verbose, enable_tracing=enable_tracing)
+
+
+def stream_llm_analysis_text(
+    trace: Trace,
+    result_holder: dict[str, Any],
+    *,
+    model: str | None = None,
+    verbose: bool = False,
+    enable_tracing: bool | None = None,
+) -> Iterator[str]:
+    """
+    Stream LLM / graph output as text chunks for UIs (e.g. ``st.write_stream``).
+
+    When the iterator completes, ``result_holder['result']`` contains the final
+    :class:`AnalysisResult` (unless the outer caller interrupted before completion).
+    """
+    yield from run_analysis_stream(
+        trace,
+        result_holder,
+        model=model,
+        verbose=verbose,
+        enable_tracing=enable_tracing,
+    )
+
+
+def run_deterministic_analysis(trace: Trace) -> AnalysisResult:
+    """Pre-analysis-only report without an LLM."""
+    return run_analysis_without_llm(trace)
+
+
+def analyze(
+    trace_path: str | Path,
+    *,
+    no_llm: bool = False,
+    no_embeddings: bool = False,
+    model: str | None = None,
+    verbose: bool = False,
+    enable_tracing: bool | None = None,
+) -> Report:
+    """
+    Full pipeline: load trace, pre-analyze, optional LLM, wrap report generator.
+
+    When ``no_embeddings`` is True, sentence-transformers are not loaded for drift.
+    Traces without a task goal also skip embeddings automatically.
+    """
+    cfg = get_config()
+    prev_skip = cfg.skip_embeddings
+    try:
+        cfg.skip_embeddings = prev_skip or no_embeddings
+        trace = load_trace(trace_path)
+        apply_embedding_defaults_for_trace(trace)
+        preanalysis = run_preanalysis(trace)
+
+        if no_llm or not llm_credentials_configured(cfg):
+            analysis = run_deterministic_analysis(trace)
+        else:
+            analysis = run_llm_analysis(
+                trace,
+                model=model,
+                verbose=verbose,
+                enable_tracing=enable_tracing,
+            )
+
+        gen = generate_report(trace, analysis)
+        return Report(trace=trace, preanalysis=preanalysis, analysis=analysis, report_generator=gen)
+    finally:
+        cfg.skip_embeddings = prev_skip
+
+
+def render_report(
+    report: Report,
+    format: Literal["markdown", "json"] = "markdown",
+) -> str:
+    """Render a :class:`Report` to markdown or JSON text."""
+    if format == "json":
+        import json
+
+        return json.dumps(report.report_generator.to_json(), indent=2, default=str)
+    return report.report_generator.to_markdown()
+
+
+def trace_summary(trace: Trace) -> dict[str, Any]:
+    """Lightweight stats dict for UI and MCP."""
+    return TraceNormalizer.get_summary(trace)

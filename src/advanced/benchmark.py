@@ -4,6 +4,7 @@ Benchmark and evaluation mode utilities.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +13,8 @@ from typing import Any
 from src.ingestion import TraceNormalizer, parse_trace_file
 from src.preanalysis import PatternDetector
 from src.schema import Trace
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -99,6 +102,7 @@ def _load_trace(path: str | Path) -> Trace | None:
         trace = parse_trace_file(path)
         return TraceNormalizer.normalize(trace)
     except Exception:
+        logger.debug("Benchmark skipped unreadable trace %s", path, exc_info=True)
         return None
 
 

@@ -4,13 +4,16 @@ Live trace monitoring with streaming alerts.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import logging
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterator
 
 from src.ingestion import TraceNormalizer, parse_trace_file
 from src.preanalysis import PatternDetector
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -58,6 +61,7 @@ class LiveTraceMonitor:
                 trace = parse_trace_file(trace_file)
                 trace = TraceNormalizer.normalize(trace)
             except Exception:
+                logger.exception("LiveTraceMonitor failed to parse %s", trace_file)
                 continue
 
             for pattern in PatternDetector(trace).detect_all():

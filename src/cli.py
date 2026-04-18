@@ -5,6 +5,7 @@ Provides commands for analyzing traces and generating reports.
 """
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -15,13 +16,14 @@ from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
+from src import api
 from src.advanced import benchmark_trace_directory, compare_traces_advanced, LiveTraceMonitor
-from src.ingestion import parse_trace_file, TraceNormalizer
-from src.preanalysis import RootCauseBuilder
-from src.analysis import run_analysis
-from src.analysis.agent import run_analysis_without_llm
-from src.output import ReportGenerator, ArtifactGenerator, FixSuggestionGenerator
+from src.errors import ParseError, PluginError, SchemaValidationError
+from src.ingestion import TraceNormalizer
+from src.output import ArtifactGenerator, FixSuggestionGenerator, ReportGenerator
 from src.utils.config import get_config
+
+logger = logging.getLogger(__name__)
 
 app = typer.Typer(
     name="autopsy",
@@ -64,6 +66,11 @@ def analyze(
         "--no-llm",
         help="Run only deterministic analysis without LLM",
     ),
+    no_embeddings: bool = typer.Option(
+        False,
+        "--no-embeddings",
+        help="Do not load sentence-transformers for semantic drift (saves memory)",
+    ),
     format: str = typer.Option(
         "markdown",
         "-f", "--format",
@@ -78,99 +85,109 @@ def analyze(
         autopsy analyze ./traces/run_001.json -o report.md --artifacts ./patches/
     """
     config = get_config()
+    prev_skip = config.skip_embeddings
+    if no_embeddings:
+        config.skip_embeddings = True
 
-    console.print(Panel.fit(
-        "[bold blue]Agent Autopsy[/bold blue]\n"
-        "Analyzing agent execution trace...",
-        border_style="blue",
-    ))
+    try:
+        console.print(Panel.fit(
+            "[bold blue]Agent Autopsy[/bold blue]\n"
+            "Analyzing agent execution trace...",
+            border_style="blue",
+        ))
 
-    # Step 1: Parse trace
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Parsing trace file...", total=None)
-
-        try:
-            trace = parse_trace_file(trace_file)
-            trace = TraceNormalizer.normalize(trace)
-        except Exception as e:
-            console.print(f"[red]Error parsing trace:[/red] {e}")
-            raise typer.Exit(1)
-
-        progress.update(task, description="Trace parsed successfully")
-
-    # Show trace summary
-    summary = TraceNormalizer.get_summary(trace)
-    _print_trace_summary(summary)
-
-    # Step 2: Run pre-analysis
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Running pre-analysis...", total=None)
-
-        preanalysis = RootCauseBuilder(trace).build()
-        progress.update(task, description="Pre-analysis complete")
-
-    # Show pre-analysis results
-    if verbose:
-        _print_preanalysis(preanalysis)
-
-    # Step 3: Run analysis
-    if no_llm or not config.openrouter_api_key:
-        if not no_llm:
-            console.print("[yellow]Warning:[/yellow] No API key configured. Running without LLM.")
-
-        result = run_analysis_without_llm(trace)
-    else:
+        # Step 1: Parse trace
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             console=console,
         ) as progress:
-            task = progress.add_task(f"Running LLM analysis with {model or config.default_model}...", total=None)
+            task = progress.add_task("Parsing trace file...", total=None)
 
             try:
-                result = run_analysis(trace, model=model, verbose=verbose)
-            except Exception as e:
-                console.print(f"[yellow]LLM analysis failed:[/yellow] {e}")
-                console.print("Falling back to deterministic analysis...")
-                result = run_analysis_without_llm(trace)
+                trace = api.load_trace(trace_file)
+                api.apply_embedding_defaults_for_trace(trace)
+            except (ParseError, SchemaValidationError, PluginError) as e:
+                console.print(f"[red]Error parsing trace:[/red] {e}")
+                raise typer.Exit(1)
+            except Exception:
+                logger.exception("Unexpected error while parsing trace file")
+                console.print("[red]Error parsing trace (see logs for details).[/red]")
+                raise typer.Exit(1)
 
-            progress.update(task, description="Analysis complete")
+            progress.update(task, description="Trace parsed successfully")
 
-    # Step 4: Generate report
-    report_generator = ReportGenerator(trace, result)
+        # Show trace summary
+        summary = api.trace_summary(trace)
+        _print_trace_summary(summary)
 
-    if output:
-        saved_path = report_generator.save(output, format=format)
-        console.print(f"\n[green]Report saved to:[/green] {saved_path}")
-    else:
-        # Print to console
-        console.print("\n")
-        if format == "json":
-            import json
-            console.print_json(json.dumps(report_generator.to_json(), default=str))
+        # Step 2: Run pre-analysis
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Running pre-analysis...", total=None)
+
+            preanalysis = api.run_preanalysis(trace)
+            progress.update(task, description="Pre-analysis complete")
+
+        # Show pre-analysis results
+        if verbose:
+            _print_preanalysis(preanalysis)
+
+        # Step 3: Run analysis
+        if no_llm or not api.llm_credentials_configured(config):
+            if not no_llm:
+                console.print("[yellow]Warning:[/yellow] No API key configured for the selected LLM provider. Running without LLM.")
+
+            result = api.run_deterministic_analysis(trace)
         else:
-            console.print(report_generator.to_markdown())
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                task = progress.add_task(f"Running LLM analysis with {model or config.default_model}...", total=None)
 
-    # Step 5: Generate artifacts if requested
-    if artifacts:
-        artifact_generator = ArtifactGenerator(trace, preanalysis)
-        saved_artifacts = artifact_generator.save_all(artifacts)
+                try:
+                    result = api.run_llm_analysis(trace, model=model, verbose=verbose)
+                except Exception as e:
+                    logger.exception("LLM analysis failed")
+                    console.print(f"[yellow]LLM analysis failed:[/yellow] {e}")
+                    console.print("Falling back to deterministic analysis...")
+                    result = api.run_deterministic_analysis(trace)
 
-        console.print(f"\n[green]Artifacts saved to:[/green] {artifacts}")
-        for path in saved_artifacts:
-            console.print(f"  - {path.name}")
+                progress.update(task, description="Analysis complete")
 
-    # Print summary
-    console.print("\n")
-    _print_result_summary(result, preanalysis)
+        # Step 4: Generate report
+        report_generator = api.generate_report(trace, result)
+
+        if output:
+            saved_path = report_generator.save(output, format=format)
+            console.print(f"\n[green]Report saved to:[/green] {saved_path}")
+        else:
+            # Print to console
+            console.print("\n")
+            if format == "json":
+                console.print_json(json.dumps(report_generator.to_json(), default=str))
+            else:
+                console.print(report_generator.to_markdown())
+
+        # Step 5: Generate artifacts if requested
+        if artifacts:
+            artifact_generator = ArtifactGenerator(trace, preanalysis)
+            saved_artifacts = artifact_generator.save_all(artifacts)
+
+            console.print(f"\n[green]Artifacts saved to:[/green] {artifacts}")
+            for path in saved_artifacts:
+                console.print(f"  - {path.name}")
+
+        # Print summary
+        console.print("\n")
+        _print_result_summary(result, preanalysis)
+    finally:
+        config.skip_embeddings = prev_skip
 
 
 @app.command()
@@ -189,17 +206,20 @@ def summary(
         autopsy summary ./traces/run_001.json
     """
     try:
-        trace = parse_trace_file(trace_file)
-        trace = TraceNormalizer.normalize(trace)
-    except Exception as e:
+        trace = api.load_trace(trace_file)
+    except (ParseError, SchemaValidationError, PluginError) as e:
         console.print(f"[red]Error parsing trace:[/red] {e}")
         raise typer.Exit(1)
+    except Exception:
+        logger.exception("Unexpected error parsing trace")
+        console.print("[red]Error parsing trace (see logs for details).[/red]")
+        raise typer.Exit(1)
 
-    summary = TraceNormalizer.get_summary(trace)
+    summary = api.trace_summary(trace)
     _print_trace_summary(summary)
 
     # Quick pre-analysis
-    preanalysis = RootCauseBuilder(trace).build()
+    preanalysis = api.run_preanalysis(trace)
     _print_preanalysis(preanalysis)
 
 
@@ -219,7 +239,7 @@ def validate(
         autopsy validate ./traces/run_001.json
     """
     try:
-        trace = parse_trace_file(trace_file)
+        trace = api.load_trace(trace_file)
         issues = TraceNormalizer.validate(trace)
 
         if issues:
@@ -234,8 +254,12 @@ def validate(
         console.print(f"Events: {len(trace.events)}")
         console.print(f"Status: {trace.status.value}")
 
-    except Exception as e:
+    except (ParseError, SchemaValidationError, PluginError) as e:
         console.print(f"[red]Invalid trace file:[/red] {e}")
+        raise typer.Exit(1)
+    except Exception:
+        logger.exception("Unexpected error validating trace")
+        console.print("[red]Invalid trace file (see logs for details).[/red]")
         raise typer.Exit(1)
 
 
@@ -263,10 +287,14 @@ def compare(
 ):
     """Compare two traces and highlight regressions/improvements."""
     try:
-        a = TraceNormalizer.normalize(parse_trace_file(trace_a))
-        b = TraceNormalizer.normalize(parse_trace_file(trace_b))
-    except Exception as e:
+        a = api.load_trace(trace_a)
+        b = api.load_trace(trace_b)
+    except (ParseError, SchemaValidationError, PluginError) as e:
         console.print(f"[red]Error parsing traces:[/red] {e}")
+        raise typer.Exit(1)
+    except Exception:
+        logger.exception("Unexpected error parsing traces for compare")
+        console.print("[red]Error parsing traces (see logs for details).[/red]")
         raise typer.Exit(1)
 
     result = compare_traces_advanced(a, b)
@@ -341,12 +369,16 @@ def fixes(
 ):
     """Generate advanced fix suggestions for a trace."""
     try:
-        trace = TraceNormalizer.normalize(parse_trace_file(trace_file))
-    except Exception as e:
+        trace = api.load_trace(trace_file)
+    except (ParseError, SchemaValidationError, PluginError) as e:
         console.print(f"[red]Error parsing trace:[/red] {e}")
         raise typer.Exit(1)
+    except Exception:
+        logger.exception("Unexpected error parsing trace for fixes")
+        console.print("[red]Error parsing trace (see logs for details).[/red]")
+        raise typer.Exit(1)
 
-    preanalysis = RootCauseBuilder(trace).build()
+    preanalysis = api.run_preanalysis(trace)
     suggestions = FixSuggestionGenerator(trace, preanalysis).to_dict()
     if not suggestions:
         console.print("No advanced fix suggestions generated.")
@@ -370,9 +402,13 @@ def agent_flow(
 ):
     """Show inter-agent communication and handoff flow."""
     try:
-        trace = TraceNormalizer.normalize(parse_trace_file(trace_file))
-    except Exception as e:
+        trace = api.load_trace(trace_file)
+    except (ParseError, SchemaValidationError, PluginError) as e:
         console.print(f"[red]Error parsing trace:[/red] {e}")
+        raise typer.Exit(1)
+    except Exception:
+        logger.exception("Unexpected error parsing trace for agent-flow")
+        console.print("[red]Error parsing trace (see logs for details).[/red]")
         raise typer.Exit(1)
 
     agent_ids = trace.get_agent_ids()
@@ -478,6 +514,11 @@ def autopsy_run(
         "--no-llm",
         help="Run only deterministic analysis without LLM",
     ),
+    no_embeddings: bool = typer.Option(
+        False,
+        "--no-embeddings",
+        help="Do not load sentence-transformers for semantic drift (saves memory)",
+    ),
     verbose: bool = typer.Option(
         False,
         "-v", "--verbose",
@@ -496,110 +537,124 @@ def autopsy_run(
         python -m src.cli autopsy-run traces/my_trace.json -o report.md --no-llm
     """
     config = get_config()
+    prev_skip = config.skip_embeddings
+    if no_embeddings:
+        config.skip_embeddings = True
 
-    console.print(Panel.fit(
-        "[bold blue]Agent Autopsy[/bold blue]\n"
-        "Running full analysis pipeline...",
-        border_style="blue",
-    ))
+    try:
+        console.print(Panel.fit(
+            "[bold blue]Agent Autopsy[/bold blue]\n"
+            "Running full analysis pipeline...",
+            border_style="blue",
+        ))
 
-    # Step 1: Parse and normalize trace
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Parsing trace file...", total=None)
+        # Step 1: Parse and normalize trace
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Parsing trace file...", total=None)
 
-        try:
-            trace = parse_trace_file(trace_file)
-            trace = TraceNormalizer.normalize(trace)
-        except Exception as e:
-            console.print(f"[red]Error parsing trace:[/red] {e}")
-            raise typer.Exit(1)
-
-        progress.update(task, description="Trace parsed successfully")
-
-    # Print trace summary
-    table = Table(title="Trace Summary", show_header=False)
-    table.add_column("Field", style="cyan")
-    table.add_column("Value", style="white")
-
-    table.add_row("Trace File", str(trace_file))
-    table.add_row("Run ID", trace.run_id)
-    table.add_row("Status", trace.status.value)
-    table.add_row("Total Events", str(len(trace.events)))
-    table.add_row("LLM Calls", str(trace.stats.num_llm_calls))
-    table.add_row("Tool Calls", str(trace.stats.num_tool_calls))
-    table.add_row("Errors", f"[red]{trace.stats.num_errors}[/red]" if trace.stats.num_errors else "0")
-
-    console.print(table)
-
-    # Step 2: Run pre-analysis
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Running pre-analysis...", total=None)
-
-        preanalysis = RootCauseBuilder(trace).build()
-
-        progress.update(task, description=f"Pre-analysis complete: {len(preanalysis.signals)} signals, {len(preanalysis.hypotheses)} hypotheses")
-
-    if verbose:
-        _print_preanalysis_summary(preanalysis)
-
-    # Step 3: Run analysis (LLM or deterministic)
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        if no_llm or not config.openrouter_api_key:
-            task = progress.add_task("Running deterministic analysis...", total=None)
-            result = run_analysis_without_llm(trace)
-        else:
-            task = progress.add_task("Running LLM analysis...", total=None)
             try:
-                result = run_analysis(trace, verbose=verbose)
-            except Exception as e:
-                console.print(f"[yellow]LLM analysis failed, falling back to deterministic:[/yellow] {e}")
-                result = run_analysis_without_llm(trace)
+                trace = api.load_trace(trace_file)
+                api.apply_embedding_defaults_for_trace(trace)
+            except (ParseError, SchemaValidationError, PluginError) as e:
+                console.print(f"[red]Error parsing trace:[/red] {e}")
+                raise typer.Exit(1)
+            except Exception:
+                logger.exception("Unexpected error parsing trace for autopsy-run")
+                console.print("[red]Error parsing trace (see logs for details).[/red]")
+                raise typer.Exit(1)
 
-        progress.update(task, description="Analysis complete")
+            progress.update(task, description="Trace parsed successfully")
 
-    # Step 4: Generate report
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Generating report...", total=None)
+        # Print trace summary
+        table = Table(title="Trace Summary", show_header=False)
+        table.add_column("Field", style="cyan")
+        table.add_column("Value", style="white")
 
-        # Determine output path
-        if output is None:
-            reports_dir = Path("./reports")
-            reports_dir.mkdir(parents=True, exist_ok=True)
-            output = reports_dir / f"{trace_file.stem}.md"
+        table.add_row("Trace File", str(trace_file))
+        table.add_row("Run ID", trace.run_id)
+        table.add_row("Status", trace.status.value)
+        table.add_row("Total Events", str(len(trace.events)))
+        table.add_row("LLM Calls", str(trace.stats.num_llm_calls))
+        table.add_row("Tool Calls", str(trace.stats.num_tool_calls))
+        table.add_row("Errors", f"[red]{trace.stats.num_errors}[/red]" if trace.stats.num_errors else "0")
 
-        # Generate and save the report
-        report_gen = ReportGenerator(trace, result)
-        output_format = "json" if output.suffix.lower() == ".json" else "markdown"
-        output = report_gen.save(output, format=output_format)
+        console.print(table)
 
-        progress.update(task, description="Report generated")
+        # Step 2: Run pre-analysis
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Running pre-analysis...", total=None)
 
-    console.print(f"\n[green]Report saved to:[/green] {output}")
+            preanalysis = api.run_preanalysis(trace)
 
-    # Print result summary
-    _print_result_summary(result, preanalysis)
+            progress.update(
+                task,
+                description=f"Pre-analysis complete: {len(preanalysis.signals)} signals, {len(preanalysis.hypotheses)} hypotheses",
+            )
 
-    # Return status based on findings
-    if trace.stats.num_errors > 0 or len(preanalysis.signals) > 0:
-        console.print("\n[yellow]Issues detected in trace - review report for details[/yellow]")
-    else:
-        console.print("\n[green]No issues detected in trace[/green]")
+        if verbose:
+            _print_preanalysis_summary(preanalysis)
+
+        # Step 3: Run analysis (LLM or deterministic)
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            if no_llm or not api.llm_credentials_configured(config):
+                task = progress.add_task("Running deterministic analysis...", total=None)
+                result = api.run_deterministic_analysis(trace)
+            else:
+                task = progress.add_task("Running LLM analysis...", total=None)
+                try:
+                    result = api.run_llm_analysis(trace, verbose=verbose)
+                except Exception as e:
+                    logger.exception("LLM analysis failed in autopsy-run")
+                    console.print(f"[yellow]LLM analysis failed, falling back to deterministic:[/yellow] {e}")
+                    result = api.run_deterministic_analysis(trace)
+
+            progress.update(task, description="Analysis complete")
+
+        # Step 4: Generate report
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Generating report...", total=None)
+
+            # Determine output path
+            if output is None:
+                reports_dir = Path("./reports")
+                reports_dir.mkdir(parents=True, exist_ok=True)
+                output = reports_dir / f"{trace_file.stem}.md"
+
+            # Generate and save the report
+            report_gen = api.generate_report(trace, result)
+            output_format = "json" if output.suffix.lower() == ".json" else "markdown"
+            output = report_gen.save(output, format=output_format)
+
+            progress.update(task, description="Report generated")
+
+        console.print(f"\n[green]Report saved to:[/green] {output}")
+
+        # Print result summary
+        _print_result_summary(result, preanalysis)
+
+        # Return status based on findings
+        if trace.stats.num_errors > 0 or len(preanalysis.signals) > 0:
+            console.print("\n[yellow]Issues detected in trace - review report for details[/yellow]")
+        else:
+            console.print("\n[green]No issues detected in trace[/green]")
+    finally:
+        config.skip_embeddings = prev_skip
 
 
 def main():

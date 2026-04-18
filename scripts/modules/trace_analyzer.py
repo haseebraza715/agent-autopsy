@@ -12,12 +12,15 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+from src import api
 from src.ingestion import parse_trace_file, TraceNormalizer
 from src.preanalysis import RootCauseBuilder
 from src.analysis import run_analysis
 from src.analysis.agent import run_analysis_without_llm
 from src.output import ReportGenerator
 from src.utils.config import get_config
+
+logger = logging.getLogger(__name__)
 
 
 class TraceAnalyzer:
@@ -58,6 +61,7 @@ class TraceAnalyzer:
                     trace = TraceNormalizer.normalize(trace)
                     use_full = True
                 except Exception as parse_error:
+                    logger.exception("TraceAnalyzer parse failed for %s", trace_file)
                     use_full = False
                     result_info["error"] = f"Parse error: {str(parse_error)[:100]}"
             else:
@@ -83,11 +87,12 @@ class TraceAnalyzer:
                     result_info["signals"].append(signal.type)
                 
                 # Run analysis (with or without LLM)
-                if self.config.openrouter_api_key:
+                if api.llm_credentials_configured(self.config):
                     try:
                         result = run_analysis(trace, verbose=False, enable_tracing=False)
                         result_info["analysis_type"] = "llm"
                     except Exception as e:
+                        logger.exception("TraceAnalyzer LLM path failed for %s", trace_file)
                         result = run_analysis_without_llm(trace)
                         result_info["analysis_type"] = "deterministic"
                         result_info["error"] = f"LLM failed: {str(e)[:100]}"
@@ -145,6 +150,7 @@ class TraceAnalyzer:
                     result_info["error"] = proc_result.stderr[:200] if proc_result.stderr else "Unknown error"
                     
         except Exception as e:
+            logger.exception("TraceAnalyzer failed for %s", trace_file)
             result_info["error"] = str(e)
         
         return result_info

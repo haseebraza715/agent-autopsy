@@ -1,0 +1,8 @@
+{
+  "run_id": "e2e-generic",
+  "status": "success",
+  "events": [
+    {"type": "message", "role": "user", "content": "hello"},
+    {"type": "llm_call", "name": "gpt-4", "input": "hello", "output": "hi", "timestamp": "2024-01-15T11:00:02Z"}
+  ]
+}

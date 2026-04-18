@@ -1,56 +1,21 @@
-# MCP Server
+# Agent Autopsy MCP server
 
-Agent Autopsy includes an MCP server so MCP-compatible clients can analyze traces directly from chat/IDE workflows.
+## Running
 
-## Run
+- **stdio** (default, local IDE integration): `python -m src.mcp --transport stdio`
+- **SSE / HTTP** (remote or LAN): `python -m src.mcp --transport sse` (see MCP SDK / FastMCP docs for ports and paths)
 
-Stdio transport (local client integration):
+## Security: SSE and streamable HTTP
 
-```bash
-python -m src.mcp --transport stdio
-```
+When you use `sse` or `streamable-http`, any process that can reach the listener can invoke analysis tools on traces you expose through the server.
 
-HTTP transport (Streamable HTTP):
+Set a shared secret and send it as a **Bearer** token:
 
-```bash
-python -m src.mcp --transport streamable-http --mount-path /mcp
-```
+1. Export `MCP_SSE_TOKEN` to a long random string on the server.
+2. Configure your MCP client to pass `Authorization: Bearer <same token>` on HTTP requests to the MCP endpoint.
 
-SSE transport:
+**stdio** transport remains process-local and does not use `MCP_SSE_TOKEN`.
 
-```bash
-python -m src.mcp --transport sse --mount-path /mcp
-```
+## Environment
 
-## Tools
-
-- `analyze_trace`
-- `detect_patterns`
-- `validate_trace`
-- `get_trace_summary`
-- `compare_traces`
-- `capture_trace`
-- `list_traces`
-- `get_event_details`
-- `suggest_fixes`
-- `health_check`
-- `benchmark_runs`
-- `monitor_traces`
-- `conversation_flow`
-
-All tools accept trace input as a file path (`trace_file`) or inline JSON (`trace_json`) where relevant.
-
-## Resources
-
-- `agent-autopsy://traces/recent`
-- `agent-autopsy://reports/archive`
-- `agent-autopsy://patterns/catalog`
-- `agent-autopsy://config/current`
-- `agent-autopsy://plugins/active`
-
-## Prompts
-
-- `debug_my_agent`
-- `quick_health_check`
-- `compare_runs`
-- `explain_failure`
+See the project `.env.example` for `PROVIDER`, API keys, and trace capture settings.

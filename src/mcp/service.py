@@ -7,21 +7,25 @@ can stay thin and unit-testable.
 
 from __future__ import annotations
 
-from datetime import date, datetime
 import json
+import logging
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
+from src import api
 from src.advanced import benchmark_trace_directory, benchmark_traces, compare_traces_advanced, LiveTraceMonitor
 from src.analysis import run_analysis
 from src.analysis.agent import AnalysisResult, run_analysis_without_llm
-from src.ingestion import TraceNormalizer, parse_trace_data, parse_trace_file, TraceParser
-from src.output import ReportGenerator, FixSuggestionGenerator
+from src.ingestion import TraceNormalizer, TraceParser
+from src.output import FixSuggestionGenerator, ReportGenerator
 from src.plugins import get_plugin_manager
-from src.preanalysis import PatternDetector, PatternType, RootCauseBuilder
+from src.preanalysis import PatternType
 from src.schema import Trace, TraceEvent
 from src.tracing import get_trace_config
 from src.utils.config import get_config
+
+logger = logging.getLogger(__name__)
 
 
 def resolve_trace(
@@ -46,7 +50,7 @@ def resolve_trace(
             raise TypeError("trace_json must be a dict or JSON string")
 
         detected_format = TraceParser.detect_format(raw_data)
-        trace = parse_trace_data(raw_data)
+        trace = api.load_trace_from_dict(raw_data)
     elif trace_file:
         path = Path(trace_file).expanduser().resolve()
         source = str(path)
@@ -54,12 +58,11 @@ def resolve_trace(
             raise FileNotFoundError(f"Trace file not found: {path}")
         raw_data = json.loads(path.read_text())
         detected_format = TraceParser.detect_format(raw_data)
-        trace = parse_trace_file(path)
+        trace = api.load_trace(path)
     else:
         raise ValueError("Provide either trace_file or trace_json")
 
-    normalized = TraceNormalizer.normalize(trace)
-    return normalized, source, detected_format
+    return trace, source, detected_format
 
 
 def analyze_trace(
@@ -77,9 +80,9 @@ def analyze_trace(
     fallback_reason = ""
     if deterministic_only:
         analysis = run_analysis_without_llm(trace)
-    elif not cfg.openrouter_api_key:
+    elif not api.llm_credentials_configured(cfg):
         used_fallback = True
-        fallback_reason = "OPENROUTER_API_KEY not configured"
+        fallback_reason = "LLM credentials not configured for current provider"
         analysis = run_analysis_without_llm(trace)
     else:
         try:
@@ -89,6 +92,7 @@ def analyze_trace(
                 fallback_reason = analysis.error or "LLM analysis returned unsuccessful result"
                 analysis = run_analysis_without_llm(trace)
         except Exception as exc:
+            logger.exception("MCP analyze_trace LLM path failed; using deterministic fallback")
             used_fallback = True
             fallback_reason = str(exc)
             analysis = run_analysis_without_llm(trace)
@@ -120,7 +124,7 @@ def detect_patterns(
 ) -> dict[str, Any]:
     """Detect deterministic patterns from a trace."""
     trace, source, detected_format = resolve_trace(trace_file=trace_file, trace_json=trace_json)
-    patterns = PatternDetector(trace).detect_all()
+    patterns = api.detect_patterns(trace)
     return {
         "source": source,
         "format": detected_format,
@@ -165,7 +169,7 @@ def get_trace_summary(
 ) -> dict[str, Any]:
     """Get lightweight summary stats for a trace."""
     trace, source, detected_format = resolve_trace(trace_file=trace_file, trace_json=trace_json)
-    summary = TraceNormalizer.get_summary(trace)
+    summary = api.trace_summary(trace)
     return {
         "source": source,
         "format": detected_format,
@@ -183,8 +187,8 @@ def compare_traces(
     trace_a, source_a, format_a = resolve_trace(trace_file=trace_file_a, trace_json=trace_json_a)
     trace_b, source_b, format_b = resolve_trace(trace_file=trace_file_b, trace_json=trace_json_b)
 
-    summary_a = TraceNormalizer.get_summary(trace_a)
-    summary_b = TraceNormalizer.get_summary(trace_b)
+    summary_a = api.trace_summary(trace_a)
+    summary_b = api.trace_summary(trace_b)
     numeric_keys = ["total_events", "llm_calls", "tool_calls", "errors", "total_tokens", "duration_ms"]
     metric_delta: dict[str, int | None] = {}
     for key in numeric_keys:
@@ -195,8 +199,8 @@ def compare_traces(
         else:
             metric_delta[key] = None
 
-    patterns_a = PatternDetector(trace_a).detect_all()
-    patterns_b = PatternDetector(trace_b).detect_all()
+    patterns_a = api.detect_patterns(trace_a)
+    patterns_b = api.detect_patterns(trace_b)
     counts_a = _pattern_counts(patterns_a)
     counts_b = _pattern_counts(patterns_b)
     advanced = compare_traces_advanced(trace_a, trace_b)
@@ -336,8 +340,8 @@ def suggest_fixes(
 ) -> dict[str, Any]:
     """Return categorized, actionable fix suggestions for a trace."""
     trace, source, detected_format = resolve_trace(trace_file=trace_file, trace_json=trace_json)
-    preanalysis = RootCauseBuilder(trace).build()
-    summary = TraceNormalizer.get_summary(trace)
+    preanalysis = api.run_preanalysis(trace)
+    summary = api.trace_summary(trace)
     report = ReportGenerator(
         trace,
         AnalysisResult(
@@ -361,6 +365,10 @@ def suggest_fixes(
                 }
             )
         except Exception:
+            logger.exception(
+                "Fix generator plugin %r failed",
+                getattr(plugin, "name", plugin.__class__.__name__),
+            )
             continue
 
     return {
@@ -389,8 +397,8 @@ def health_check(
 ) -> dict[str, Any]:
     """Return a compact health score with one-line summary."""
     trace, source, detected_format = resolve_trace(trace_file=trace_file, trace_json=trace_json)
-    preanalysis = RootCauseBuilder(trace).build()
-    summary = TraceNormalizer.get_summary(trace)
+    preanalysis = api.run_preanalysis(trace)
+    summary = api.trace_summary(trace)
     report = ReportGenerator(
         trace,
         AnalysisResult(

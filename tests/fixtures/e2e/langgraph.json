@@ -1,0 +1,7 @@
+{
+  "thread_id": "e2e-langgraph",
+  "status": "success",
+  "events": [
+    {"type": "llm_call", "name": "model", "input": "x", "output": "y", "timestamp": "2024-01-15T11:00:02Z"}
+  ]
+}
