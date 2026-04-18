@@ -48,6 +48,26 @@ pip install -e ".[cli]"
 autopsy analyze examples/traces/loop_failure.json --no-llm --no-embeddings
 ```
 
+### CLI exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | No errors in trace stats and no deterministic signals |
+| 1 | Findings (signals or trace errors) |
+| 2 | Parse / validation / usage error |
+
+### Daily-driver commands (local-first)
+
+```bash
+autopsy analyze trace.json --no-llm -q -f text          # fast deterministic report, plain text
+autopsy analyze trace.json -f json | jq .             # machine-readable
+autopsy diff baseline.json candidate.json -f json     # rich diff (also: compare)
+autopsy watch ./traces --pattern '*.json'             # analyze new traces on write
+autopsy replay trace.json --from 42 --speed 2 --delay 0.2
+```
+
+LLM options: `--provider ollama --model llama3.1:8b`, `--stream`, `--no-cache` (bypass `~/.cache/agent-autopsy/`). Shell completion: `autopsy --install-completion`.
+
 ## Usage
 
 ### Web App
@@ -74,9 +94,10 @@ python -m src.mcp --transport stdio
 
 ```bash
 python -m src.cli summary trace.json
-python -m src.cli compare baseline.json candidate.json
+python -m src.cli compare baseline.json candidate.json   # alias: diff
 python -m src.cli benchmark --traces-dir ./traces
 python -m src.cli fixes trace.json
+python scripts/eval_detectors.py                         # detector corpus metrics (CI)
 ```
 
 ---
