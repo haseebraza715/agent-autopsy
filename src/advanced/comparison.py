@@ -119,3 +119,82 @@ def _pattern_counts(patterns: list[Any]) -> dict[str, int]:
         key = pattern.pattern_type.value
         counts[key] = counts.get(key, 0) + 1
     return counts
+
+
+def _pattern_type_set(patterns: list[Any]) -> set[str]:
+    return {p.pattern_type.value for p in patterns}
+
+
+def trace_diff_detail(trace_a: Trace, trace_b: Trace) -> dict[str, Any]:
+    """
+    Rich diff for CLI: event ID sets, pattern sets, tool signature changes, timing deltas.
+    """
+    ids_a = {e.event_id for e in trace_a.events}
+    ids_b = {e.event_id for e in trace_b.events}
+
+    pa = PatternDetector(trace_a).detect_all()
+    pb = PatternDetector(trace_b).detect_all()
+    pset_a = _pattern_type_set(pa)
+    pset_b = _pattern_type_set(pb)
+
+    tool_sigs_a = _tool_signatures(trace_a)
+    tool_sigs_b = _tool_signatures(trace_b)
+
+    timing_rows: list[dict[str, Any]] = []
+    events_a = list(trace_a.events)
+    events_b = list(trace_b.events)
+    for idx in range(min(len(events_a), len(events_b))):
+        ea, eb = events_a[idx], events_b[idx]
+        da = ea.timestamp
+        db = eb.timestamp
+        delta_ms = None
+        if da is not None and db is not None:
+            delta_ms = (db - da).total_seconds() * 1000.0
+        timing_rows.append(
+            {
+                "index": idx,
+                "event_id_a": ea.event_id,
+                "event_id_b": eb.event_id,
+                "delta_ms": delta_ms,
+            }
+        )
+
+    arg_diffs: list[dict[str, Any]] = []
+    tc_a = trace_a.get_tool_calls()
+    tc_b = trace_b.get_tool_calls()
+    for idx in range(min(len(tc_a), len(tc_b))):
+        if tc_a[idx].name != tc_b[idx].name:
+            arg_diffs.append(
+                {
+                    "index": idx,
+                    "event_a": tc_a[idx].event_id,
+                    "event_b": tc_b[idx].event_id,
+                    "tool_a": tc_a[idx].name,
+                    "tool_b": tc_b[idx].name,
+                }
+            )
+        elif str(tc_a[idx].input) != str(tc_b[idx].input):
+            arg_diffs.append(
+                {
+                    "index": idx,
+                    "event_a": tc_a[idx].event_id,
+                    "event_b": tc_b[idx].event_id,
+                    "tool": tc_a[idx].name,
+                    "input_a_preview": str(tc_a[idx].input)[:200],
+                    "input_b_preview": str(tc_b[idx].input)[:200],
+                }
+            )
+
+    return {
+        "run_id_a": trace_a.run_id,
+        "run_id_b": trace_b.run_id,
+        "event_ids_only_in_a": sorted(ids_a - ids_b),
+        "event_ids_only_in_b": sorted(ids_b - ids_a),
+        "patterns_only_in_a": sorted(pset_a - pset_b),
+        "patterns_only_in_b": sorted(pset_b - pset_a),
+        "tool_signatures_only_in_a": sorted(set(tool_sigs_a) - set(tool_sigs_b)),
+        "tool_signatures_only_in_b": sorted(set(tool_sigs_b) - set(tool_sigs_a)),
+        "tool_call_arg_or_name_diffs": arg_diffs,
+        "timing_deltas_aligned_by_index": timing_rows,
+        "advanced": compare_traces_advanced(trace_a, trace_b).to_dict(),
+    }
