@@ -1,6 +1,9 @@
 """Tests for analysis-agent quality validation helpers."""
 
-from src.analysis.agent import AnalysisAgent, ReportQualityValidator
+from langchain_core.messages import AIMessageChunk
+
+from src.analysis.agent import ReportQualityValidator
+from src.analysis.llm_agent import AnalysisAgent
 
 
 class TestReportQualityValidator:
@@ -51,3 +54,20 @@ class TestAnalysisAgentStreamHelpers:
             [{"type": "text", "text": "ab"}]
         ) == "ab"
         assert AnalysisAgent._stringify_stream_content(["x", "y"]) == "xy"
+
+    def test_stream_chat_to_message_accumulates_chunks(self) -> None:
+        """Runnable.stream chunks merge to a single AIMessage (no LangGraph writer)."""
+
+        class _Runnable:
+            def stream(self, _messages: object):
+                yield AIMessageChunk(content="Hel")
+                yield AIMessageChunk(content="lo")
+
+        class _Dummy:
+            def _optional_stream_writer(self):
+                return None
+
+        dummy = _Dummy()
+        out = AnalysisAgent._stream_chat_to_message(dummy, _Runnable(), [], node_name="test")
+        text = out.content if isinstance(out.content, str) else str(out.content)
+        assert "Hello" in text
