@@ -128,6 +128,9 @@ def analyze(
         config.llm_provider = provider.strip().lower()
 
     exit_code = 0
+    trace = None
+    preanalysis = None
+    t0 = time.perf_counter()
     try:
         if not quiet:
             console.print(Panel.fit(
@@ -155,11 +158,13 @@ def analyze(
                 api.apply_embedding_defaults_for_trace(trace)
             except (ParseError, SchemaValidationError, PluginError) as e:
                 console.print(f"[red]Error parsing trace:[/red] {e}")
-                raise typer.Exit(2)
+                exit_code = 2
+                raise typer.Exit(exit_code)
             except Exception:
                 logger.exception("Unexpected error while parsing trace file")
                 console.print("[red]Error parsing trace (see logs for details).[/red]")
-                raise typer.Exit(2)
+                exit_code = 2
+                raise typer.Exit(exit_code)
             if not quiet:
                 progress.update(task, description="Trace parsed successfully")
 
@@ -180,7 +185,8 @@ def analyze(
         fmt = format.lower().strip()
         if fmt not in ("text", "markdown", "json"):
             console.print(f"[red]Unknown format:[/red] {format} (use text, markdown, or json)")
-            raise typer.Exit(2)
+            exit_code = 2
+            raise typer.Exit(exit_code)
 
         if no_llm or not api.llm_credentials_configured(config):
             if not no_llm and not quiet:
@@ -261,6 +267,18 @@ def analyze(
     finally:
         config.skip_embeddings = prev_skip
         config.llm_provider = prev_provider
+        try:
+            from src.utils.telemetry import record_event
+
+            record_event(
+                "analyze",
+                exit_code=exit_code,
+                signal_count=len(preanalysis.signals) if preanalysis else 0,
+                run_id=trace.run_id if trace else None,
+                duration_ms=(time.perf_counter() - t0) * 1000.0,
+            )
+        except Exception:
+            logger.debug("telemetry record failed", exc_info=True)
 
     raise typer.Exit(exit_code)
 
@@ -752,11 +770,11 @@ def autopsy_run(
                 api.apply_embedding_defaults_for_trace(trace)
             except (ParseError, SchemaValidationError, PluginError) as e:
                 console.print(f"[red]Error parsing trace:[/red] {e}")
-                raise typer.Exit(1)
+                raise typer.Exit(2)
             except Exception:
                 logger.exception("Unexpected error parsing trace for autopsy-run")
                 console.print("[red]Error parsing trace (see logs for details).[/red]")
-                raise typer.Exit(1)
+                raise typer.Exit(2)
 
             progress.update(task, description="Trace parsed successfully")
 
@@ -839,13 +857,45 @@ def autopsy_run(
         # Print result summary
         _print_result_summary(result, preanalysis)
 
-        # Return status based on findings
+        # Exit codes: 1 = findings, 0 = clean (match `analyze`)
         if trace.stats.num_errors > 0 or len(preanalysis.signals) > 0:
             console.print("\n[yellow]Issues detected in trace - review report for details[/yellow]")
-        else:
-            console.print("\n[green]No issues detected in trace[/green]")
+            raise typer.Exit(1)
+        console.print("\n[green]No issues detected in trace[/green]")
     finally:
         config.skip_embeddings = prev_skip
+
+
+@app.command("telemetry")
+def telemetry_cmd(
+    action: str = typer.Argument(
+        ...,
+        help="on | off | status — opt-in anonymous usage metrics (off by default)",
+    ),
+):
+    """
+    Control opt-in telemetry (command names, exit codes, signal counts — no trace payloads).
+
+    Enable with ``on`` or environment ``AUTOPSY_TELEMETRY=1``. Events append to
+    ``~/.cache/agent-autopsy/telemetry-events.jsonl``.
+    """
+    from src.utils import telemetry as tel
+
+    a = action.lower().strip()
+    if a == "on":
+        tel.set_enabled(True)
+        console.print(f"[green]Telemetry enabled.[/green] Log: {tel.events_path()}")
+    elif a == "off":
+        tel.set_enabled(False)
+        console.print("[dim]Telemetry disabled.[/dim]")
+    elif a == "status":
+        on = tel.is_enabled()
+        console.print(f"Telemetry: {'[green]on[/green]' if on else '[dim]off[/dim]'}")
+        console.print(f"State: {tel.state_path()}")
+        console.print(f"Events: {tel.events_path()}")
+    else:
+        console.print("[red]Unknown action. Use:[/red] on | off | status")
+        raise typer.Exit(2)
 
 
 def main():
