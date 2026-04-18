@@ -1,0 +1,155 @@
+{
+  "run_id": "b8f735cd-fdb3-4239-902d-fc0e163edf02",
+  "start_time": "2025-12-31T18:59:20.958Z",
+  "end_time": "2025-12-31T18:59:23.958Z",
+  "duration_ms": 3000,
+  "status": "failed",
+  "goal": "Check payment service health",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:59:20.958Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Check service health",
+      "output": "I'll check the service status.",
+      "token_count": 60,
+      "latency_ms": 300
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:59:21.358Z",
+      "type": "tool_call",
+      "name": "health_check",
+      "input": {
+        "service": "payment-service",
+        "timeout": 1000
+      },
+      "error": "Service unavailable: Connection refused",
+      "latency_ms": 150,
+      "metadata": {
+        "retry_attempt": 1
+      }
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:59:21.558Z",
+      "type": "tool_call",
+      "name": "health_check",
+      "input": {
+        "service": "payment-service",
+        "timeout": 1000
+      },
+      "error": "Service unavailable: Connection refused",
+      "latency_ms": 150,
+      "metadata": {
+        "retry_attempt": 2
+      }
+    },
+    {
+      "event_id": 3,
+      "ts": "2025-12-31T18:59:21.758Z",
+      "type": "tool_call",
+      "name": "health_check",
+      "input": {
+        "service": "payment-service",
+        "timeout": 1000
+      },
+      "error": "Service unavailable: Connection refused",
+      "latency_ms": 150,
+      "metadata": {
+        "retry_attempt": 3
+      }
+    },
+    {
+      "event_id": 4,
+      "ts": "2025-12-31T18:59:21.958Z",
+      "type": "tool_call",
+      "name": "health_check",
+      "input": {
+        "service": "payment-service",
+        "timeout": 1000
+      },
+      "error": "Service unavailable: Connection refused",
+      "latency_ms": 150,
+      "metadata": {
+        "retry_attempt": 4
+      }
+    },
+    {
+      "event_id": 5,
+      "ts": "2025-12-31T18:59:22.158Z",
+      "type": "tool_call",
+      "name": "health_check",
+      "input": {
+        "service": "payment-service",
+        "timeout": 1000
+      },
+      "error": "Service unavailable: Connection refused",
+      "latency_ms": 150,
+      "metadata": {
+        "retry_attempt": 5
+      }
+    },
+    {
+      "event_id": 6,
+      "ts": "2025-12-31T18:59:22.358Z",
+      "type": "tool_call",
+      "name": "health_check",
+      "input": {
+        "service": "payment-service",
+        "timeout": 1000
+      },
+      "error": "Service unavailable: Connection refused",
+      "latency_ms": 150,
+      "metadata": {
+        "retry_attempt": 6
+      }
+    },
+    {
+      "event_id": 7,
+      "ts": "2025-12-31T18:59:22.558Z",
+      "type": "tool_call",
+      "name": "health_check",
+      "input": {
+        "service": "payment-service",
+        "timeout": 1000
+      },
+      "error": "Service unavailable: Connection refused",
+      "latency_ms": 150,
+      "metadata": {
+        "retry_attempt": 7
+      }
+    },
+    {
+      "event_id": 8,
+      "ts": "2025-12-31T18:59:22.758Z",
+      "type": "tool_call",
+      "name": "health_check",
+      "input": {
+        "service": "payment-service",
+        "timeout": 1000
+      },
+      "error": "Service unavailable: Connection refused",
+      "latency_ms": 150,
+      "metadata": {
+        "retry_attempt": 8
+      }
+    },
+    {
+      "event_id": 9,
+      "ts": "2025-12-31T18:59:23.058Z",
+      "type": "error",
+      "name": "retry_policy",
+      "error": "Max retries exceeded (8) for health_check",
+      "metadata": {
+        "error_type": "MaxRetriesExceeded",
+        "attempts": 8
+      }
+    }
+  ],
+  "error_summary": "Retry storm: 8 rapid retries without backoff",
+  "metadata": {
+    "scenario": "retry_storm"
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "run_id": "dfc5faa7-1fca-495c-b8d7-d4fd27eba84f",
+  "start_time": "2025-12-31T18:59:20.957Z",
+  "end_time": "2025-12-31T18:59:25.957Z",
+  "duration_ms": 5000,
+  "status": "failed",
+  "goal": "Fetch latest stock prices",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:59:20.957Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Get current stock prices for AAPL, GOOGL, MSFT",
+      "output": "I'll fetch the stock prices.",
+      "token_count": 100,
+      "latency_ms": 500
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:59:21.557Z",
+      "type": "tool_call",
+      "name": "stock_api",
+      "input": {
+        "symbols": [
+          "AAPL"
+        ]
+      },
+      "output": {
+        "AAPL": 185.5
+      },
+      "latency_ms": 300
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:59:21.957Z",
+      "type": "tool_call",
+      "name": "stock_api",
+      "input": {
+        "symbols": [
+          "GOOGL"
+        ]
+      },
+      "output": {
+        "GOOGL": 142.3
+      },
+      "latency_ms": 300
+    },
+    {
+      "event_id": 3,
+      "ts": "2025-12-31T18:59:22.357Z",
+      "type": "tool_call",
+      "name": "stock_api",
+      "input": {
+        "symbols": [
+          "MSFT"
+        ]
+      },
+      "error": "Rate limit exceeded: 429 Too Many Requests. Retry after 60 seconds.",
+      "latency_ms": 100
+    },
+    {
+      "event_id": 4,
+      "ts": "2025-12-31T18:59:22.557Z",
+      "type": "error",
+      "name": "stock_api",
+      "error": "Rate limit exceeded: 429 Too Many Requests",
+      "metadata": {
+        "error_type": "RateLimitError",
+        "retry_after": 60
+      }
+    },
+    {
+      "event_id": 5,
+      "ts": "2025-12-31T18:59:22.657Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Rate limit error on MSFT lookup",
+      "output": "I was able to get prices for AAPL and GOOGL but hit a rate limit for MSFT.",
+      "token_count": 120,
+      "latency_ms": 600
+    }
+  ],
+  "error_summary": "API rate limit exceeded during stock price fetch",
+  "metadata": {
+    "scenario": "api_rate_limit"
+  }
+}

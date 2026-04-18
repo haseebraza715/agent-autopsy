@@ -1,0 +1,105 @@
+{
+  "run_id": "05fb76c3-2631-4def-a41c-7981a49ba8fe",
+  "start_time": "2025-12-31T18:51:14.596Z",
+  "end_time": "2025-12-31T18:51:20.596Z",
+  "duration_ms": 6000,
+  "status": "failed",
+  "total_events": 8,
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:51:14.596Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Analyze the sales data and create a report",
+      "output": "I'll fetch the sales data first.",
+      "token_count": 100,
+      "latency_ms": 400,
+      "metadata": {}
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:51:15.096Z",
+      "type": "tool_call",
+      "name": "database_query",
+      "input": {
+        "query": "SELECT * FROM sales WHERE date > '2024-01-01'"
+      },
+      "latency_ms": 500,
+      "error": "Database connection failed: Connection refused",
+      "metadata": {}
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:51:15.696Z",
+      "type": "error",
+      "name": "database_query",
+      "error": "Database connection failed: Connection refused",
+      "metadata": {
+        "error_type": "ConnectionError",
+        "host": "db.example.com"
+      }
+    },
+    {
+      "event_id": 3,
+      "ts": "2025-12-31T18:51:15.796Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Database error occurred",
+      "output": "Let me try to fetch from the backup cache.",
+      "token_count": 80,
+      "latency_ms": 300,
+      "metadata": {}
+    },
+    {
+      "event_id": 4,
+      "ts": "2025-12-31T18:51:16.196Z",
+      "type": "tool_call",
+      "name": "cache_fetch",
+      "input": {
+        "key": "sales_data_backup"
+      },
+      "latency_ms": 200,
+      "error": "Cache miss: key 'sales_data_backup' not found",
+      "metadata": {}
+    },
+    {
+      "event_id": 5,
+      "ts": "2025-12-31T18:51:16.496Z",
+      "type": "error",
+      "name": "cache_fetch",
+      "error": "Cache miss: key 'sales_data_backup' not found",
+      "metadata": {
+        "error_type": "CacheMissError"
+      }
+    },
+    {
+      "event_id": 6,
+      "ts": "2025-12-31T18:51:16.596Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Cache also failed",
+      "output": "I cannot complete this task without access to the sales data.",
+      "token_count": 60,
+      "latency_ms": 250,
+      "metadata": {}
+    },
+    {
+      "event_id": 7,
+      "ts": "2025-12-31T18:51:16.896Z",
+      "type": "error",
+      "name": "agent",
+      "error": "Task failed: Unable to access required data after multiple attempts",
+      "metadata": {
+        "error_type": "TaskFailure",
+        "cascade_depth": 3
+      }
+    }
+  ],
+  "error_summary": "Error cascade: database failure -> cache miss -> task failure",
+  "metadata": {
+    "trace_version": "1.0",
+    "captured_by": "test_generator",
+    "scenario": "error_cascade"
+  }
+}
