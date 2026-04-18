@@ -1,0 +1,48 @@
+{
+  "run_id": "12c9776c-87c5-4eaf-8b88-e1f1639e4817",
+  "start_time": "2025-12-31T18:59:20.958Z",
+  "end_time": "2025-12-31T18:59:55.958Z",
+  "duration_ms": 35000,
+  "status": "timeout",
+  "goal": "Process large PDF document",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:59:20.958Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Extract and summarize content from large_report.pdf (500 pages)",
+      "output": "I'll process the PDF document.",
+      "token_count": 100,
+      "latency_ms": 500
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:59:21.558Z",
+      "type": "tool_call",
+      "name": "pdf_processor",
+      "input": {
+        "file": "large_report.pdf",
+        "operation": "extract_text"
+      },
+      "error": "Operation timed out after 30000ms",
+      "latency_ms": 30000
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:59:51.658Z",
+      "type": "error",
+      "name": "pdf_processor",
+      "error": "Timeout: PDF processing exceeded 30 second limit",
+      "metadata": {
+        "error_type": "TimeoutError",
+        "timeout_ms": 30000,
+        "file_size_mb": 125
+      }
+    }
+  ],
+  "error_summary": "PDF processing timed out - file too large",
+  "metadata": {
+    "scenario": "operation_timeout"
+  }
+}

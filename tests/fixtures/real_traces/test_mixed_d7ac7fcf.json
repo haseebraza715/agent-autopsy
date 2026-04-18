@@ -1,0 +1,112 @@
+{
+  "run_id": "d7ac7fcf-7a14-4b45-beea-cb94c2f52691",
+  "start_time": "2025-12-31T18:51:14.596Z",
+  "end_time": "2025-12-31T18:51:24.596Z",
+  "duration_ms": 10000,
+  "status": "success",
+  "total_events": 12,
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2025-12-31T18:51:14.596Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Compare prices for iPhone 15 across different stores",
+      "output": "I'll search multiple stores for iPhone 15 prices.",
+      "token_count": 120,
+      "latency_ms": 500,
+      "metadata": {}
+    },
+    {
+      "event_id": 1,
+      "ts": "2025-12-31T18:51:15.196Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "iPhone 15 price Amazon"
+      },
+      "output": {
+        "price": 799,
+        "store": "Amazon",
+        "in_stock": true
+      },
+      "latency_ms": 800,
+      "metadata": {}
+    },
+    {
+      "event_id": 2,
+      "ts": "2025-12-31T18:51:16.096Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "iPhone 15 price BestBuy"
+      },
+      "output": {
+        "price": 829,
+        "store": "BestBuy",
+        "in_stock": true
+      },
+      "latency_ms": 600,
+      "metadata": {}
+    },
+    {
+      "event_id": 3,
+      "ts": "2025-12-31T18:51:16.796Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "iPhone 15 price Walmart"
+      },
+      "latency_ms": 3000,
+      "error": "Request timeout",
+      "metadata": {
+        "warning": true
+      }
+    },
+    {
+      "event_id": 4,
+      "ts": "2025-12-31T18:51:19.896Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "query": "iPhone 15 price Target"
+      },
+      "output": {
+        "price": 799,
+        "store": "Target",
+        "in_stock": false
+      },
+      "latency_ms": 700,
+      "metadata": {}
+    },
+    {
+      "event_id": 5,
+      "ts": "2025-12-31T18:51:20.696Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Price data: Amazon=$799, BestBuy=$829, Walmart=timeout, Target=$799(out of stock)",
+      "output": "Based on the available data, here's the price comparison...",
+      "token_count": 200,
+      "latency_ms": 600,
+      "metadata": {}
+    },
+    {
+      "event_id": 6,
+      "ts": "2025-12-31T18:51:21.396Z",
+      "type": "message",
+      "name": "assistant",
+      "role": "assistant",
+      "output": "iPhone 15 Price Comparison:\n- Amazon: $799 (in stock)\n- BestBuy: $829 (in stock)\n- Target: $799 (out of stock)\n- Walmart: Unable to fetch (timeout)\n\nBest deal: Amazon at $799",
+      "metadata": {
+        "partial_data": true,
+        "stores_checked": 4,
+        "stores_succeeded": 3
+      }
+    }
+  ],
+  "metadata": {
+    "trace_version": "1.0",
+    "captured_by": "test_generator",
+    "scenario": "mixed_success_with_warnings"
+  }
+}
