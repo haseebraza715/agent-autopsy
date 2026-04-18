@@ -6,12 +6,23 @@ Generates structured markdown reports from analysis results.
 
 from dataclasses import dataclass, field
 from datetime import datetime
+import re
 from pathlib import Path
 from typing import Any
 
 from src.plugins import get_plugin_manager
 from src.schema import Trace
 from src.analysis.agent import AnalysisResult
+
+
+def markdown_to_plain(md: str) -> str:
+    """Strip common markdown markers for terminal / pipe-friendly text."""
+    lines: list[str] = []
+    for line in (md or "").splitlines():
+        line = re.sub(r"^#+\s*", "", line)
+        line = re.sub(r"\*\*(.+?)\*\*", r"\1", line)
+        lines.append(line)
+    return "\n".join(lines)
 
 
 @dataclass
@@ -354,12 +365,15 @@ class ReportGenerator:
         Built-ins:
             - markdown
             - json
+            - text (markdown with headings/bold stripped)
         """
         normalized = format_name.lower().strip()
         if normalized == "markdown":
             return self.to_markdown()
         if normalized == "json":
             return self.to_json()
+        if normalized == "text":
+            return markdown_to_plain(self.to_markdown())
 
         plugin_manager = get_plugin_manager()
         for plugin in plugin_manager.report_templates:
@@ -381,8 +395,11 @@ class ReportGenerator:
                 path = path.with_suffix(".json")
         else:
             content = str(rendered)
-            if not path.suffix and format == "markdown":
-                path = path.with_suffix(".md")
+            if not path.suffix:
+                if format == "markdown":
+                    path = path.with_suffix(".md")
+                elif format == "text":
+                    path = path.with_suffix(".txt")
 
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
