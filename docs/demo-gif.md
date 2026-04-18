@@ -1,12 +1,14 @@
 # Recording a README demo (GIF)
 
-The hero asset **`docs/images/autopsy-demo.gif`** is generated at **1600×900**, with **2× supersampling** (draw large, downscale with Lanczos) so text stays sharp on Retina displays.
+The hero asset **`docs/images/autopsy-demo.gif`** is generated at **1920×1080** with **large monospace** (about 30–44px for UI tiers) so the README preview stays readable without squinting. There is **no downscale step** that shrinks text.
 
 ## What the GIF shows
 
-1. **Deterministic block** — real output from  
-   `autopsy analyze examples/traces/loop_failure.json --no-llm -q -f text`
-2. **LLM synthesis block** — either:
+Structured in two clear steps:
+
+1. **Step 1 — Deterministic** — real output from  
+   `autopsy analyze examples/traces/loop_failure.json --no-llm -q -f text` (trimmed for length)
+2. **Step 2 — LLM synthesis** — either:
    - **Live** OpenRouter + LangGraph output when `OPENROUTER_API_KEY` is set (repo `.env` is loaded automatically), or  
    - A **representative excerpt** from `scripts/demo_gif_llm_sample.txt` if the key is missing or the live run fails.
 

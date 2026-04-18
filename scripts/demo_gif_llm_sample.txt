@@ -1,13 +1,12 @@
-## Summary
-Run `run_loop_001` failed after a tight retry loop: `web_search` returned empty or errored and the agent kept issuing the same class of tool calls without backoff (see Events 3–7).
+Summary
+Retry loop on web_search — Events 3–7 repeat the same failing calls.
 
-## Root cause
-No circuit breaker or retry cap on `web_search`; identical queries were retried without validating tool output before the next LLM step, so the graph never exited the failure path.
+Root cause
+No retry cap; empty tool responses did not stop the graph.
 
-## Fix recommendations
-- A) Code: cap retries per tool name and add exponential backoff.
-- B) Ops: surface tool latency/empty payloads to the model as explicit errors.
-- C) Prompt: require a plan change after two identical failed tool calls.
+Fixes
+• Cap retries + exponential backoff on web_search
+• Surface “empty output” as an error before the next LLM turn
 
-## Confidence
-0.82 — pattern matches repeated tool_call rows with escalating errors in the trace.
+Confidence
+0.82 (matches repeated tool_call + error rows in the trace)
