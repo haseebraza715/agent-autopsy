@@ -298,15 +298,15 @@ def main() -> int:
     args = parser.parse_args()
     _load_dotenv()
 
-    wrap_w = 38  # short lines = bigger apparent type when scaled
-    det = _run_deterministic(4, wrap_w)
+    wrap_w = 32  # short lines keep each char chunky on the narrow canvas
+    det = _run_deterministic(3, wrap_w)
 
     try_live = not args.force_sample_llm and not args.no_live_llm
     used_live = False
     if args.force_sample_llm:
         llm_lines = _load_sample_llm(wrap_w)
     elif try_live:
-        live = _run_llm_live(5, wrap_w, timeout=args.llm_timeout)
+        live = _run_llm_live(4, wrap_w, timeout=args.llm_timeout)
         if live:
             llm_lines = live
             used_live = True
@@ -321,7 +321,7 @@ def main() -> int:
     ]
     script_lines = _build_script(cmd_lines, det, llm_lines)
 
-    max_lines = 18
+    max_lines = 12
     if len(script_lines) > max_lines:
         script_lines = script_lines[: max_lines - 1] + ["  …"]
 
