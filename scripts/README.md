@@ -11,9 +11,22 @@ scripts/
 │   ├── trace_analyzer.py       # Analyze traces
 │   ├── trace_verifier.py       # Verify traces
 │   └── report_generator.py     # Generate summary reports
+├── eval_detectors.py           # Corpus precision/recall (CI)
+├── benchmark_no_llm.py         # Cold-path timing (no LLM)
+├── record_demo.sh              # Instructions for asciinema README GIF
+├── render_demo_gif.py          # Build docs/images/autopsy-demo.gif (Pillow + real CLI)
 ├── generate_traces.py          # Main script for trace generation
 ├── analyze_traces.py           # Main script for trace analysis
 └── verify_traces.py            # Main script for trace verification
+```
+
+### Detector eval & benchmarks
+
+```bash
+python scripts/eval_detectors.py
+python scripts/benchmark_no_llm.py examples/traces/loop_failure.json --repeat 5
+./scripts/record_demo.sh
+python scripts/render_demo_gif.py
 ```
 
 ## Usage
