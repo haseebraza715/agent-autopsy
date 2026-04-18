@@ -9,6 +9,8 @@
 
 *Automatically detect failures, loops, and issues in agent execution traces*
 
+![Deterministic autopsy demo: autopsy analyze loop_failure.json --no-llm](docs/images/autopsy-demo.gif)
+
 **[Try it live](https://autopsyagent.streamlit.app/)** | [Documentation](docs/) | [Report Issue](https://github.com/haseebraza715/agent-autopsy/issues)
 
 </div>
@@ -67,6 +69,10 @@ autopsy replay trace.json --from 42 --speed 2 --delay 0.2
 ```
 
 LLM options: `--provider ollama --model llama3.1:8b`, `--stream`, `--no-cache` (bypass `~/.cache/agent-autopsy/`). Shell completion: `autopsy --install-completion`.
+
+**Telemetry (optional):** off by default. `autopsy telemetry on` appends anonymous JSON lines (command, exit code, signal count, hashed run id) to `~/.cache/agent-autopsy/telemetry-events.jsonl`, or set `AUTOPSY_TELEMETRY=1`.
+
+**Docs:** [Launch post draft](docs/launch-post.md) · [Demo GIF how-to](docs/demo-gif.md) · [Roadmap](ROADMAP.md) · [Good first issues](docs/good-first-issues.md)
 
 ## Usage
 
