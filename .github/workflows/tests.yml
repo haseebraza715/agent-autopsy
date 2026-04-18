@@ -31,3 +31,6 @@ jobs:
 
       - name: Run tests
         run: pytest
+
+      - name: Detector corpus eval
+        run: python scripts/eval_detectors.py
