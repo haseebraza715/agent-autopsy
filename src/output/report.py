@@ -327,15 +327,14 @@ class ReportGenerator:
             "",
         ])
 
-        # Add LLM report if available
-        if report.raw_report and "deterministic" not in report.raw_report.lower():
-            lines.extend([
-                "---",
-                "",
-                "## Detailed Analysis",
-                "",
-                report.raw_report,
-            ])
+        # Full narrative: LLM synthesis and/or deterministic markdown from run_analysis_without_llm
+        if report.raw_report:
+            section_title = (
+                "## Deterministic analysis (no LLM)"
+                if "deterministic" in report.raw_report.lower()
+                else "## Detailed analysis"
+            )
+            lines.extend(["---", "", section_title, "", report.raw_report])
 
         return "\n".join(lines)
 
