@@ -52,6 +52,8 @@ class Config:
     analysis_max_report_revisions: int = 2
     analysis_report_quality_threshold: float = 0.65
     analysis_token_budget: int = 12000
+    # Use Runnable.stream() inside graph LLM nodes (token deltas + LangGraph custom stream).
+    analysis_use_llm_stream: bool = True
     semantic_drift_enabled: bool = True
     semantic_drift_model: str = "all-MiniLM-L6-v2"
     semantic_drift_delta_threshold: float = 0.35
@@ -97,6 +99,7 @@ class Config:
             analysis_max_report_revisions=int(os.getenv("ANALYSIS_MAX_REPORT_REVISIONS", "2")),
             analysis_report_quality_threshold=float(os.getenv("ANALYSIS_REPORT_QUALITY_THRESHOLD", "0.65")),
             analysis_token_budget=int(os.getenv("ANALYSIS_TOKEN_BUDGET", "12000")),
+            analysis_use_llm_stream=os.getenv("ANALYSIS_USE_LLM_STREAM", "1").lower() in ("1", "true", "yes"),
             semantic_drift_enabled=os.getenv("SEMANTIC_DRIFT_ENABLED", "1").lower() in ("1", "true", "yes"),
             semantic_drift_model=os.getenv("SEMANTIC_DRIFT_MODEL", "all-MiniLM-L6-v2"),
             semantic_drift_delta_threshold=float(os.getenv("SEMANTIC_DRIFT_DELTA_THRESHOLD", "0.35")),
@@ -133,6 +136,7 @@ class Config:
             "analysis_max_report_revisions": self.analysis_max_report_revisions,
             "analysis_report_quality_threshold": self.analysis_report_quality_threshold,
             "analysis_token_budget": self.analysis_token_budget,
+            "analysis_use_llm_stream": self.analysis_use_llm_stream,
             "semantic_drift_enabled": self.semantic_drift_enabled,
             "semantic_drift_model": self.semantic_drift_model,
             "semantic_drift_delta_threshold": self.semantic_drift_delta_threshold,
