@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 """
-Render docs/images/autopsy-demo.gif from a real `autopsy analyze` run.
+Render docs/images/autopsy-demo.gif — README hero, maximally legible type.
 
-Layout: 1920×1080, large monospace (no downscale — text stays readable on GitHub).
-Structure: header bar → command → Step 1 (deterministic) → Step 2 (LLM excerpt).
-
-Deterministic block always from CLI (--no-llm). LLM block from live API when
-OPENROUTER_API_KEY works, else scripts/demo_gif_llm_sample.txt.
+1920×1080, very large monospace (title ~72px, body ~56px). GitHub scales the
+image down; oversized glyphs stay readable. Content is intentionally short.
 """
 from __future__ import annotations
 
@@ -24,12 +21,20 @@ OUT = REPO / "docs" / "images" / "autopsy-demo.gif"
 TRACE = REPO / "examples" / "traces" / "loop_failure.json"
 SAMPLE_LLM = REPO / "scripts" / "demo_gif_llm_sample.txt"
 
-# Final frame — full HD so README hero stays legible
 W, H = 1920, 1080
-HEADER_H = 108
-PAD_X = 56
-PAD_Y = 28
-FOOTER_H = 52
+HEADER_H = 152
+PAD_X = 48
+PAD_Y = 20
+FOOTER_H = 62
+
+# Large type tuned for GitHub README downscaling
+FONT_TITLE = 72
+FONT_SUB = 36
+FONT_CMD = 50
+FONT_STEP = 48
+FONT_BODY = 56
+FONT_FOOT = 30
+LINE_EXTRA = 18  # padding below each line (increases line spacing)
 
 
 def _load_dotenv() -> None:
@@ -65,7 +70,14 @@ def _wrap(raw: str, width: int) -> list[str]:
     return textwrap.wrap(raw, width=width, break_long_words=True, replace_whitespace=False)
 
 
-def _run_deterministic(max_lines: int) -> list[str]:
+def _hr_chars_for_body() -> str:
+    """Horizontal rule that fits content width for FONT_BODY."""
+    char_w = max(10, int(FONT_BODY * 0.52))
+    n = max(24, (W - 2 * PAD_X) // char_w)
+    return "─" * n
+
+
+def _run_deterministic(max_lines: int, wrap_w: int) -> list[str]:
     env = {**os.environ, "PYTHONWARNINGS": "ignore", "NO_COLOR": "1"}
     cmd = [
         sys.executable,
@@ -88,7 +100,6 @@ def _run_deterministic(max_lines: int) -> list[str]:
     )
     body = (proc.stdout or "").strip()
     lines: list[str] = []
-    wrap_w = 76
     for raw in body.splitlines():
         for part in _wrap(raw, wrap_w):
             lines.append(part)
@@ -97,22 +108,21 @@ def _run_deterministic(max_lines: int) -> list[str]:
     return lines
 
 
-def _run_llm_live(max_lines: int, timeout: int) -> list[str] | None:
+def _run_llm_live(max_lines: int, wrap_w: int, timeout: int) -> list[str] | None:
     if not (os.getenv("OPENROUTER_API_KEY") or "").strip():
         return None
     env = {**os.environ, "PYTHONWARNINGS": "ignore", "NO_COLOR": "1"}
-    cmd = [
-        sys.executable,
-        "-m",
-        "src.cli",
-        "analyze",
-        str(TRACE),
-        "-q",
-        "-f",
-        "text",
-    ]
     proc = subprocess.run(
-        cmd,
+        [
+            sys.executable,
+            "-m",
+            "src.cli",
+            "analyze",
+            str(TRACE),
+            "-q",
+            "-f",
+            "text",
+        ],
         cwd=str(REPO),
         capture_output=True,
         text=True,
@@ -127,7 +137,6 @@ def _run_llm_live(max_lines: int, timeout: int) -> list[str] | None:
         return None
     body = (proc.stdout or "").strip()
     lines: list[str] = []
-    wrap_w = 76
     for raw in body.splitlines():
         for part in _wrap(raw, wrap_w):
             lines.append(part)
@@ -139,16 +148,16 @@ def _truncate_middle(lines: list[str], max_lines: int) -> list[str]:
         return lines
     head = max_lines // 2
     tail = max_lines - head - 3
-    return lines[:head] + ["", "  … truncated …", ""] + lines[-tail:]
+    return lines[:head] + ["", "  …", ""] + lines[-tail:]
 
 
-def _load_sample_llm() -> list[str]:
+def _load_sample_llm(wrap_w: int) -> list[str]:
     lines: list[str] = []
     for ln in SAMPLE_LLM.read_text().splitlines():
         if not ln.strip():
             lines.append("")
         else:
-            lines.extend(_wrap(ln, 76))
+            lines.extend(_wrap(ln, wrap_w))
     return lines
 
 
@@ -165,15 +174,54 @@ def _style_for_line(line: str) -> str:
     return "body"
 
 
+def _line_height(font: ImageFont.ImageFont) -> int:
+    try:
+        bbox = font.getbbox("Mg")
+        return bbox[3] - bbox[1] + LINE_EXTRA
+    except Exception:
+        return int(getattr(font, "size", FONT_BODY) * 1.45) + LINE_EXTRA
+
+
 def _draw_header(draw: ImageDraw.ImageDraw, fonts: dict[str, ImageFont.ImageFont]) -> None:
     draw.rectangle((0, 0, W, HEADER_H), fill=(22, 27, 34))
-    draw.text((PAD_X, 22), "AGENT AUTOPSY", font=fonts["title"], fill=(255, 255, 255))
     draw.text(
-        (PAD_X, 68),
-        "Demo trace: examples/traces/loop_failure.json",
-        font=fonts["subtitle"],
-        fill=(139, 148, 158),
+        (PAD_X, 18),
+        "AGENT AUTOPSY",
+        font=fonts["title"],
+        fill=(255, 255, 255),
+        stroke_width=2,
+        stroke_fill=(10, 12, 16),
     )
+    draw.text(
+        (PAD_X, 98),
+        "Demo: loop_failure.json",
+        font=fonts["subtitle"],
+        fill=(160, 170, 180),
+        stroke_width=1,
+        stroke_fill=(10, 12, 16),
+    )
+
+
+def _text(
+    draw: ImageDraw.ImageDraw,
+    xy: tuple[int, int],
+    text: str,
+    *,
+    font: ImageFont.ImageFont,
+    fill: tuple[int, int, int],
+    stroke: bool = True,
+) -> None:
+    if stroke:
+        draw.text(
+            xy,
+            text,
+            font=font,
+            fill=fill,
+            stroke_width=1,
+            stroke_fill=(13, 17, 23),
+        )
+    else:
+        draw.text(xy, text, font=font, fill=fill)
 
 
 def _draw_frame(
@@ -188,60 +236,60 @@ def _draw_frame(
     _draw_header(draw, fonts)
 
     body_font = fonts["body"]
-    try:
-        bbox = body_font.getbbox("Ay")
-        lh = bbox[3] - bbox[1] + 12
-    except Exception:
-        lh = int(getattr(body_font, "size", 32) * 1.4) + 12
-
-    y = HEADER_H + PAD_Y
+    lh = _line_height(body_font)
+    y = HEADER_H + PAD_Y + 8
     x0 = PAD_X
-    y_max = H - FOOTER_H - lh
+    y_max = H - FOOTER_H - lh - 4
 
     for line in lines:
         if y > y_max:
-            draw.text((x0, y), "…", font=body_font, fill=(139, 148, 158))
+            _text(draw, (x0, y), "…", font=body_font, fill=(139, 148, 158))
             break
         st = _style_for_line(line)
 
         if st == "cmd":
-            draw.text((x0, y), line, font=fonts["cmd"], fill=(126, 231, 135))
+            _text(draw, (x0, y), line, font=fonts["cmd"], fill=(126, 231, 135))
         elif st == "step":
-            draw.text((x0, y), line, font=fonts["step"], fill=(255, 166, 87))
+            _text(draw, (x0, y), line, font=fonts["step"], fill=(255, 180, 96))
         elif st == "rule":
-            draw.text((x0, y), line, font=body_font, fill=(88, 96, 106))
+            _text(draw, (x0, y), line, font=fonts["rule"], fill=(72, 82, 94), stroke=False)
         elif st == "blank":
-            y += lh // 2
+            y += max(12, lh // 3)
             continue
         else:
-            color = (220, 227, 235)
+            color = (230, 236, 243)
             if line.lstrip().startswith(("-", "•", "*")):
-                color = (187, 196, 206)
-            draw.text((x0, y), line, font=body_font, fill=color)
+                color = (195, 204, 214)
+            _text(draw, (x0, y), line, font=body_font, fill=color)
         y += lh
 
-    # Footer strip
     draw.rectangle((0, H - FOOTER_H, W, H), fill=(17, 21, 28))
-    draw.text((PAD_X, H - FOOTER_H + 14), footer, font=fonts["footer"], fill=(110, 118, 129))
+    fh = fonts["footer"]
+    try:
+        fb = fh.getbbox(footer)
+        fy = H - FOOTER_H + (FOOTER_H - (fb[3] - fb[1])) // 2
+    except Exception:
+        fy = H - FOOTER_H + 16
+    _text(draw, (PAD_X, fy), footer, font=fh, fill=(130, 138, 148), stroke=False)
     return img
 
 
-def _hr() -> str:
-    return "─" * 88
-
-
-def _build_script(cmd_line: str, det: list[str], llm_lines: list[str]) -> list[str]:
-    return [
-        cmd_line,
-        "",
-        "▸ Step 1 — Deterministic scan (patterns + health score)",
-        _hr(),
-        *[("  " + ln) if ln else "" for ln in det],
-        "",
-        "▸ Step 2 — LLM synthesis (OpenRouter + LangGraph tools)",
-        _hr(),
-        *[("  " + ln) if ln else "" for ln in llm_lines],
-    ]
+def _build_script(cmd_lines: list[str], det: list[str], llm_lines: list[str]) -> list[str]:
+    hr = _hr_chars_for_body()
+    out: list[str] = []
+    for ln in cmd_lines:
+        out.append(ln)
+    out.append("")
+    out.append("▸ Step 1 — Deterministic (built-in patterns)")
+    out.append(hr)
+    for ln in det:
+        out.append(("  " + ln) if ln else "")
+    out.append("")
+    out.append("▸ Step 2 — LLM synthesis (OpenRouter + tools)")
+    out.append(hr)
+    for ln in llm_lines:
+        out.append(("  " + ln) if ln else "")
+    return out
 
 
 def main() -> int:
@@ -252,41 +300,47 @@ def main() -> int:
     args = parser.parse_args()
     _load_dotenv()
 
-    det = _run_deterministic(9)
+    wrap_w = 38  # short lines = bigger apparent type when scaled
+    det = _run_deterministic(4, wrap_w)
+
     try_live = not args.force_sample_llm and not args.no_live_llm
     used_live = False
     if args.force_sample_llm:
-        llm_lines = _load_sample_llm()
+        llm_lines = _load_sample_llm(wrap_w)
     elif try_live:
-        live = _run_llm_live(14, timeout=args.llm_timeout)
+        live = _run_llm_live(5, wrap_w, timeout=args.llm_timeout)
         if live:
             llm_lines = live
             used_live = True
         else:
-            llm_lines = _load_sample_llm()
+            llm_lines = _load_sample_llm(wrap_w)
     else:
-        llm_lines = _load_sample_llm()
+        llm_lines = _load_sample_llm(wrap_w)
 
-    cmd_line = "$ autopsy analyze examples/traces/loop_failure.json -q -f text"
-    script_lines = _build_script(cmd_line, det, llm_lines)
+    cmd_lines = [
+        "$ autopsy analyze \\",
+        "    examples/traces/loop_failure.json -q -f text",
+    ]
+    script_lines = _build_script(cmd_lines, det, llm_lines)
 
-    # Hard cap so nothing clips on 1080p layout
-    max_lines = 26
+    max_lines = 18
     if len(script_lines) > max_lines:
         script_lines = script_lines[: max_lines - 1] + ["  …"]
 
     if used_live:
         footer = "Live OpenRouter + LangGraph  ·  agent-autopsy"
     else:
-        footer = "Representative LLM block when API unavailable  ·  agent-autopsy"
+        footer = "Sample LLM lines when API offline  ·  agent-autopsy"
 
+    rule_font = _mono_font(max(28, FONT_BODY - 12))
     fonts = {
-        "title": _mono_font(44),
-        "subtitle": _mono_font(26),
-        "cmd": _mono_font(30),
-        "step": _mono_font(30),
-        "body": _mono_font(32),
-        "footer": _mono_font(22),
+        "title": _mono_font(FONT_TITLE),
+        "subtitle": _mono_font(FONT_SUB),
+        "cmd": _mono_font(FONT_CMD),
+        "step": _mono_font(FONT_STEP),
+        "body": _mono_font(FONT_BODY),
+        "footer": _mono_font(FONT_FOOT),
+        "rule": rule_font,
     }
 
     frames: list[Image.Image] = []
@@ -298,7 +352,7 @@ def main() -> int:
         return 2
 
     final = frames[-1]
-    for _ in range(32):
+    for _ in range(36):
         frames.append(final)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -306,7 +360,7 @@ def main() -> int:
         OUT,
         save_all=True,
         append_images=frames[1:],
-        duration=95,
+        duration=105,
         loop=0,
         optimize=True,
     )
