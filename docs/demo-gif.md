@@ -1,6 +1,6 @@
 # Recording a README demo (GIF)
 
-The hero asset **`docs/images/autopsy-demo.gif`** is generated at **1920×1080** with **extra-large monospace** (body ≈56px, title ≈72px, command ≈50px) and short wrapped lines so GitHub’s scaled-down preview stays readable. There is **no downscale** of the canvas; only a few CLI lines are shown so type can stay huge.
+The hero asset **`docs/images/autopsy-demo.gif`** is generated at **1100×700** with **large monospace** (body ≈36px, title ≈52px) on a canvas matched to GitHub’s readme column width (~830px), so the preview barely downscales and type stays legible. Only a few CLI lines are animated to keep file size small.
 
 ## What the GIF shows
 
