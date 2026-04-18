@@ -16,6 +16,9 @@ Run tests before opening a PR:
 
 ```bash
 .venv/bin/pytest -q
+.venv/bin/python scripts/eval_detectors.py
+.venv/bin/python scripts/benchmark_no_llm.py examples/traces/loop_failure.json --repeat 3
+.venv/bin/python scripts/render_demo_gif.py   # refresh README demo GIF (needs Pillow)
 ```
 
 Smoke-check core entrypoints:
