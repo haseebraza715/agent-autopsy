@@ -159,6 +159,20 @@ class AnalysisAgent:
 
         return graph.compile()
 
+    def _finalize_report_markdown(self, text: str) -> str:
+        """Append validated structured JSON appendix when the model included a fenced block."""
+        from src.analysis.structured_report import (
+            extract_structured_json,
+            structured_to_markdown_append,
+            validate_structured_against_trace,
+        )
+
+        structured = extract_structured_json(text)
+        if structured is None:
+            return text
+        errs = validate_structured_against_trace(structured, self.trace)
+        return text + structured_to_markdown_append(structured, errs)
+
     def _analyze_node(self, state: AgentState) -> AgentState:
         """Main analysis node - calls LLM to reason about trace."""
         messages = state["messages"]
@@ -325,9 +339,10 @@ class AnalysisAgent:
                     and quality.get("has_root_cause")
                     and quality.get("has_fix_recommendations")
                 ):
+                    final = self._finalize_report_markdown(candidate)
                     return {
-                        "messages": [response],
-                        "final_report": candidate,
+                        "messages": [AIMessage(content=final)],
+                        "final_report": final,
                         "report_revisions": report_revisions,
                         "report_quality": quality,
                         "analysis_complete": True,
@@ -351,9 +366,11 @@ class AnalysisAgent:
                 f"Quality gate warning: best score {best_quality.get('overall_score', 0):.2f} "
                 f"(target {target_quality:.2f})."
             )
+            combined = best_report + quality_note
+            final = self._finalize_report_markdown(combined)
             return {
-                "messages": [AIMessage(content=best_report + quality_note)],
-                "final_report": best_report + quality_note,
+                "messages": [AIMessage(content=final)],
+                "final_report": final,
                 "report_revisions": report_revisions,
                 "report_quality": best_quality,
                 "analysis_complete": True,

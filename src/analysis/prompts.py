@@ -90,4 +90,15 @@ Include:
 4. **Fix Recommendations**: Categorized as A) Code, B) Tool, C) Prompt, D) Ops
 5. **Confidence**: Your confidence level (0-1) with reasoning
 
-Format the output as structured markdown that can be directly saved as a report."""
+Format the output as structured markdown that can be directly saved as a report.
+
+After the markdown, append **one** fenced JSON block (machine validation) using exactly this shape:
+```json
+{
+  "root_cause": "one sentence",
+  "evidence": [{"description": "...", "event_ids": [1, 2]}],
+  "recommendations": ["actionable item"],
+  "confidence": 0.85
+}
+```
+Use only event_ids that exist in the trace. If you are unsure, use an empty evidence list rather than inventing IDs."""
