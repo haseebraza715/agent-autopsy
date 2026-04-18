@@ -15,7 +15,6 @@ from typing import Any
 
 from src import api
 from src.advanced import benchmark_trace_directory, benchmark_traces, compare_traces_advanced, LiveTraceMonitor
-from src.analysis import run_analysis
 from src.analysis.agent import AnalysisResult, run_analysis_without_llm
 from src.ingestion import TraceNormalizer, TraceParser
 from src.output import FixSuggestionGenerator, ReportGenerator
@@ -86,7 +85,9 @@ def analyze_trace(
         analysis = run_analysis_without_llm(trace)
     else:
         try:
-            analysis = run_analysis(trace, model=model, verbose=False)
+            from src.analysis.llm_agent import run_analysis as run_llm_analysis
+
+            analysis = run_llm_analysis(trace, model=model, verbose=False)
             if not analysis.success:
                 used_fallback = True
                 fallback_reason = analysis.error or "LLM analysis returned unsuccessful result"
