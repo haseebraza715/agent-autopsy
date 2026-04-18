@@ -2,8 +2,8 @@
 """
 Render docs/images/autopsy-demo.gif — README hero, maximally legible type.
 
-1920×1080, very large monospace (title ~72px, body ~56px). GitHub scales the
-image down; oversized glyphs stay readable. Content is intentionally short.
+1100×700 canvas: GitHub README images render ~830px wide, so a narrower GIF
+barely downscales and chunky monospace stays readable. Content is short.
 """
 from __future__ import annotations
 
@@ -21,20 +21,20 @@ OUT = REPO / "docs" / "images" / "autopsy-demo.gif"
 TRACE = REPO / "examples" / "traces" / "loop_failure.json"
 SAMPLE_LLM = REPO / "scripts" / "demo_gif_llm_sample.txt"
 
-W, H = 1920, 1080
-HEADER_H = 152
-PAD_X = 48
-PAD_Y = 20
-FOOTER_H = 62
+W, H = 1100, 700
+HEADER_H = 104
+PAD_X = 36
+PAD_Y = 12
+FOOTER_H = 40
 
-# Large type tuned for GitHub README downscaling
-FONT_TITLE = 72
-FONT_SUB = 36
-FONT_CMD = 50
-FONT_STEP = 48
-FONT_BODY = 56
-FONT_FOOT = 30
-LINE_EXTRA = 18  # padding below each line (increases line spacing)
+# Fonts sized for the narrow canvas (see module docstring).
+FONT_TITLE = 52
+FONT_SUB = 24
+FONT_CMD = 34
+FONT_STEP = 34
+FONT_BODY = 36
+FONT_FOOT = 20
+LINE_EXTRA = 10  # padding below each line (increases line spacing)
 
 
 def _load_dotenv() -> None:
