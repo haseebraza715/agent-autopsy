@@ -1,202 +1,311 @@
-<div align="center">
-
 # Agent Autopsy
 
-### Forensic debugging for AI agent traces — in your terminal, in under a second.
+### Local-first debugging for AI agent traces
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
 [![GitHub stars](https://img.shields.io/github/stars/haseebraza715/agent-autopsy?style=social)](https://github.com/haseebraza715/agent-autopsy)
 
-![Agent Autopsy — deterministic + LLM analysis of a failing trace](docs/images/autopsy-demo.gif)
+Find failure patterns, inspect evidence, and generate fix guidance from LangGraph, LangChain, OpenTelemetry, or generic JSON traces without shipping them to a hosted dashboard first.
 
-**[Try it live →](https://autopsyagent.streamlit.app/)**
+![Agent Autopsy demo](docs/images/autopsy-demo.gif)
 
-</div>
+**[Live demo](https://autopsyagent.streamlit.app/)** ·
+**[Quick start](docs/quickstart.md)** ·
+**[Examples](examples/README.md)** ·
+**[Architecture](ARCHITECTURE.md)**
 
 ---
 
-## The problem
+## Why this exists
 
-Your agent failed. You have a 5 MB JSON trace. Now what?
+When an agent run fails, the painful part usually is not collecting the trace. It is figuring out what actually went wrong quickly enough to fix it.
 
-`grep`ing won't surface the loop. The LangGraph Studio upload is slow and public-cloud. Your homegrown Python script catches the one bug you wrote it for and misses the next three.
+Agent Autopsy is built for that moment:
 
-## The fix
+- You have a large trace file and need a fast local read on what happened.
+- You want deterministic signal detection before paying for LLM reasoning.
+- You need something that works in the terminal, in CI, or in environments where traces should stay on your machine.
 
-```bash
-autopsy analyze trace.json
-```
+In deterministic mode, Agent Autopsy runs fully offline. If you enable LLM analysis, it can synthesize a deeper root-cause report using OpenRouter, OpenAI, Anthropic, or Ollama.
 
-One second later, a terminal report shows you the infinite loop at event 42, the hallucinated tool call at event 58, and three retry storms between them — with citation event IDs you can jump to.
+---
 
-Want deeper analysis? Add `--stream` and an LLM synthesises root cause with cited evidence. Works with Ollama, OpenAI, Anthropic, OpenRouter.
+## What Agent Autopsy does
+
+Agent Autopsy runs a deterministic-first pipeline:
+
+1. Ingest a trace from LangGraph, LangChain, OpenTelemetry, or a generic JSON shape.
+2. Normalize it into a common trace schema.
+3. Detect failure patterns such as loops, retry storms, hallucinated tools, auth failures, timeouts, context overflow, token waste, stale context, and contract mismatches.
+4. Build a report with evidence and event references.
+5. Optionally hand the normalized trace and deterministic findings to an LLM for a stronger root-cause narrative and fix recommendations.
+
+You can use it through:
+
+- A CLI for local debugging and CI workflows
+- A Streamlit UI for browsing traces interactively
+- An MCP server so other tools can analyze traces programmatically
+- Trace-capture helpers for LangChain and LangGraph style runs
 
 ---
 
 ## Quickstart
 
+### Requirements
+
+- Python 3.10 or newer
+- `pip`
+
+If `python3 --version` reports 3.9 or lower, install Python 3.10+ first. The project uses modern type syntax and will not run on Python 3.9.
+
+### Fastest path
+
 ```bash
-pip install -e ".[cli]"
-autopsy analyze examples/traces/loop_failure.json --no-llm
+git clone https://github.com/haseebraza715/agent-autopsy.git
+cd agent-autopsy
+
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e .
+
+autopsy analyze examples/traces/loop_failure.json --no-llm --no-embeddings
 ```
 
-No API key. No account. No network call. Works on your laptop, in CI, on air-gapped boxes.
+That gives you the core CLI with deterministic analysis only:
+
+- No API key
+- No account
+- No hosted upload
+- No network call
+
+### Useful next commands
+
+```bash
+autopsy summary examples/traces/hallucinated_tool.json
+autopsy validate examples/traces/loop_failure.json
+autopsy fixes examples/traces/loop_failure.json
+autopsy diff examples/traces/loop_failure.json examples/traces/hallucinated_tool.json
+```
 
 ---
 
-## Feature tour
+## Install options
 
-<details open>
-<summary><b>Thirteen deterministic pattern detectors</b></summary>
+The base install is enough for the CLI and deterministic analysis.
 
-Built-in detectors for infinite loops, retry storms, context overflow, hallucinated tools, empty responses, error cascades, stale context, semantic drift, token waste, auth failures, and more. All run sub-second, no LLM required. See [docs/patterns.md](docs/patterns.md).
+| Install target | Command | Includes |
+|---|---|---|
+| Base CLI | `python -m pip install -e .` | CLI + deterministic analysis |
+| LLM mode | `python -m pip install -e ".[llm]"` | Provider integrations for deeper synthesis |
+| GUI | `python -m pip install -e ".[gui]"` | Streamlit app |
+| MCP | `python -m pip install -e ".[mcp]"` | MCP server |
+| Embeddings | `python -m pip install -e ".[embeddings]"` | Sentence-transformers for semantic drift |
+| Full | `python -m pip install -e ".[full]"` | Everything above |
 
-</details>
+If you want the shortest reliable first-run path, start with the base install and add extras only when you need them.
 
-<details>
-<summary><b>Optional LLM root-cause synthesis</b></summary>
+---
+
+## Core workflows
+
+### 1. Analyze one trace
 
 ```bash
-autopsy analyze trace.json --stream                    # tokens stream live
-autopsy analyze trace.json --provider ollama --model llama3.1:8b   # local
+autopsy analyze trace.json
+autopsy analyze trace.json --no-llm
+autopsy analyze trace.json --no-llm --no-embeddings
+autopsy analyze trace.json -f json
+autopsy analyze trace.json -o report.md --artifacts ./patches
 ```
 
-Structured Pydantic output, citations validated against the trace (no hallucinated event IDs), disk-cached so re-runs are instant.
+What you get:
 
-</details>
+- Trace summary
+- Deterministic findings and hypotheses
+- Report text or JSON
+- Optional fix artifacts
 
-<details>
-<summary><b><code>autopsy watch</code> — auto-analyse new traces</b></summary>
+### 2. Compare two runs
+
+```bash
+autopsy diff baseline.json candidate.json
+autopsy diff baseline.json candidate.json -f json
+```
+
+Useful for:
+
+- Regression checks
+- Prompt or toolchain changes
+- Evaluating whether a “fix” really changed agent behavior
+
+### 3. Watch a trace directory
 
 ```bash
 autopsy watch ./traces
 ```
 
-Point it at your trace output directory. Every new `.json` gets analysed on write. Perfect for the agent-dev inner loop.
+This is a nice inner-loop workflow when your agent writes JSON traces continuously during development.
 
-</details>
-
-<details>
-<summary><b><code>autopsy diff</code> — compare two runs</b></summary>
-
-```bash
-autopsy diff baseline.json candidate.json -f json
-```
-
-Which events appeared or disappeared, which patterns fired in one run but not the other, which tool calls have different arguments. Unique — hosted tools don't do this well.
-
-</details>
-
-<details>
-<summary><b><code>autopsy replay</code> — step through a trace</b></summary>
+### 4. Replay the run event by event
 
 ```bash
 autopsy replay trace.json --from 42 --speed 2
+autopsy replay trace.json --step
 ```
 
-Interactive, debugger-style playback. Understand what the agent was *thinking* event by event.
+Use this when you want a debugger-style walkthrough of the trace rather than a summary.
 
-</details>
-
-<details>
-<summary><b>Plugins and MCP</b></summary>
-
-Drop-in parser, detector, report, and fix-generator plugins — see [docs/plugins.md](docs/plugins.md). MCP server exposes analysis tools to any MCP-compatible client with optional bearer-token auth for SSE — see [docs/mcp.md](docs/mcp.md).
-
-</details>
-
-<details>
-<summary><b>Streamlit web UI</b></summary>
+### 5. Batch benchmark a trace set
 
 ```bash
-pip install -e ".[gui]"
+autopsy benchmark --traces-dir ./traces
+```
+
+This helps answer questions like:
+
+- Are failures getting better or worse?
+- Which patterns are most common?
+- Did a recent change degrade success rate or latency?
+
+---
+
+## Optional LLM analysis
+
+If you install `.[llm]`, Agent Autopsy can synthesize a stronger root-cause explanation on top of deterministic findings.
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env
+```
+
+Then configure one provider:
+
+```env
+# Pick one provider: openrouter | openai | anthropic | ollama
+PROVIDER=openrouter
+OPENROUTER_API_KEY=your_key_here
+DEFAULT_MODEL=google/gemma-4-31b-it:free
+```
+
+Example commands:
+
+```bash
+autopsy analyze trace.json
+autopsy analyze trace.json --stream
+autopsy analyze trace.json --provider ollama --model llama3.1:8b
+autopsy analyze trace.json --no-cache
+```
+
+Notes:
+
+- If no valid provider credentials are configured, `analyze` falls back to deterministic mode.
+- `--stream` streams LLM output live in the terminal.
+- `--no-cache` bypasses the disk cache for LLM responses.
+
+---
+
+## Supported inputs
+
+Agent Autopsy automatically detects and normalizes these trace shapes:
+
+- LangGraph
+- LangChain
+- OpenTelemetry
+- Generic JSON traces
+- Plugin-defined trace parsers
+
+Normalization gives the rest of the pipeline a consistent schema for:
+
+- Event IDs
+- Event types
+- Timing
+- Token usage
+- Errors
+- Tool calls
+- Agent handoffs
+
+See [docs/ingestion.md](docs/ingestion.md) for details.
+
+---
+
+## Built-in detectors
+
+The deterministic layer includes detectors for:
+
+- Infinite loops
+- Retry storms
+- Redundant tool calls
+- Empty responses
+- Error cascades
+- Hallucinated tools
+- Auth and permission failures
+- Timeout patterns
+- Goal drift
+- Stale context
+- Token waste
+- Inter-agent failures
+- Context overflow
+- Tool contract mismatches
+
+See [docs/patterns.md](docs/patterns.md) for the detector catalog and tuning notes.
+
+---
+
+## Streamlit UI
+
+If you want a browser UI instead of terminal output:
+
+```bash
+python -m pip install -e ".[gui]"
 streamlit run app.py
 ```
 
-Custom dark theme, batch analysis, trace viewer, live LLM streaming. Prefer the terminal? Ignore this.
+The Streamlit app includes:
 
-</details>
+- Single-trace analysis
+- Batch analysis
+- Trace viewer
+- Reports
+- Settings and provider configuration
 
----
-
-## How it compares
-
-| | Agent Autopsy | LangSmith | `grep` + scripts |
-|---|:-:|:-:|:-:|
-| Works offline | yes | no | yes |
-| No account required | yes | no | yes |
-| Sub-second analysis | yes | no | yes |
-| Pattern library | 13+ | yes | none |
-| LLM root cause | yes | yes | no |
-| Streaming output | yes | yes | no |
-| Trace diffing | yes | partial | no |
-| Local LLM (Ollama) | yes | no | n/a |
-| Data stays on your box | yes | no | yes |
-
-Agent Autopsy is not a LangSmith replacement — it's for the 90% of debugging that happens on your laptop, in CI, or where you can't ship traces off-box.
+You can also try the hosted demo at [autopsyagent.streamlit.app](https://autopsyagent.streamlit.app/).
 
 ---
 
-## Install
+## MCP server
 
-Pick the smallest group you need:
-
-| Group | Command | Use for |
-|-------|---------|---------|
-| `cli` | `pip install -e ".[cli]"` | Terminal only |
-| `gui` | `pip install -e ".[gui]"` | Web UI |
-| `mcp` | `pip install -e ".[mcp]"` | MCP server |
-| `embeddings` | `pip install -e ".[embeddings]"` | Semantic drift (1.5 GB model) |
-| `full` | `pip install -e ".[full]"` | Everything |
-
----
-
-## Command reference
+If you want to expose Agent Autopsy to an MCP-compatible client:
 
 ```bash
-# Analysis
-autopsy analyze trace.json                     # deterministic + LLM (if key set)
-autopsy analyze trace.json --no-llm            # fast, offline
-autopsy analyze trace.json --stream            # stream LLM tokens live
-autopsy analyze trace.json -f json | jq .      # machine-readable
+python -m pip install -e ".[mcp]"
 
-# Daily drivers
-autopsy watch ./traces                         # auto-analyse new files
-autopsy diff baseline.json candidate.json      # compare two runs
-autopsy replay trace.json --from 42 --speed 2  # step-by-step
-
-# Utilities
-autopsy summary trace.json                     # one-screen overview
-autopsy fixes trace.json                       # remediation suggestions
-autopsy benchmark --traces-dir ./traces        # batch metrics
-autopsy telemetry on                           # opt in to anonymous local logs
-
-# Shell completion
-autopsy --install-completion
+autopsy-mcp --transport stdio
+autopsy-mcp --transport streamable-http --mount-path /mcp
 ```
 
-**Exit codes:** `0` clean · `1` findings · `2` tool / parse error. `NO_COLOR=1` disables colors.
+The MCP layer exposes tools for:
+
+- Analyzing traces
+- Detecting patterns
+- Validating trace structure
+- Comparing runs
+- Listing traces
+- Looking up event details
+- Suggesting fixes
+- Monitoring trace directories
+
+For HTTP transports, bearer-token auth can be enabled with `MCP_SSE_TOKEN`.
+
+See [docs/mcp.md](docs/mcp.md) for setup and transport details.
 
 ---
 
-## Configuration
+## Capturing traces from your own agent
 
-A single `.env` covers all providers:
-
-```env
-OPENROUTER_API_KEY=...          # or OPENAI_API_KEY / ANTHROPIC_API_KEY
-DEFAULT_MODEL=google/gemma-4-31b-it:free
-TRACE_ENABLED=1
-TRACE_DIR=./traces
-MCP_SSE_TOKEN=...               # only if exposing MCP over SSE
-```
-
-Telemetry is off by default. Opt-in is local-only: anonymous JSON appended to `~/.cache/agent-autopsy/telemetry-events.jsonl`. Nothing leaves your machine.
-
----
-
-## Capturing traces from your agent
+Agent Autopsy includes trace-capture helpers for LangChain and LangGraph style workflows.
 
 ```python
 from src.tracing import start_trace, end_trace
@@ -206,30 +315,80 @@ result = graph.invoke(state, config={"callbacks": [trace_handler]})
 end_trace(trace_handler)
 ```
 
-Outputs land in `TRACE_DIR`. Feed them straight into `autopsy analyze`.
+By default, traces are written to `./traces` unless you override `TRACE_DIR`.
+
+Relevant settings:
+
+```env
+TRACE_ENABLED=1
+TRACE_DIR=./traces
+TRACE_MAX_CHARS=5000
+```
+
+See [src/tracing/trace_saver.py](src/tracing/trace_saver.py) and [docs/quickstart.md](docs/quickstart.md) for more.
 
 ---
 
-## Documentation
+## Configuration
 
-| | |
+Common settings live in `.env`:
+
+```env
+PROVIDER=openrouter
+OPENROUTER_API_KEY=
+OPENAI_API_KEY=
+OPENAI_API_BASE=
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+DEFAULT_MODEL=google/gemma-4-31b-it:free
+FALLBACK_MODEL=google/gemma-4-26b-a4b-it:free
+TRACE_ENABLED=1
+TRACE_DIR=./traces
+```
+
+Telemetry is opt-in and local-only:
+
+```bash
+autopsy telemetry status
+autopsy telemetry on
+autopsy telemetry off
+```
+
+When enabled, telemetry is appended to a local JSONL file under the cache directory. Nothing is sent by default.
+
+---
+
+## Documentation map
+
+| Topic | Link |
 |---|---|
-| **Get started** | [Quick Start](docs/quickstart.md) · [Demo Playbook](docs/demo.md) · [Examples](examples/README.md) |
-| **Deep dives** | [Architecture](ARCHITECTURE.md) · [Patterns](docs/patterns.md) · [Analysis pipeline](docs/analysis.md) |
-| **Extend it** | [Plugins](docs/plugins.md) · [Extensions](docs/extensions.md) · [MCP server](docs/mcp.md) |
-| **Roadmap** | [Launch post draft](docs/launch-post.md) · [Roadmap](ROADMAP.md) · [Good first issues](docs/good-first-issues.md) |
-| **Planning** | [Improvement plan v1](docs/unified-improvement-plan.md) · [v2 best-in-class](docs/v2-best-in-class-plan.md) · [Implementation audit](docs/implementation-audit.md) |
+| Fast onboarding | [docs/quickstart.md](docs/quickstart.md) |
+| Example traces and walkthroughs | [examples/README.md](examples/README.md) |
+| Architecture overview | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Ingestion and format detection | [docs/ingestion.md](docs/ingestion.md) |
+| Analysis pipeline | [docs/analysis.md](docs/analysis.md) |
+| Detector catalog | [docs/patterns.md](docs/patterns.md) |
+| MCP setup | [docs/mcp.md](docs/mcp.md) |
+| Plugins and extension points | [docs/plugins.md](docs/plugins.md) and [docs/extensions.md](docs/extensions.md) |
+| Demo playbook | [docs/demo.md](docs/demo.md) |
+| Roadmap and plans | [ROADMAP.md](ROADMAP.md) and [docs/unified-improvement-plan.md](docs/unified-improvement-plan.md) |
 
 ---
 
 ## Contributing
 
-Good first issues are labelled in the tracker and listed in [docs/good-first-issues.md](docs/good-first-issues.md). Adding a new pattern detector takes about 15 minutes — see [CONTRIBUTING.md](CONTRIBUTING.md). Please read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before filing issues.
+Contributions are welcome, especially in these areas:
 
----
+- New trace parsers
+- New deterministic detectors
+- Better report generation
+- UI polish
+- Real-world fixtures and evaluation traces
+- Documentation and onboarding
 
-<div align="center">
+Start with:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [docs/good-first-issues.md](docs/good-first-issues.md)
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 Built by [Haseeb Raza](https://github.com/haseebraza715) · MIT licensed
-
-</div>
