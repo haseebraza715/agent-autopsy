@@ -1,12 +1,6 @@
-# This file is intentionally minimal. Install from pyproject optional groups, for example:
-#
-#   pip install "agent-autopsy[cli]"          # Typer/Rich CLI only (default package deps)
-#   pip install "agent-autopsy[llm]"         # + LangGraph / LangChain / OpenAI client
-#   pip install "agent-autopsy[gui]"        # + Streamlit
-#   pip install "agent-autopsy[mcp]"        # + MCP SDK
-#   pip install "agent-autopsy[embeddings]" # + sentence-transformers (semantic drift)
-#   pip install "agent-autopsy[dev]"        # + pytest
-#   pip install "agent-autopsy[full]"       # everything above (largest install)
-#
-# Editable local install:
-#   pip install -e ".[full]"
+# Streamlit Cloud installs dependencies from this file by default.
+# Install the local package with the extras needed by the web app:
+# - base package deps (pydantic, typer, rich, httpx, watchdog, etc.)
+# - Streamlit UI
+# - optional LLM providers used by the app when configured
+.[gui,llm]
