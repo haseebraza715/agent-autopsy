@@ -9,8 +9,8 @@ Understand baseline behavior for a healthy trace.
 ## What to run
 
 ```bash
-python -m src.cli summary examples/traces/successful_run.json
-python -m src.cli analyze examples/traces/successful_run.json --no-llm -o /tmp/success_report.md
+python -m agent_autopsy.cli summary examples/traces/successful_run.json
+python -m agent_autopsy.cli analyze examples/traces/successful_run.json --no-llm -o /tmp/success_report.md
 ```
 
 ## Expected interpretation

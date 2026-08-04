@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.ingestion.parser import TraceParser, parse_trace_data
-from src.plugins import manager as plugin_manager_module
-from src.plugins import get_plugin_manager
+from agent_autopsy.ingestion.parser import TraceParser, parse_trace_data
+from agent_autopsy.plugins import get_plugin_manager
+from agent_autopsy.plugins import manager as plugin_manager_module
 
 
 def _reset_global_plugin_manager() -> None:
@@ -19,8 +19,8 @@ def test_local_parser_plugin_is_loaded(monkeypatch, tmp_path: Path):
         "\n".join(
             [
                 "from datetime import datetime",
-                "from src.plugins import ParserPlugin",
-                "from src.schema import EnvironmentInfo, Trace, TraceStatus",
+                "from agent_autopsy.plugins import ParserPlugin",
+                "from agent_autopsy.schema import EnvironmentInfo, Trace, TraceStatus",
                 "",
                 "class CustomParser(ParserPlugin):",
                 "    name = 'custom_json'",

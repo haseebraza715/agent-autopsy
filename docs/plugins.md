@@ -43,8 +43,8 @@ Use entry point groups:
 
 ```python
 from datetime import datetime
-from src.plugins import ParserPlugin
-from src.schema import Trace, TraceStatus, EnvironmentInfo
+from agent_autopsy.plugins import ParserPlugin
+from agent_autopsy.schema import Trace, TraceStatus, EnvironmentInfo
 
 class MyParser(ParserPlugin):
     name = "my_format"

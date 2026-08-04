@@ -1,8 +1,9 @@
 """Citation validation for LLM reports."""
 
-from src.analysis.citation_validate import validate_report_event_citations
-from src.ingestion import TraceNormalizer, parse_trace_file
 from pathlib import Path
+
+from agent_autopsy.analysis.citation_validate import validate_report_event_citations
+from agent_autopsy.ingestion import TraceNormalizer, parse_trace_file
 
 REPO = Path(__file__).resolve().parents[1]
 

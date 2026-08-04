@@ -2,14 +2,14 @@
 
 from datetime import datetime
 
-from src.analysis.agent import AnalysisResult
-from src.output import ReportGenerator
-from src.schema import (
+from agent_autopsy.analysis.agent import AnalysisResult
+from agent_autopsy.output import ReportGenerator
+from agent_autopsy.schema import (
+    EnvironmentInfo,
+    EventType,
     Trace,
     TraceEvent,
     TraceStatus,
-    EventType,
-    EnvironmentInfo,
 )
 
 

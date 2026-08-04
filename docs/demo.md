@@ -9,7 +9,7 @@ For a **GIF / asciinema** workflow (README hero asset), see [demo-gif.md](demo-g
 Use sample trace: [`examples/traces/loop_failure.json`](../examples/traces/loop_failure.json)
 
 ```bash
-python -m src.cli summary examples/traces/loop_failure.json
+python -m agent_autopsy.cli summary examples/traces/loop_failure.json
 ```
 
 Show:
@@ -23,7 +23,7 @@ Show:
 Analyze the same trace: [`examples/traces/loop_failure.json`](../examples/traces/loop_failure.json)
 
 ```bash
-python -m src.cli analyze examples/traces/loop_failure.json --no-llm -o /tmp/demo_report.md
+python -m agent_autopsy.cli analyze examples/traces/loop_failure.json --no-llm -o /tmp/demo_report.md
 ```
 
 Show:
@@ -35,7 +35,7 @@ Show:
 ## 3) MCP Interface
 
 ```bash
-python -m src.mcp --transport stdio
+python -m agent_autopsy.mcp --transport stdio
 ```
 
 Show:

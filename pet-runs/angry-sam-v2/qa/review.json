@@ -1,0 +1,1001 @@
+{
+  "ok": true,
+  "frames_root": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames",
+  "states": [
+    "idle",
+    "running-right",
+    "running-left",
+    "waving",
+    "jumping",
+    "failed",
+    "waiting",
+    "running",
+    "review"
+  ],
+  "errors": [],
+  "warnings": [
+    "idle used extraction method stable-slots; confirm motion playback remains stable and unclipped",
+    "running-right used extraction method stable-slots; confirm motion playback remains stable and unclipped",
+    "running-left used extraction method stable-slots; confirm motion playback remains stable and unclipped",
+    "waving used extraction method stable-slots; confirm motion playback remains stable and unclipped",
+    "jumping used extraction method stable-slots; confirm motion playback remains stable and unclipped",
+    "failed used extraction method stable-slots; confirm motion playback remains stable and unclipped",
+    "waiting used extraction method stable-slots; confirm motion playback remains stable and unclipped",
+    "running used extraction method stable-slots; confirm motion playback remains stable and unclipped",
+    "review used extraction method stable-slots; confirm motion playback remains stable and unclipped"
+  ],
+  "rows": [
+    {
+      "state": "idle",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": "stable-slots",
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        "idle used extraction method stable-slots; confirm motion playback remains stable and unclipped"
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/idle/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17761,
+          "bbox": [
+            37,
+            6,
+            154,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 83
+        },
+        {
+          "index": 1,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/idle/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17326,
+          "bbox": [
+            38,
+            6,
+            152,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 102
+        },
+        {
+          "index": 2,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/idle/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17134,
+          "bbox": [
+            40,
+            6,
+            151,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 75
+        },
+        {
+          "index": 3,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/idle/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17249,
+          "bbox": [
+            39,
+            6,
+            152,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 84
+        },
+        {
+          "index": 4,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/idle/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17614,
+          "bbox": [
+            38,
+            6,
+            152,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 117
+        },
+        {
+          "index": 5,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/idle/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17701,
+          "bbox": [
+            38,
+            6,
+            153,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 117
+        }
+      ]
+    },
+    {
+      "state": "running-right",
+      "expected_frames": 8,
+      "actual_frames": 8,
+      "extraction_method": "stable-slots",
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        "running-right used extraction method stable-slots; confirm motion playback remains stable and unclipped"
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-right/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17017,
+          "bbox": [
+            26,
+            6,
+            165,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 173
+        },
+        {
+          "index": 1,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-right/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17644,
+          "bbox": [
+            31,
+            6,
+            159,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 147
+        },
+        {
+          "index": 2,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-right/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16571,
+          "bbox": [
+            28,
+            6,
+            162,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 134
+        },
+        {
+          "index": 3,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-right/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16849,
+          "bbox": [
+            32,
+            6,
+            159,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 166
+        },
+        {
+          "index": 4,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-right/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16254,
+          "bbox": [
+            26,
+            6,
+            165,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 149
+        },
+        {
+          "index": 5,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-right/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18135,
+          "bbox": [
+            30,
+            6,
+            160,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 135
+        },
+        {
+          "index": 6,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-right/06.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16340,
+          "bbox": [
+            30,
+            6,
+            161,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 192
+        },
+        {
+          "index": 7,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-right/07.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16491,
+          "bbox": [
+            35,
+            6,
+            156,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 147
+        }
+      ]
+    },
+    {
+      "state": "running-left",
+      "expected_frames": 8,
+      "actual_frames": 8,
+      "extraction_method": "stable-slots",
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        "running-left used extraction method stable-slots; confirm motion playback remains stable and unclipped"
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-left/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16491,
+          "bbox": [
+            35,
+            6,
+            156,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 147
+        },
+        {
+          "index": 1,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-left/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16340,
+          "bbox": [
+            30,
+            6,
+            161,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 192
+        },
+        {
+          "index": 2,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-left/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18139,
+          "bbox": [
+            30,
+            6,
+            160,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 133
+        },
+        {
+          "index": 3,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-left/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16254,
+          "bbox": [
+            26,
+            6,
+            165,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 149
+        },
+        {
+          "index": 4,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-left/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16849,
+          "bbox": [
+            32,
+            6,
+            159,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 166
+        },
+        {
+          "index": 5,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-left/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16571,
+          "bbox": [
+            28,
+            6,
+            162,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 129
+        },
+        {
+          "index": 6,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-left/06.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17618,
+          "bbox": [
+            31,
+            6,
+            159,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 137
+        },
+        {
+          "index": 7,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running-left/07.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17017,
+          "bbox": [
+            26,
+            6,
+            165,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 173
+        }
+      ]
+    },
+    {
+      "state": "waving",
+      "expected_frames": 4,
+      "actual_frames": 4,
+      "extraction_method": "stable-slots",
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        "waving used extraction method stable-slots; confirm motion playback remains stable and unclipped"
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/waving/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17217,
+          "bbox": [
+            40,
+            6,
+            151,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 46
+        },
+        {
+          "index": 1,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/waving/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17842,
+          "bbox": [
+            32,
+            6,
+            160,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 62
+        },
+        {
+          "index": 2,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/waving/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17956,
+          "bbox": [
+            29,
+            6,
+            163,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 45
+        },
+        {
+          "index": 3,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/waving/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17432,
+          "bbox": [
+            35,
+            6,
+            157,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 68
+        }
+      ]
+    },
+    {
+      "state": "jumping",
+      "expected_frames": 5,
+      "actual_frames": 5,
+      "extraction_method": "stable-slots",
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        "jumping used extraction method stable-slots; confirm motion playback remains stable and unclipped"
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/jumping/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 20087,
+          "bbox": [
+            30,
+            6,
+            162,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 110
+        },
+        {
+          "index": 1,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/jumping/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17136,
+          "bbox": [
+            37,
+            6,
+            154,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 78
+        },
+        {
+          "index": 2,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/jumping/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18207,
+          "bbox": [
+            32,
+            6,
+            159,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 117
+        },
+        {
+          "index": 3,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/jumping/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16600,
+          "bbox": [
+            40,
+            6,
+            152,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 85
+        },
+        {
+          "index": 4,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/jumping/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18319,
+          "bbox": [
+            36,
+            6,
+            156,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 126
+        }
+      ]
+    },
+    {
+      "state": "failed",
+      "expected_frames": 8,
+      "actual_frames": 8,
+      "extraction_method": "stable-slots",
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        "failed used extraction method stable-slots; confirm motion playback remains stable and unclipped"
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/failed/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16084,
+          "bbox": [
+            44,
+            6,
+            148,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 89
+        },
+        {
+          "index": 1,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/failed/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16087,
+          "bbox": [
+            43,
+            6,
+            149,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 95
+        },
+        {
+          "index": 2,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/failed/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17132,
+          "bbox": [
+            39,
+            6,
+            153,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 132
+        },
+        {
+          "index": 3,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/failed/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 19145,
+          "bbox": [
+            33,
+            6,
+            159,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 131
+        },
+        {
+          "index": 4,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/failed/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 26192,
+          "bbox": [
+            14,
+            6,
+            177,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 264
+        },
+        {
+          "index": 5,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/failed/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 26656,
+          "bbox": [
+            7,
+            6,
+            185,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 274
+        },
+        {
+          "index": 6,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/failed/06.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18071,
+          "bbox": [
+            37,
+            6,
+            155,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 101
+        },
+        {
+          "index": 7,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/failed/07.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 15777,
+          "bbox": [
+            43,
+            6,
+            148,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 107
+        }
+      ]
+    },
+    {
+      "state": "waiting",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": "stable-slots",
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        "waiting used extraction method stable-slots; confirm motion playback remains stable and unclipped"
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/waiting/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17206,
+          "bbox": [
+            38,
+            6,
+            153,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 76
+        },
+        {
+          "index": 1,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/waiting/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18344,
+          "bbox": [
+            35,
+            6,
+            156,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 65
+        },
+        {
+          "index": 2,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/waiting/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16821,
+          "bbox": [
+            40,
+            6,
+            151,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 101
+        },
+        {
+          "index": 3,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/waiting/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16751,
+          "bbox": [
+            39,
+            6,
+            152,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 91
+        },
+        {
+          "index": 4,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/waiting/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16949,
+          "bbox": [
+            39,
+            6,
+            151,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 50
+        },
+        {
+          "index": 5,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/waiting/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17226,
+          "bbox": [
+            38,
+            6,
+            152,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 77
+        }
+      ]
+    },
+    {
+      "state": "running",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": "stable-slots",
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        "running used extraction method stable-slots; confirm motion playback remains stable and unclipped"
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18169,
+          "bbox": [
+            37,
+            6,
+            153,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 134
+        },
+        {
+          "index": 1,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 18468,
+          "bbox": [
+            32,
+            7,
+            160,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 136
+        },
+        {
+          "index": 2,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16940,
+          "bbox": [
+            37,
+            13,
+            154,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 77
+        },
+        {
+          "index": 3,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17420,
+          "bbox": [
+            35,
+            13,
+            155,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 119
+        },
+        {
+          "index": 4,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17555,
+          "bbox": [
+            37,
+            13,
+            154,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 168
+        },
+        {
+          "index": 5,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/running/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17065,
+          "bbox": [
+            39,
+            14,
+            152,
+            203
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 142
+        }
+      ]
+    },
+    {
+      "state": "review",
+      "expected_frames": 6,
+      "actual_frames": 6,
+      "extraction_method": "stable-slots",
+      "ok": true,
+      "errors": [],
+      "warnings": [
+        "review used extraction method stable-slots; confirm motion playback remains stable and unclipped"
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/review/00.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17768,
+          "bbox": [
+            35,
+            6,
+            156,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 88
+        },
+        {
+          "index": 1,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/review/01.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17559,
+          "bbox": [
+            36,
+            6,
+            155,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 43
+        },
+        {
+          "index": 2,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/review/02.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17679,
+          "bbox": [
+            35,
+            6,
+            156,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 84
+        },
+        {
+          "index": 3,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/review/03.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16405,
+          "bbox": [
+            39,
+            6,
+            152,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 69
+        },
+        {
+          "index": 4,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/review/04.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 16964,
+          "bbox": [
+            37,
+            6,
+            153,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 59
+        },
+        {
+          "index": 5,
+          "file": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/frames/review/05.png",
+          "width": 192,
+          "height": 208,
+          "nontransparent_pixels": 17721,
+          "bbox": [
+            35,
+            6,
+            155,
+            202
+          ],
+          "edge_pixels": 0,
+          "chroma_adjacent_pixels": 58
+        }
+      ]
+    }
+  ]
+}

@@ -11,7 +11,7 @@ Sub-pages live under ``pages/`` and share helpers in ``src.ui.streamlit_pages``.
 import streamlit as st
 
 try:
-    from src.ui import streamlit_pages as ui
+    from agent_autopsy.ui import streamlit_pages as ui
 except ModuleNotFoundError as exc:
     st.set_page_config(
         page_title="Agent Autopsy",

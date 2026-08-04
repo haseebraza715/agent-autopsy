@@ -32,5 +32,11 @@ jobs:
       - name: Run tests
         run: pytest
 
+      - name: Ruff
+        run: ruff check src scripts tests
+
       - name: Detector corpus eval
-        run: python scripts/eval_detectors.py
+        env:
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+        run: python scripts/eval_detectors.py --json-out /tmp/detector-eval.json

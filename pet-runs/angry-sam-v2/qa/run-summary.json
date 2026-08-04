@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "spriteVersionNumber": 2,
+  "run_dir": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2",
+  "spritesheet": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/final/spritesheet-extended.webp",
+  "validation": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/final/validation-extended.json",
+  "chroma_despill": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/qa/chroma-despill-extended.json",
+  "contact_sheet": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/qa/contact-sheet-extended.png",
+  "direction_sheet": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/qa/look-directions.png",
+  "direction_semantics": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/qa/direction-semantics.json",
+  "blind_direction_validation": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/qa/direction-blind-validation.json",
+  "continuity": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/qa/look-continuity.json",
+  "review": "/Users/x/Downloads/workspace/agent-autopsy/pet-runs/angry-sam-v2/qa/review.json",
+  "package": "/Users/x/.codex/pets/angry-sam"
+}

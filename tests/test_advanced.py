@@ -6,8 +6,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from src.advanced import benchmark_traces, compare_traces_advanced, LiveTraceMonitor
-from src.schema import EnvironmentInfo, EventType, Trace, TraceEvent, TraceStatus
+from agent_autopsy.advanced import LiveTraceMonitor, benchmark_traces, compare_traces_advanced
+from agent_autopsy.schema import EnvironmentInfo, EventType, Trace, TraceEvent, TraceStatus
 
 
 def _trace(run_id: str, events: list[TraceEvent], status: TraceStatus = TraceStatus.SUCCESS) -> Trace:

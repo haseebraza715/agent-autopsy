@@ -11,10 +11,10 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.ingestion import parse_trace_file, TraceNormalizer
-from src.analysis import run_analysis
-from src.analysis.agent import run_analysis_without_llm
-from src.utils.config import get_config
+from agent_autopsy.analysis import run_analysis
+from agent_autopsy.analysis.agent import run_analysis_without_llm
+from agent_autopsy.ingestion import TraceNormalizer, parse_trace_file
+from agent_autopsy.utils.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class TraceGenerator:
     def check_trace_for_failure(self, trace_file: Path) -> tuple[bool, int]:
         """Check if a trace file contains failures."""
         try:
-            with open(trace_file, "r") as f:
+            with open(trace_file) as f:
                 trace_data = json.load(f)
             
             events = trace_data.get("events", [])
@@ -110,14 +110,13 @@ class TraceGenerator:
                 if self.config.openrouter_api_key:
                     result = run_analysis(trace, verbose=False, enable_tracing=True)
                     if verbose:
-                        print(f"  ✓ Analysis complete (with LLM)")
+                        print("  ✓ Analysis complete (with LLM)")
                 else:
                     # Use deterministic analysis with synthetic trace events
                     # Since no LLM callbacks fire, we manually create trace events
-                    from src.tracing import TraceSaver, get_trace_config
-                    from src.preanalysis import RootCauseBuilder
-                    import json
-                    from datetime import datetime
+
+                    from agent_autopsy.preanalysis import RootCauseBuilder
+                    from agent_autopsy.tracing import TraceSaver, get_trace_config
 
                     trace_handler = TraceSaver(config=get_trace_config())
 
@@ -155,7 +154,7 @@ class TraceGenerator:
                     saved_path = trace_handler.save()
 
                     if verbose:
-                        print(f"  ✓ Analysis complete (deterministic)")
+                        print("  ✓ Analysis complete (deterministic)")
 
                     if saved_path:
                         all_traces.append(saved_path)
@@ -229,12 +228,12 @@ class TraceGenerator:
             print(f"Traces with failures: {len(failed_traces)}")
             
             if failed_traces:
-                print(f"\n⚠ Failed Traces:")
+                print("\n⚠ Failed Traces:")
                 for trace_file, error_count in failed_traces:
                     print(f"  - {trace_file.name} ({error_count} error(s))")
             
             print(f"\nAll new traces saved in: {self.traces_dir}")
-            print(f"Ready for analysis!")
+            print("Ready for analysis!")
         
         return result
 

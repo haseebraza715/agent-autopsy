@@ -17,7 +17,7 @@ This folder contains starter traces and walkthroughs for evaluating Agent Autops
 ## Try It
 
 ```bash
-python -m src.cli summary examples/traces/loop_failure.json
-python -m src.cli analyze examples/traces/loop_failure.json --no-llm -o /tmp/loop_report.md
-python -m src.mcp --transport stdio
+python -m agent_autopsy.cli summary examples/traces/loop_failure.json
+python -m agent_autopsy.cli analyze examples/traces/loop_failure.json --no-llm -o /tmp/loop_report.md
+python -m agent_autopsy.mcp --transport stdio
 ```

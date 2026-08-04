@@ -1,18 +1,16 @@
 """Tests for the schema module."""
 
-import pytest
 from datetime import datetime
 
-from src.schema import (
+from agent_autopsy.schema import (
+    EnvironmentInfo,
+    EventError,
+    EventRole,
+    EventType,
+    TaskContext,
     Trace,
     TraceEvent,
     TraceStatus,
-    EventType,
-    EventRole,
-    EventError,
-    TaskContext,
-    EnvironmentInfo,
-    TraceStats,
 )
 
 

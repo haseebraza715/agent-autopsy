@@ -1,0 +1,107 @@
+{
+  "command": "python scripts/eval_detectors.py --json-out docs/evidence/detector-eval.json",
+  "commit": "9416719cd5fb5bda22482a8995d902cf42c0cd62",
+  "corpus_sha256": "2cbae7756302104495183efdf1967ae700990e0358a30c73e0838d2f3effc995",
+  "embedding_backend": "lexical_overlap_deterministic",
+  "metrics": {
+    "precision": {
+      "auth_permission_failure": {
+        "fp": 0,
+        "rate": 1.0,
+        "tp": 4
+      },
+      "context_overflow": {
+        "fp": 0,
+        "rate": 1.0,
+        "tp": 1
+      },
+      "empty_response": {
+        "fp": 0,
+        "rate": 1.0,
+        "tp": 14
+      },
+      "error_cascade": {
+        "fp": 0,
+        "rate": 1.0,
+        "tp": 10
+      },
+      "hallucinated_tool": {
+        "fp": 0,
+        "rate": 1.0,
+        "tp": 1
+      },
+      "infinite_loop": {
+        "fp": 0,
+        "rate": 1.0,
+        "tp": 2
+      },
+      "redundant_tool_call": {
+        "fp": 0,
+        "rate": 1.0,
+        "tp": 1
+      },
+      "timeout_pattern": {
+        "fp": 0,
+        "rate": 1.0,
+        "tp": 3
+      },
+      "token_waste": {
+        "fp": 0,
+        "rate": 1.0,
+        "tp": 1
+      }
+    },
+    "recall": {
+      "auth_permission_failure": {
+        "hits": 4,
+        "rate": 1.0,
+        "total": 4
+      },
+      "context_overflow": {
+        "hits": 1,
+        "rate": 1.0,
+        "total": 1
+      },
+      "empty_response": {
+        "hits": 14,
+        "rate": 1.0,
+        "total": 14
+      },
+      "error_cascade": {
+        "hits": 10,
+        "rate": 1.0,
+        "total": 10
+      },
+      "hallucinated_tool": {
+        "hits": 1,
+        "rate": 1.0,
+        "total": 1
+      },
+      "infinite_loop": {
+        "hits": 2,
+        "rate": 1.0,
+        "total": 2
+      },
+      "redundant_tool_call": {
+        "hits": 1,
+        "rate": 1.0,
+        "total": 1
+      },
+      "timeout_pattern": {
+        "hits": 3,
+        "rate": 1.0,
+        "total": 3
+      },
+      "token_waste": {
+        "hits": 1,
+        "rate": 1.0,
+        "total": 1
+      }
+    }
+  },
+  "passed": true,
+  "thresholds": {
+    "min_precision": 0.9,
+    "min_recall": 0.8
+  }
+}

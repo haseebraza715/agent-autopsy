@@ -5,8 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.mcp import service
-
+from agent_autopsy.mcp import service
 
 SAMPLE_TRACES_DIR = Path(__file__).parent / "sample_traces"
 
