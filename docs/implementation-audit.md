@@ -61,7 +61,7 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 |------|--------|----------|
 | Real trace corpus + manifest | ✅ | [tests/fixtures/](../tests/fixtures), [examples/traces/](../examples/traces) |
 | Detector accuracy harness | ✅ | [scripts/eval_detectors.py](../scripts/eval_detectors.py) |
-| Precision/recall threshold in CI | 🟡 | Script exists; verify CI fails on regression |
+| Precision/recall threshold in CI | ✅ | `tests.yml` runs the hermetic lexical evaluator on every supported Python version and fails on regression |
 
 ### Week 2 — Deterministic fast path
 
@@ -99,7 +99,7 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 | README restructured | ✅ | Rewritten today |
 | Per-pattern docs | ✅ | [docs/patterns.md](patterns.md) |
 | Contributor on-ramp | ✅ | [docs/good-first-issues.md](good-first-issues.md), [CONTRIBUTING.md](../CONTRIBUTING.md) |
-| PyPI publish | ❌ | `agent-autopsy` not yet on PyPI. Only editable installs work today |
+| PyPI publish automation | ✅ | Tag-driven trusted publish workflow exists; actual registry deployment remains a maintainer release action |
 
 ### Week 6 — Launch & iterate
 
@@ -111,15 +111,15 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 | Actual launch (HN / Reddit / X) | ❌ | Not yet posted |
 | ≥ 1 external issue | ❌ | Gated on launch |
 
-**v2 summary: 22/25 ✅, 1 partial, 2 genuine gaps (PyPI + launch).**
+**v2 summary:** engineering automation is present; external PyPI deployment and public launch remain maintainer-controlled release actions.
 
 ---
 
 ## What's left to do
 
-1. **Publish to PyPI.** Wire a GitHub Actions tag-push job, bump to `0.4.0 → 1.0.0`, verify `pip install agent-autopsy` on a clean venv. (½ day)
+1. **Publish to PyPI.** Use the existing tag-driven workflow, then verify `pip install agent-autopsy` from the registry in a clean venv. (maintainer action)
 2. **Tighten MCP auth test coverage.** Add a test that SSE without a token is rejected and with the correct token is accepted. (2 hrs)
-3. **Confirm eval_detectors is CI-enforced.** If not already, add the job to fail PRs when precision/recall drops below threshold. (1 hr)
+3. **Detector evaluator:** CI enforcement is complete; preserve its hermetic lexical backend and evidence artifact.
 4. **Collapse [ARCHITECTURE.md](../ARCHITECTURE.md) duplication.** Either expand the top-level file or make it a pointer to [docs/architecture.md](architecture.md). (30 min)
 5. **Ship the launch post.** Everything else is ready — this is now a marketing task, not an engineering one.
 

@@ -9,8 +9,8 @@ Validate tool-allowlist and contract-failure diagnostics.
 ## What to run
 
 ```bash
-python -m src.cli summary examples/traces/hallucinated_tool.json
-python -m src.cli analyze examples/traces/hallucinated_tool.json --no-llm -o /tmp/hallucinated_tool_report.md
+python -m agent_autopsy.cli summary examples/traces/hallucinated_tool.json
+python -m agent_autopsy.cli analyze examples/traces/hallucinated_tool.json --no-llm -o /tmp/hallucinated_tool_report.md
 ```
 
 ## Expected interpretation

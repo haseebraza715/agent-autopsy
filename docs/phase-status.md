@@ -82,7 +82,7 @@ Goal: Expose Agent Autopsy as MCP tools/resources/prompts.
 
 ### Completed in this phase
 
-- [x] Added MCP SDK dependency and created [`src/mcp`](../src/mcp) package with runtime entry point (`python -m src.mcp`)
+- [x] Added MCP SDK dependency and created [`src/agent_autopsy/mcp`](../src/agent_autopsy/mcp) package with runtime entry point (`python -m agent_autopsy.mcp`)
 - [x] Implemented MCP server wrapper with 10 core tools in [`src/mcp/server.py`](../src/mcp/server.py)
 - [x] Added MCP service layer ([`src/mcp/service.py`](../src/mcp/service.py)) for reusable, testable tool logic
 - [x] Added raw-trace JSON parsing entrypoint (`parse_trace_data`) to ingestion layer for MCP tool inputs

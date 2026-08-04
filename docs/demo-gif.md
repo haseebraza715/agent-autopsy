@@ -1,19 +1,18 @@
 # Recording a README demo (GIF)
 
-The hero asset **`docs/images/autopsy-demo.gif`** is generated at **1100×700** with **large monospace** (body ≈36px, title ≈52px) on a canvas matched to GitHub’s readme column width (~830px), so the preview barely downscales and type stays legible. Only a few CLI lines are animated to keep file size small.
+The hero asset **`docs/images/autopsy-demo.gif`** is generated at **1100×700** with **large monospace** (body ≈36px, title ≈52px) on a canvas matched to GitHub’s readme column width (~830px), so the preview barely downscales and type stays legible. It is a **20-second**, five-scene story designed for a 15–25 second demo slot.
 
 ## What the GIF shows
 
-Structured in two clear steps:
+Structured in five quick beats:
 
-1. **Step 1 — Deterministic** — real output from  
-   `autopsy analyze examples/traces/loop_failure.json --no-llm -q -f text` (trimmed for length)
-2. **Step 2 — LLM synthesis** — either:
-   - **Live** OpenRouter + LangGraph output when `OPENROUTER_API_KEY` is set (repo `.env` is loaded automatically), or  
-   - A **representative excerpt** from `scripts/demo_gif_llm_sample.txt` if the key is missing or the live run fails.
+1. A failed agent run and the one-command hook.
+2. Local trace normalization and pattern checks.
+3. Root cause: seven identical `web_search` calls and seven timeouts.
+4. Trace-backed evidence: the same call repeated every two seconds without backoff.
+5. The recommended fix: cap retries, add backoff, and stop retrying timeout failures.
 
-The command line in the GIF is the full path (with LLM):  
-`autopsy analyze examples/traces/loop_failure.json -q -f text`
+The GIF is deterministic and uses facts from `examples/traces/loop_failure.json`; it does not require an API key.
 
 ## Regenerate (recommended)
 

@@ -104,6 +104,11 @@ The base install is enough for the CLI and deterministic analysis.
 | Embeddings | `python -m pip install -e ".[embeddings]"` | Sentence-transformers for semantic drift |
 | Full | `python -m pip install -e ".[full]"` | Everything above |
 
+For contributors, `pip install -e ".[dev]"` is sufficient to collect and run
+the complete test suite. The detector corpus evaluator is hermetic: it uses
+the deterministic lexical drift backend and writes a hashed machine-readable
+artifact with `python scripts/eval_detectors.py --json-out <path>`.
+
 If you want the shortest reliable first-run path, start with the base install and add extras only when you need them.
 
 ---
@@ -308,7 +313,7 @@ See [docs/mcp.md](docs/mcp.md) for setup and transport details.
 Agent Autopsy includes trace-capture helpers for LangChain and LangGraph style workflows.
 
 ```python
-from src.tracing import start_trace, end_trace
+from agent_autopsy.tracing import start_trace, end_trace
 
 trace_handler, run_id = start_trace()
 result = graph.invoke(state, config={"callbacks": [trace_handler]})

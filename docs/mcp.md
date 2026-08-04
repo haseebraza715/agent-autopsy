@@ -2,8 +2,8 @@
 
 ## Running
 
-- **stdio** (default, local IDE integration): `python -m src.mcp --transport stdio`
-- **SSE / HTTP** (remote or LAN): `python -m src.mcp --transport sse` (see MCP SDK / FastMCP docs for ports and paths)
+- **stdio** (default, local IDE integration): `python -m agent_autopsy.mcp --transport stdio`
+- **SSE / HTTP** (remote or LAN): `python -m agent_autopsy.mcp --transport sse` (see MCP SDK / FastMCP docs for ports and paths)
 
 ## Security: SSE and streamable HTTP
 
