@@ -29,7 +29,7 @@ def test_cli_analyze_pipeline_no_llm(filename: str, expected_substring: str) -> 
         [
             sys.executable,
             "-m",
-            "src.cli",
+            "agent_autopsy.cli",
             "analyze",
             str(trace_path),
             "--no-llm",

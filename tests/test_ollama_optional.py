@@ -1,8 +1,8 @@
 """Ollama provider is first-class without requiring a running daemon."""
 
-from src import api
-from src.utils import config as cfgmod
-from src.utils.config import Config
+from agent_autopsy import api
+from agent_autopsy.utils import config as cfgmod
+from agent_autopsy.utils.config import Config
 
 
 def test_ollama_provider_counts_as_configured() -> None:

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from src.output import FixSuggestionGenerator
-from src.preanalysis import RootCauseBuilder
-from src.schema import EnvironmentInfo, EventType, Trace, TraceEvent, TraceStatus
+from agent_autopsy.output import FixSuggestionGenerator
+from agent_autopsy.preanalysis import RootCauseBuilder
+from agent_autopsy.schema import EnvironmentInfo, EventType, Trace, TraceEvent, TraceStatus
 
 
 def _loop_trace() -> Trace:

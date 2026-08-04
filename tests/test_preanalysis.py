@@ -1,27 +1,27 @@
 """Tests for the pre-analysis module."""
 
-from datetime import datetime, timedelta
 import json
 import tempfile
+from datetime import datetime, timedelta
 from pathlib import Path
 
-from src.preanalysis import (
+from agent_autopsy.preanalysis import (
+    ContractValidator,
     PatternDetector,
     PatternType,
-    Severity,
-    ContractValidator,
     RootCauseBuilder,
+    Severity,
 )
-from src.utils.config import get_config
-from src.schema import (
+from agent_autopsy.schema import (
+    EnvironmentInfo,
+    EventError,
+    EventType,
+    TaskContext,
     Trace,
     TraceEvent,
     TraceStatus,
-    EventType,
-    EnvironmentInfo,
-    EventError,
-    TaskContext,
 )
+from agent_autopsy.utils.config import get_config
 
 
 def _build_trace(

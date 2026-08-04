@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from src.utils import telemetry as tel
+from agent_autopsy.utils import telemetry as tel
 
 
 def test_telemetry_default_off(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
