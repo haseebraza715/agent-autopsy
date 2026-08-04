@@ -2,8 +2,8 @@
 
 from langchain_core.messages import AIMessageChunk
 
-from src.analysis.agent import ReportQualityValidator
-from src.analysis.llm_agent import AnalysisAgent
+from agent_autopsy.analysis.agent import ReportQualityValidator
+from agent_autopsy.analysis.llm_agent import AnalysisAgent
 
 
 class TestReportQualityValidator:

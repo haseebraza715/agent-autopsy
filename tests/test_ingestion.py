@@ -1,17 +1,16 @@
 """Tests for the ingestion module."""
 
-import pytest
-import json
 from pathlib import Path
 
-from src.ingestion import parse_trace_file, TraceNormalizer
-from src.ingestion.parser import TraceParser
-from src.ingestion.formats.langgraph import LangGraphParser
-from src.ingestion.formats.generic import GenericJSONParser
-from src.ingestion.formats.langchain import LangChainParser
-from src.ingestion.formats.opentelemetry import OpenTelemetryParser
-from src.schema import TraceStatus, EventType
+import pytest
 
+from agent_autopsy.ingestion import TraceNormalizer, parse_trace_file
+from agent_autopsy.ingestion.formats.generic import GenericJSONParser
+from agent_autopsy.ingestion.formats.langchain import LangChainParser
+from agent_autopsy.ingestion.formats.langgraph import LangGraphParser
+from agent_autopsy.ingestion.formats.opentelemetry import OpenTelemetryParser
+from agent_autopsy.ingestion.parser import TraceParser
+from agent_autopsy.schema import EventType, TraceStatus
 
 SAMPLE_TRACES_DIR = Path(__file__).parent / "sample_traces"
 

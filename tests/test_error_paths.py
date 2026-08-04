@@ -8,9 +8,9 @@ from pathlib import Path
 
 import pytest
 
-from src.errors import ParseError
-from src.ingestion import TraceNormalizer
-from src.ingestion.parser import parse_trace_data
+from agent_autopsy.errors import ParseError
+from agent_autopsy.ingestion import TraceNormalizer
+from agent_autopsy.ingestion.parser import parse_trace_data
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,7 +19,7 @@ def test_parse_truncated_json_raises(tmp_path: Path) -> None:
     bad = tmp_path / "bad.json"
     bad.write_text('{"run_id": "x", "events": [', encoding="utf-8")
     proc = subprocess.run(
-        [sys.executable, "-m", "src.cli", "analyze", str(bad), "--no-llm"],
+        [sys.executable, "-m", "agent_autopsy.cli", "analyze", str(bad), "--no-llm"],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -35,7 +35,7 @@ def test_parse_trace_data_type_error() -> None:
 
 def test_cli_summary_missing_file() -> None:
     proc = subprocess.run(
-        [sys.executable, "-m", "src.cli", "summary", str(REPO_ROOT / "nonexistent_trace.json")],
+        [sys.executable, "-m", "agent_autopsy.cli", "summary", str(REPO_ROOT / "nonexistent_trace.json")],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -47,7 +47,7 @@ def test_cli_summary_missing_file() -> None:
 def test_cli_validate_empty_object() -> None:
     p = REPO_ROOT / "tests" / "fixtures" / "e2e" / "generic.json"
     proc = subprocess.run(
-        [sys.executable, "-m", "src.cli", "validate", str(p)],
+        [sys.executable, "-m", "agent_autopsy.cli", "validate", str(p)],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,

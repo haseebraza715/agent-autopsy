@@ -2,12 +2,12 @@
 
 from pathlib import Path
 
-from src.analysis.structured_report import (
+from agent_autopsy.analysis.structured_report import (
     extract_structured_json,
     structured_to_markdown_append,
     validate_structured_against_trace,
 )
-from src.ingestion import TraceNormalizer, parse_trace_file
+from agent_autopsy.ingestion import TraceNormalizer, parse_trace_file
 
 REPO = Path(__file__).resolve().parents[1]
 

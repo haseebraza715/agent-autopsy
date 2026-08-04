@@ -7,10 +7,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
-import pytest
-
-from src.tracing import TraceSaver, start_trace, end_trace, get_trace_config
-from src.tracing.trace_saver import (
+from agent_autopsy.tracing import TraceSaver, end_trace, start_trace
+from agent_autopsy.tracing.trace_saver import (
     TraceConfig,
     _redact_secrets,
     _safe_serialize,
