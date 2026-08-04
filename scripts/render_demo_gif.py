@@ -1,25 +1,18 @@
 #!/usr/bin/env python3
 """
-Render docs/images/autopsy-demo.gif — README hero, maximally legible type.
+Render docs/images/autopsy-demo.gif — a 20-second README/product demo.
 
 1100×700 canvas: GitHub README images render ~830px wide, so a narrower GIF
 barely downscales and chunky monospace stays readable. Content is short.
 """
 from __future__ import annotations
 
-import argparse
-import os
-import subprocess
-import sys
-import textwrap
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
 REPO = Path(__file__).resolve().parents[1]
 OUT = REPO / "docs" / "images" / "autopsy-demo.gif"
-TRACE = REPO / "examples" / "traces" / "loop_failure.json"
-SAMPLE_LLM = REPO / "scripts" / "demo_gif_llm_sample.txt"
 
 W, H = 1100, 700
 HEADER_H = 104
@@ -37,15 +30,6 @@ FONT_FOOT = 20
 LINE_EXTRA = 10  # padding below each line (increases line spacing)
 
 
-def _load_dotenv() -> None:
-    try:
-        from dotenv import load_dotenv
-
-        load_dotenv(REPO / ".env", override=False)
-    except Exception:
-        pass
-
-
 def _mono_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     candidates = [
         "/System/Library/Fonts/Supplemental/Menlo.ttc",
@@ -61,102 +45,11 @@ def _mono_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     return ImageFont.load_default()
 
 
-def _wrap(raw: str, width: int) -> list[str]:
-    raw = raw.rstrip("\n")
-    if len(raw) <= width:
-        return [raw]
-    return textwrap.wrap(raw, width=width, break_long_words=True, replace_whitespace=False)
-
-
 def _hr_chars_for_body() -> str:
     """Horizontal rule that fits content width for FONT_BODY."""
     char_w = max(10, int(FONT_BODY * 0.52))
     n = max(24, (W - 2 * PAD_X) // char_w)
     return "─" * n
-
-
-def _run_deterministic(max_lines: int, wrap_w: int) -> list[str]:
-    env = {**os.environ, "PYTHONWARNINGS": "ignore", "NO_COLOR": "1"}
-    cmd = [
-        sys.executable,
-        "-m",
-        "src.cli",
-        "analyze",
-        str(TRACE),
-        "--no-llm",
-        "-q",
-        "-f",
-        "text",
-    ]
-    proc = subprocess.run(
-        cmd,
-        cwd=str(REPO),
-        capture_output=True,
-        text=True,
-        timeout=120,
-        env=env,
-    )
-    body = (proc.stdout or "").strip()
-    lines: list[str] = []
-    for raw in body.splitlines():
-        for part in _wrap(raw, wrap_w):
-            lines.append(part)
-            if len(lines) >= max_lines:
-                return lines
-    return lines
-
-
-def _run_llm_live(max_lines: int, wrap_w: int, timeout: int) -> list[str] | None:
-    if not (os.getenv("OPENROUTER_API_KEY") or "").strip():
-        return None
-    env = {**os.environ, "PYTHONWARNINGS": "ignore", "NO_COLOR": "1"}
-    proc = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "src.cli",
-            "analyze",
-            str(TRACE),
-            "-q",
-            "-f",
-            "text",
-        ],
-        cwd=str(REPO),
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        env=env,
-    )
-    if proc.returncode != 0:
-        print(
-            f"LLM analyze exited {proc.returncode}; stderr: {(proc.stderr or '')[:400]}",
-            file=sys.stderr,
-        )
-        return None
-    body = (proc.stdout or "").strip()
-    lines: list[str] = []
-    for raw in body.splitlines():
-        for part in _wrap(raw, wrap_w):
-            lines.append(part)
-    return _truncate_middle(lines, max_lines)
-
-
-def _truncate_middle(lines: list[str], max_lines: int) -> list[str]:
-    if len(lines) <= max_lines:
-        return lines
-    head = max_lines // 2
-    tail = max_lines - head - 3
-    return lines[:head] + ["", "  …", ""] + lines[-tail:]
-
-
-def _load_sample_llm(wrap_w: int) -> list[str]:
-    lines: list[str] = []
-    for ln in SAMPLE_LLM.read_text().splitlines():
-        if not ln.strip():
-            lines.append("")
-        else:
-            lines.extend(_wrap(ln, wrap_w))
-    return lines
 
 
 def _style_for_line(line: str) -> str:
@@ -272,64 +165,7 @@ def _draw_frame(
     return img
 
 
-def _build_script(cmd_lines: list[str], det: list[str], llm_lines: list[str]) -> list[str]:
-    hr = _hr_chars_for_body()
-    out: list[str] = []
-    for ln in cmd_lines:
-        out.append(ln)
-    out.append("")
-    out.append("▸ Step 1 — Deterministic (built-in patterns)")
-    out.append(hr)
-    for ln in det:
-        out.append(("  " + ln) if ln else "")
-    out.append("")
-    out.append("▸ Step 2 — LLM synthesis (OpenRouter + tools)")
-    out.append(hr)
-    for ln in llm_lines:
-        out.append(("  " + ln) if ln else "")
-    return out
-
-
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Render README demo GIF.")
-    parser.add_argument("--force-sample-llm", action="store_true")
-    parser.add_argument("--no-live-llm", action="store_true")
-    parser.add_argument("--llm-timeout", type=int, default=150)
-    args = parser.parse_args()
-    _load_dotenv()
-
-    wrap_w = 32  # short lines keep each char chunky on the narrow canvas
-    det = _run_deterministic(3, wrap_w)
-
-    try_live = not args.force_sample_llm and not args.no_live_llm
-    used_live = False
-    if args.force_sample_llm:
-        llm_lines = _load_sample_llm(wrap_w)
-    elif try_live:
-        live = _run_llm_live(4, wrap_w, timeout=args.llm_timeout)
-        if live:
-            llm_lines = live
-            used_live = True
-        else:
-            llm_lines = _load_sample_llm(wrap_w)
-    else:
-        llm_lines = _load_sample_llm(wrap_w)
-
-    cmd_lines = [
-        "$ autopsy analyze \\",
-        "    examples/traces/loop_failure.json -q -f text",
-    ]
-    script_lines = _build_script(cmd_lines, det, llm_lines)
-
-    max_lines = 12
-    if len(script_lines) > max_lines:
-        script_lines = script_lines[: max_lines - 1] + ["  …"]
-
-    if used_live:
-        footer = "Live OpenRouter + LangGraph  ·  agent-autopsy"
-    else:
-        footer = "Sample LLM lines when API offline  ·  agent-autopsy"
-
     rule_font = _mono_font(max(28, FONT_BODY - 12))
     fonts = {
         "title": _mono_font(FONT_TITLE),
@@ -341,29 +177,68 @@ def main() -> int:
         "rule": rule_font,
     }
 
-    frames: list[Image.Image] = []
-    for n in range(2, len(script_lines) + 1):
-        frames.append(_draw_frame(script_lines[:n], fonts=fonts, footer=footer))
-
-    if not frames:
-        print("No frames generated", file=sys.stderr)
-        return 2
-
-    final = frames[-1]
-    for _ in range(36):
-        frames.append(final)
+    # Five purposeful beats make the product legible in a short social/README
+    # demo. Claims come directly from examples/traces/loop_failure.json.
+    scenes = [
+        [
+            "▸ A failed agent run. One command to explain it.",
+            "",
+            "$ autopsy analyze loop_failure.json --no-llm",
+        ],
+        [
+            "▸ Reading the trace locally…",
+            "",
+            "  ✓ 11 events normalized",
+            "  ✓ Tool calls and errors mapped",
+            "  ✓ Failure patterns checked",
+        ],
+        [
+            "▸ ROOT CAUSE FOUND",
+            _hr_chars_for_body(),
+            "  Retry storm on web_search",
+            "  7 identical calls · 7 timeouts",
+            "  Ended with MaxRetriesError",
+        ],
+        [
+            "▸ EVIDENCE",
+            _hr_chars_for_body(),
+            "  web_search repeated every 2s",
+            "  Same input. Same timeout. No backoff.",
+            "  Trace status: FAILED",
+        ],
+        [
+            "▸ RECOMMENDED FIX",
+            _hr_chars_for_body(),
+            "  1. Cap retries at 3",
+            "  2. Add exponential backoff",
+            "  3. Stop retrying timeout failures",
+            "",
+            "  Debug agent traces locally.",
+        ],
+    ]
+    footers = [
+        "Agent Autopsy  ·  local-first agent debugging",
+        "No upload  ·  No API key  ·  Deterministic",
+        "Pattern detection with trace-backed evidence",
+        "Every claim points back to the trace",
+        "github.com/haseebraza715/agent-autopsy",
+    ]
+    frames = [
+        _draw_frame(lines, fonts=fonts, footer=footer)
+        for lines, footer in zip(scenes, footers)
+    ]
+    durations = [3000, 3500, 4500, 3500, 5500]  # 20 seconds total
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     frames[0].save(
         OUT,
         save_all=True,
         append_images=frames[1:],
-        duration=105,
+        duration=durations,
         loop=0,
         optimize=True,
     )
-    mode = "live LLM" if used_live else "deterministic + sample LLM"
-    print(f"Wrote {OUT} ({len(frames)} frames @ {W}x{H}, {mode})")
+    print(f"Wrote {OUT} ({len(frames)} scenes @ {W}x{H}, 20-second deterministic demo)")
     return 0
 
 
