@@ -19,7 +19,7 @@ class TraceVerifier:
     def analyze_trace(self, trace_file: Path) -> dict:
         """Analyze a trace file and return detailed information."""
         try:
-            with open(trace_file, "r") as f:
+            with open(trace_file) as f:
                 trace_data = json.load(f)
             
             events = trace_data.get("events", [])

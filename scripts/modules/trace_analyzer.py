@@ -12,13 +12,13 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src import api
-from src.ingestion import parse_trace_file, TraceNormalizer
-from src.preanalysis import RootCauseBuilder
-from src.analysis import run_analysis
-from src.analysis.agent import run_analysis_without_llm
-from src.output import ReportGenerator
-from src.utils.config import get_config
+from agent_autopsy import api
+from agent_autopsy.analysis import run_analysis
+from agent_autopsy.analysis.agent import run_analysis_without_llm
+from agent_autopsy.ingestion import TraceNormalizer, parse_trace_file
+from agent_autopsy.output import ReportGenerator
+from agent_autopsy.preanalysis import RootCauseBuilder
+from agent_autopsy.utils.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ class TraceAnalyzer:
                 report_file = self.reports_dir / f"basic_analysis_{trace_file.stem}.md"
                 
                 proc_result = subprocess.run(
-                    ["python", "-m", "src.cli", "autopsy-run", str(trace_file), "-o", str(report_file)],
+                    ["python", "-m", "agent_autopsy.cli", "autopsy-run", str(trace_file), "-o", str(report_file)],
                     capture_output=True,
                     text=True,
                     cwd=Path(__file__).parent.parent.parent
@@ -127,7 +127,7 @@ class TraceAnalyzer:
                     
                     # Extract basic info from the trace JSON
                     try:
-                        with open(trace_file, "r") as f:
+                        with open(trace_file) as f:
                             trace_data = json.load(f)
                         events = trace_data.get("events", [])
                         

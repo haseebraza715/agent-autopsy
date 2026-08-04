@@ -61,7 +61,7 @@ class SummaryReportGenerator:
         if traces_dir.exists():
             for trace_file in traces_dir.glob("*.json"):
                 try:
-                    with open(trace_file, "r") as f:
+                    with open(trace_file) as f:
                         trace_data = json.load(f)
                     events = trace_data.get("events", [])
                     for event in events:

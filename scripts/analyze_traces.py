@@ -14,8 +14,8 @@ from pathlib import Path
 scripts_dir = Path(__file__).parent
 sys.path.insert(0, str(scripts_dir))
 
-from modules.trace_analyzer import TraceAnalyzer
 from modules.report_generator import SummaryReportGenerator
+from modules.trace_analyzer import TraceAnalyzer
 
 
 def main():
