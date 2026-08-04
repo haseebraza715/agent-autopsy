@@ -1,0 +1,23 @@
+%%{init: {"theme":"base","flowchart":{"curve":"basis","nodeSpacing":42,"rankSpacing":70,"htmlLabels":true},"themeVariables":{"fontFamily":"Arial, sans-serif","fontSize":"18px","lineColor":"#6c7f8a","clusterBkg":"#0c1720","clusterBorder":"#25414c","primaryTextColor":"#f7f5f0"}}}%%
+flowchart LR
+    A(["Raw trace<br/><small>framework logs</small>"])
+
+    subgraph AA[" "]
+        direction LR
+        B["Normalize<br/><small>stable event IDs</small>"]
+        C["Detect<br/><small>13 rules + contracts</small>"]
+        D["Explain<br/><small>evidence → likely cause</small>"]
+        B --> C --> D
+    end
+
+    E(["Act<br/><small>fixes + report</small>"])
+    A --> B
+    D --> E
+
+    classDef edge fill:#111e27,stroke:#6d8591,color:#f7f5f0,stroke-width:2px;
+    classDef core fill:#0f2f30,stroke:#55d6ca,color:#f7f5f0,stroke-width:2px;
+    classDef output fill:#2c2115,stroke:#f1b453,color:#f7f5f0,stroke-width:2px;
+    class A edge;
+    class B,C,D core;
+    class E output;
+    style AA fill:#09131a,stroke:#24424b,stroke-width:2px

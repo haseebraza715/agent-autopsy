@@ -24,8 +24,8 @@ Run tests before opening a PR:
 Smoke-check core entrypoints:
 
 ```bash
-.venv/bin/python -m src.cli --help
-.venv/bin/python -m src.mcp --help
+.venv/bin/python -m agent_autopsy.cli --help
+.venv/bin/python -m agent_autopsy.mcp --help
 ```
 
 ## Branching and Commits

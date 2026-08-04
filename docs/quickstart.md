@@ -23,10 +23,10 @@ The basic workflow involves analyzing a trace file to identify failures and issu
 
 ```bash
 # Analyze a trace file
-python -m src.cli analyze trace.json
+python -m agent_autopsy.cli analyze trace.json
 
 # Save report to file
-python -m src.cli analyze trace.json -o report.md
+python -m agent_autopsy.cli analyze trace.json -o report.md
 ```
 
 ## Commands
@@ -35,22 +35,22 @@ python -m src.cli analyze trace.json -o report.md
 
 ```bash
 # Full analysis with LLM
-python -m src.cli analyze trace.json -o report.md
+python -m agent_autopsy.cli analyze trace.json -o report.md
 
 # Generate code patches
-python -m src.cli analyze trace.json --artifacts ./patches/
+python -m agent_autopsy.cli analyze trace.json --artifacts ./patches/
 
 # Deterministic analysis only (no LLM)
-python -m src.cli analyze trace.json --no-llm
+python -m agent_autopsy.cli analyze trace.json --no-llm
 
 # Quick summary without full analysis
-python -m src.cli summary trace.json
+python -m agent_autopsy.cli summary trace.json
 
 # Validate trace format
-python -m src.cli validate trace.json
+python -m agent_autopsy.cli validate trace.json
 
 # Analyze captured trace (TraceSaver format)
-python -m src.cli autopsy-run traces/trace.json
+python -m agent_autopsy.cli autopsy-run traces/trace.json
 ```
 
 ### Trace Generation & Batch Analysis
@@ -73,18 +73,18 @@ Example files:
 - [`examples/traces/loop_failure.json`](../examples/traces/loop_failure.json)
 
 ```bash
-python -m src.cli summary examples/traces/successful_run.json
-python -m src.cli analyze examples/traces/loop_failure.json --no-llm -o /tmp/loop_report.md
+python -m agent_autopsy.cli summary examples/traces/successful_run.json
+python -m agent_autopsy.cli analyze examples/traces/loop_failure.json --no-llm -o /tmp/loop_report.md
 ```
 
 ### MCP Server
 
 ```bash
 # Run MCP server over stdio (for local MCP clients)
-python -m src.mcp --transport stdio
+python -m agent_autopsy.mcp --transport stdio
 
 # Run MCP server over streamable HTTP
-python -m src.mcp --transport streamable-http --mount-path /mcp
+python -m agent_autopsy.mcp --transport streamable-http --mount-path /mcp
 ```
 
 ## Example Workflows
