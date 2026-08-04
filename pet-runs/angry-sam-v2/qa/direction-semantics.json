@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "reviewed_by": "independent-final-visual-qa",
+  "directions": [
+    {"direction":"000","verdict":"pass","expected":"up","observed":"centered face with pupils and chin unmistakably aimed up","reason":"horizontal axis centered; vertical landmarks point up"},
+    {"direction":"022.5","verdict":"warning","expected":"up-right","observed":"screen-right face/pupil shift with subtle upward eyes","reason":"right axis clear; up axis subtle but coherent in labeled loop"},
+    {"direction":"045","verdict":"warning","expected":"up-right","observed":"right-facing profile with subtle upward pupil cue","reason":"right axis clear; up axis restrained"},
+    {"direction":"067.5","verdict":"warning","expected":"up-right","observed":"screen-right face with slight upper-eye cue","reason":"right axis clear; up axis subtle approaching level"},
+    {"direction":"090","verdict":"pass","expected":"right","observed":"nose, profile, and pupil unmistakably screen-right","reason":"horizontal cardinal confirmed; vertical axis neutral"},
+    {"direction":"112.5","verdict":"warning","expected":"down-right","observed":"screen-right face/pupil with slightly lowered head and eye","reason":"right axis clear; down axis restrained"},
+    {"direction":"135","verdict":"pass","expected":"down-right","observed":"right-facing profile with lowered pupil and head","reason":"both right and down axes clearly visible"},
+    {"direction":"157.5","verdict":"warning","expected":"down-right","observed":"bowed head clearly down with a weaker screen-right cue","reason":"down axis clear; right axis confirmed by labeled loop without reversal"},
+    {"direction":"180","verdict":"pass","expected":"down","observed":"centered bowed head and lowered eyes unmistakably down","reason":"vertical cardinal confirmed; horizontal axis centered"},
+    {"direction":"202.5","verdict":"pass","expected":"down-left","observed":"nose and pupil screen-left with bowed head and lowered gaze","reason":"both left and down axes clear"},
+    {"direction":"225","verdict":"pass","expected":"down-left","observed":"left-facing profile with lowered eye and head","reason":"both left and down axes clear"},
+    {"direction":"247.5","verdict":"pass","expected":"down-left","observed":"nose and pupil screen-left with visibly lowered head","reason":"both left and down axes clear"},
+    {"direction":"270","verdict":"pass","expected":"left","observed":"nose, profile, and pupil unmistakably screen-left","reason":"horizontal cardinal confirmed; vertical axis neutral"},
+    {"direction":"292.5","verdict":"pass","expected":"up-left","observed":"face and pupil screen-left with lifted head and gaze","reason":"both left and up axes clear"},
+    {"direction":"315","verdict":"pass","expected":"up-left","observed":"left-facing profile with raised pupil and head","reason":"both left and up axes clear"},
+    {"direction":"337.5","verdict":"pass","expected":"up-left","observed":"face and pupil remain screen-left with strong upward eye cue","reason":"both left and up axes clear and loop closes coherently"}
+  ],
+  "review_warnings": [
+    "Intermediate vertical cues at 022.5, 045, 067.5, and 112.5 are subtle.",
+    "157.5 has a weaker horizontal cue and measurable boundary change, but no conspicuous normal-size snap.",
+    "247.5 to 270 has a measurable diff without visible reversal or pop.",
+    "Bottom-row transparent gaps are intentional negative space between planted shoes."
+  ]
+}
