@@ -6,7 +6,11 @@ This folder contains starter traces and walkthroughs for evaluating Agent Autops
 
 - [`traces/successful_run.json`](traces/successful_run.json)
 - [`traces/loop_failure.json`](traces/loop_failure.json)
+- [`traces/loop_fixed.json`](traces/loop_fixed.json)
 - [`traces/hallucinated_tool.json`](traces/hallucinated_tool.json)
+
+`loop_failure.json` and `loop_fixed.json` are the same task before and after a
+fix — run `autopsy diff` on them to see the failing-run patterns disappear.
 
 ## Walkthroughs
 
