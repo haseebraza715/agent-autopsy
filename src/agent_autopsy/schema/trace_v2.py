@@ -9,6 +9,8 @@ This schema supports:
 - Comprehensive statistics
 """
 
+import hashlib
+import json
 from datetime import datetime
 from enum import Enum
 from typing import Any
@@ -96,10 +98,15 @@ class TraceEvent(BaseModel):
         return self.type == EventType.ERROR or self.error is not None
 
     def get_tool_signature(self) -> str | None:
-        """Get a signature for tool calls (name + input hash) for loop detection."""
+        """Get a signature for tool calls (name + input digest) for loop detection."""
         if self.type != EventType.TOOL_CALL:
             return None
-        return f"{self.name}:{hash(str(self.input))}"
+        try:
+            payload = json.dumps(self.input, sort_keys=True, default=str)
+        except (TypeError, ValueError):
+            payload = str(self.input)
+        digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+        return f"{self.name}:{digest}"
 
 
 class TaskContext(BaseModel):
