@@ -27,11 +27,14 @@ class TestTraceConfig:
 
     def test_config_from_env(self):
         """Test loading config from environment."""
-        with patch.dict(os.environ, {
-            "TRACE_ENABLED": "0",
-            "TRACE_DIR": "/tmp/custom_traces",
-            "TRACE_MAX_CHARS": "1000",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "TRACE_ENABLED": "0",
+                "TRACE_DIR": "/tmp/custom_traces",
+                "TRACE_MAX_CHARS": "1000",
+            },
+        ):
             config = TraceConfig.from_env()
             assert config.enabled is False
             assert config.trace_dir == Path("/tmp/custom_traces")
@@ -99,6 +102,26 @@ class TestRedaction:
         assert result["Token"] == "***"
         assert result["PASSWORD"] == "***"
 
+    def test_redact_preserves_prose_mentioning_secret_words(self):
+        """Regression: prose that merely mentions secret words must survive.
+
+        Error messages and LLM outputs routinely say "token", "authorization",
+        etc. — those are trace content, not secrets.
+        """
+        cases = [
+            "The token count for this request was 5000 tokens",
+            "Authorization is required to access the database",
+            "Invalid API key format: expected 40 hex characters",
+        ]
+        for case in cases:
+            assert _redact_secrets(case) == case, case
+
+    def test_redact_inline_token_shaped_strings(self):
+        """Whitespace-free 20+ char values that look like credentials are redacted."""
+        assert _redact_secrets("sk-abcdef1234567890abcdef1234567890") == "***"
+        assert _redact_secrets("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0") == "***"
+        assert _redact_secrets("ghp_abcdefghijklmnopqrstuvwxyzABCDEF") == "***"
+
 
 class TestSafeSerialization:
     """Tests for safe serialization."""
@@ -132,6 +155,7 @@ class TestSafeSerialization:
 
     def test_serialize_unserializable(self):
         """Test serializing non-serializable objects."""
+
         class CustomClass:
             pass
 
@@ -140,6 +164,7 @@ class TestSafeSerialization:
 
     def test_serialize_object_with_attrs(self):
         """Test serializing objects with attributes."""
+
         class CustomClass:
             def __init__(self):
                 self.name = "test"
