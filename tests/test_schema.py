@@ -1,5 +1,8 @@
 """Tests for the schema module."""
 
+import re
+import subprocess
+import sys
 from datetime import datetime
 
 from agent_autopsy.schema import (
@@ -79,6 +82,41 @@ class TestTraceEvent:
         # Non-tool events should return None
         message_event = TraceEvent(event_id=1, type=EventType.MESSAGE)
         assert message_event.get_tool_signature() is None
+
+    def test_get_tool_signature_is_stable_and_key_order_independent(self):
+        """Signatures must not depend on dict insertion order or process salt."""
+        event_a = TraceEvent(
+            event_id=0,
+            type=EventType.TOOL_CALL,
+            name="search",
+            input={"query": "test", "limit": 5},
+        )
+        event_b = TraceEvent(
+            event_id=1,
+            type=EventType.TOOL_CALL,
+            name="search",
+            input={"limit": 5, "query": "test"},
+        )
+        assert event_a.get_tool_signature() == event_b.get_tool_signature()
+        assert re.fullmatch(r"search:[0-9a-f]{16}", event_a.get_tool_signature() or "")
+        # Never a Python hash() integer (process-salted, non-reproducible).
+        assert "-" not in (event_a.get_tool_signature() or "")
+
+    def test_get_tool_signature_is_stable_across_processes(self):
+        """Cross-process determinism: the signature value must be identical in
+        separate interpreters (Python's builtin hash() is salted per-process)."""
+
+        code = (
+            "from agent_autopsy.schema import EventType, TraceEvent;"
+            "e = TraceEvent(event_id=0, type=EventType.TOOL_CALL,"
+            " name='search', input={'query': 'test'});"
+            "print(e.get_tool_signature())"
+        )
+        out1 = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60)
+        out2 = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60)
+        assert out1.returncode == out2.returncode == 0
+        assert out1.stdout.strip() == out2.stdout.strip()
+        assert re.fullmatch(r"search:[0-9a-f]{16}", out1.stdout.strip())
 
 
 class TestTrace:
