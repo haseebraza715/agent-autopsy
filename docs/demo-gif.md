@@ -1,6 +1,6 @@
 # Recording a README demo (GIF)
 
-The hero asset **`docs/images/autopsy-demo.gif`** is generated at **1100×700** with **large monospace** (body ≈36px, title ≈52px) on a canvas matched to GitHub’s readme column width (~830px), so the preview barely downscales and type stays legible. It is a **20-second**, five-scene story designed for a 15–25 second demo slot.
+The hero asset **`docs/images/autopsy-demo.gif`** is generated at **1100×700** with **large monospace** (body ≈36px, title ≈52px) on a canvas matched to GitHub’s readme column width (~830px), so the preview barely downscales and type stays legible. It is a **20-second**, five-scene story designed for a 15-25 second demo slot.
 
 ## What the GIF shows
 
@@ -33,10 +33,10 @@ Optional flags:
 ## Option A: asciinema + agg (alternative)
 
 1. Install [asciinema](https://asciinema.org/docs/installation) and [agg](https://github.com/asciinema/agg).
-2. `./scripts/record_demo.sh` — prints commands to paste into `asciinema rec`.
-3. `agg /tmp/autopsy-demo.cast docs/images/autopsy-demo.gif` — use a large terminal font for a crisp export.
+2. `./scripts/record_demo.sh`: prints commands to paste into `asciinema rec`.
+3. `agg /tmp/autopsy-demo.cast docs/images/autopsy-demo.gif`: use a large terminal font for a crisp export.
 
-Keep the GIF roughly under **2–3 MB** for README load times (short session, moderate frame count).
+Keep the GIF roughly under **2-3 MB** for README load times (short session, moderate frame count).
 
 ## Quick text-only smoke (no GIF)
 

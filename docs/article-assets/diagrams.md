@@ -38,7 +38,7 @@ flowchart LR
     C{{"Loop threshold<br/><small>attempt 3</small>"}}
     D["Same call ×8<br/><small>no new strategy</small>"]
     E["Max retries<br/><small>event 9</small>"]
-    F["infinite_loop<br/><small>critical · events 1–8</small>"]
+    F["infinite_loop<br/><small>critical · events 1-8</small>"]
     G(["Break the cycle<br/><small>cap · backoff · fallback</small>"])
 
     A --> B --> C --> D --> E --> F --> G

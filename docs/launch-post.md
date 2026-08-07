@@ -13,14 +13,14 @@ Debugging agents is painful. You get a JSON trace dump, a failing run ID, and a 
 ## The approach
 
 1. **Parse and normalize** common trace shapes (LangGraph, LangChain, generic JSON, experimental OpenTelemetry paths).
-2. **Deterministic detectors** flag loops, retry storms, auth and timeout patterns, hallucinated tool names, context pressure, and more—before any model call.
+2. **Deterministic detectors** flag loops, retry storms, auth and timeout patterns, hallucinated tool names, context pressure, and more. Before any model call.
 3. **Optional LLM pass** for narrative synthesis, with streaming, disk cache, and **citation checks** so invented event IDs get flagged automatically.
 
 That ordering matters: the fast path should answer “what broke?” in under a second on typical traces so you reach for `autopsy` before `grep`.
 
 ## One real bug it catches
 
-Take a trace where the same tool is invoked with identical arguments dozens of times. Autopsy’s infinite-loop detector ties that to concrete **event IDs**, prints **evidence excerpts**, and suggests a **likely cause** (for example a missing router exit). You get a markdown report you can paste into an incident thread or attach to a PR—without uploading customer data to a third party.
+Take a trace where the same tool is invoked with identical arguments dozens of times. Autopsy’s infinite-loop detector ties that to concrete **event IDs**, prints **evidence excerpts**, and suggests a **likely cause** (for example a missing router exit). You get a markdown report you can paste into an incident thread or attach to a PR, without uploading customer data to a third party.
 
 ## Try it
 
@@ -47,7 +47,7 @@ autopsy replay trace.json --from 120 --speed 2
 
 ## What is next
 
-Dogfood on real traces, keep detector precision/recall honest with the bundled corpus eval, and listen to issues from strangers. The maintainers are intentionally **not** building a SaaS replacement—see [ROADMAP.md](../ROADMAP.md) for scope boundaries.
+Dogfood on real traces, keep detector precision/recall honest with the bundled corpus eval, and listen to issues from strangers. The maintainers are intentionally **not** building a SaaS replacement. See [ROADMAP.md](../ROADMAP.md) for scope boundaries.
 
 If this sounds useful, star the repo, file an issue with a redacted trace snippet, or suggest one new pattern detector. The best roadmap is the one users write with bug reports.
 

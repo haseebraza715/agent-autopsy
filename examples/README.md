@@ -10,7 +10,7 @@ This folder contains starter traces and walkthroughs for evaluating Agent Autops
 - [`traces/hallucinated_tool.json`](traces/hallucinated_tool.json)
 
 `loop_failure.json` and `loop_fixed.json` are the same task before and after a
-fix — run `autopsy diff` on them to see the failing-run patterns disappear.
+fix: run `autopsy diff` on them to see the failing-run patterns disappear.
 
 ## Walkthroughs
 

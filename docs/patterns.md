@@ -46,7 +46,7 @@ For each detector: **what it catches**, **false-positive risk**, **tuning**.
 ### `empty_response`
 
 - **Catches:** Blank or whitespace-only LLM/tool outputs.
-- **False positives:** Short but valid answers; may co-occur with real failures—use manifest expectations in eval, not as sole root cause.
+- **False positives:** Short but valid answers; may co-occur with real failures. Use manifest expectations in eval, not as sole root cause.
 - **Tune:** Stricter empty checks vs minimum content length (code change).
 
 ### `error_cascade`

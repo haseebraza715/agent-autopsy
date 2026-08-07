@@ -1,4 +1,4 @@
-# Roadmap (post–v2 plan)
+# Roadmap (post-v2 plan)
 
 This file tracks **suggested** follow-ups from launch feedback and internal dogfooding. Nothing here is committed until prioritized in an issue or milestone.
 

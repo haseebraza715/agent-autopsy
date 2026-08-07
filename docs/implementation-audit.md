@@ -1,4 +1,4 @@
-# Implementation Audit — Plans vs. Reality
+# Implementation Audit: Plans vs. Reality
 
 Cross-check of [unified-improvement-plan.md](unified-improvement-plan.md) (v1) and [v2-best-in-class-plan.md](v2-best-in-class-plan.md) against the code on `main` as of 2026-04-18.
 
@@ -6,9 +6,9 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 
 ---
 
-## v1 — Unified Improvement Plan
+## v1: Unified Improvement Plan
 
-### Phase 1 — Foundation
+### Phase 1: Foundation
 
 | Item | Status | Evidence |
 |------|--------|----------|
@@ -16,7 +16,7 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 | 1.2 Split `requirements.txt` via `pyproject` extras | ✅ | `[cli]`, `[llm]`, `[gui]`, `[mcp]`, `[embeddings]`, `[dev]`, `[full]` groups in [pyproject.toml](../pyproject.toml) |
 | 1.3 Gate embedding model on config flag | ✅ | `--no-embeddings` CLI flag and `config.skip_embeddings` in [src/cli.py:89-126](../src/cli.py) |
 
-### Phase 2 — Architecture
+### Phase 2: Architecture
 
 | Item | Status | Evidence |
 |------|--------|----------|
@@ -24,7 +24,7 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 | 2.2 Break up god-file `app.py` | ✅ | `app.py` is now 18 lines; UI lives in [src/ui/streamlit_pages.py](../src/ui/streamlit_pages.py) |
 | 2.3 LLM provider abstraction | ✅ | `llm_credentials_configured` dispatches `openrouter / openai / anthropic / ollama` |
 
-### Phase 3 — Testing
+### Phase 3: Testing
 
 | Item | Status | Evidence |
 |------|--------|----------|
@@ -32,16 +32,16 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 | 3.2 Negative / error-path tests | ✅ | [tests/test_error_paths.py](../tests/test_error_paths.py), [tests/test_ollama_optional.py](../tests/test_ollama_optional.py) |
 | 3.3 MCP server tests | 🟡 | [tests/test_mcp_service.py](../tests/test_mcp_service.py) exists; auth path coverage still thin |
 
-### Phase 4 — UX
+### Phase 4: UX
 
 | Item | Status | Evidence |
 |------|--------|----------|
 | 4.1 Stream LLM output in UI | ✅ | `stream_llm_analysis_text` in api; Streamlit uses `stream_mode` |
 | 4.2 MCP SSE auth | ✅ | `_StaticMcpTokenVerifier` in [src/mcp/server.py:19](../src/mcp/server.py); reads `MCP_SSE_TOKEN` |
-| 4.3 Custom Streamlit theme | ✅ | [.streamlit/config.toml](../.streamlit/config.toml) — amber (#e8a317) on black, matches forensic aesthetic |
+| 4.3 Custom Streamlit theme | ✅ | [.streamlit/config.toml](../.streamlit/config.toml): amber (#e8a317) on black, matches forensic aesthetic |
 | 4.4 Structured LLM output (Pydantic) | ✅ | [tests/test_structured_report.py](../tests/test_structured_report.py), [tests/test_citation_validate.py](../tests/test_citation_validate.py) |
 
-### Phase 5 — Docs & polish
+### Phase 5: Docs & polish
 
 | Item | Status | Evidence |
 |------|--------|----------|
@@ -49,13 +49,13 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 | 5.2 README restructure + demo GIF | ✅ | README rewritten today; GIF regenerated at 1280×720 with larger type |
 | 5.3 Document all patterns | ✅ | [docs/patterns.md](patterns.md) |
 
-**Phase 1–5 summary: 13/15 ✅, 2 partial. No outright gaps.**
+**Phase 1-5 summary: 13/15 ✅, 2 partial. No outright gaps.**
 
 ---
 
-## v2 — Best-in-Class CLI Plan
+## v2: Best-in-Class CLI Plan
 
-### Week 1 — Dogfood foundation
+### Week 1: Dogfood foundation
 
 | Item | Status | Evidence |
 |------|--------|----------|
@@ -63,7 +63,7 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 | Detector accuracy harness | ✅ | [scripts/eval_detectors.py](../scripts/eval_detectors.py) |
 | Precision/recall threshold in CI | ✅ | `tests.yml` runs the hermetic lexical evaluator on every supported Python version and fails on regression |
 
-### Week 2 — Deterministic fast path
+### Week 2: Deterministic fast path
 
 | Item | Status | Evidence |
 |------|--------|----------|
@@ -72,7 +72,7 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 | Exit codes documented | ✅ | [src/cli.py:1-6](../src/cli.py) docstring |
 | `--format=json\|text\|markdown` | ✅ | `-f` flag in analyze command |
 
-### Week 3 — Daily drivers
+### Week 3: Daily drivers
 
 | Item | Status | Evidence |
 |------|--------|----------|
@@ -81,7 +81,7 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 | `autopsy replay --from --speed` | ✅ | `replay` command |
 | Shell completion | ✅ | `add_completion=True` on Typer app |
 
-### Week 4 — LLM path earns its seconds
+### Week 4: LLM path earns its seconds
 
 | Item | Status | Evidence |
 |------|--------|----------|
@@ -91,17 +91,17 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 | LLM disk cache | ✅ | [src/analysis/llm_cache.py](../src/analysis/llm_cache.py), `--no-cache` flag |
 | Ollama first-class | ✅ | `test_ollama_optional.py`, provider dispatch in api |
 
-### Week 5 — Trust & distribution
+### Week 5: Trust & distribution
 
 | Item | Status | Evidence |
 |------|--------|----------|
-| Demo GIF | ✅ | [docs/images/autopsy-demo.gif](images/autopsy-demo.gif) — regenerated with bigger type |
+| Demo GIF | ✅ | [docs/images/autopsy-demo.gif](images/autopsy-demo.gif): regenerated with bigger type |
 | README restructured | ✅ | Rewritten today |
 | Per-pattern docs | ✅ | [docs/patterns.md](patterns.md) |
 | Contributor on-ramp | ✅ | [docs/good-first-issues.md](good-first-issues.md), [CONTRIBUTING.md](../CONTRIBUTING.md) |
 | PyPI publish automation | ✅ | Tag-driven trusted publish workflow exists; actual registry deployment remains a maintainer release action |
 
-### Week 6 — Launch & iterate
+### Week 6: Launch & iterate
 
 | Item | Status | Evidence |
 |------|--------|----------|
@@ -121,6 +121,6 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 2. **Tighten MCP auth test coverage.** Add a test that SSE without a token is rejected and with the correct token is accepted. (2 hrs)
 3. **Detector evaluator:** CI enforcement is complete; preserve its hermetic lexical backend and evidence artifact.
 4. **Collapse [ARCHITECTURE.md](../ARCHITECTURE.md) duplication.** Either expand the top-level file or make it a pointer to [docs/architecture.md](architecture.md). (30 min)
-5. **Ship the launch post.** Everything else is ready — this is now a marketing task, not an engineering one.
+5. **Ship the launch post.** Everything else is ready. This is now a marketing task, not an engineering one.
 
 Nothing else from either plan is missing. The project is effectively feature-complete against both plans.

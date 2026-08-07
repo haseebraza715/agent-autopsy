@@ -16,7 +16,7 @@ The format follows Keep a Changelog and semantic versioning intent.
 - Opt-in CLI telemetry (`autopsy telemetry on|off|status`, env `AUTOPSY_TELEMETRY=1`)
 - Docs: `docs/launch-post.md`, `docs/demo-gif.md`, `docs/good-first-issues.md`, `ROADMAP.md`
 - Scripts: `scripts/benchmark_no_llm.py`, `scripts/record_demo.sh`, `scripts/render_demo_gif.py` (README GIF)
-- `docs/images/autopsy-demo.gif` — deterministic `autopsy analyze` demo asset
+- `docs/images/autopsy-demo.gif`: deterministic `autopsy analyze` demo asset
 - PyPI publish workflow on version tags (`.github/workflows/publish.yml`)
 - MCP server interface with tools, resources, and prompts (`src.mcp`)
 - Streamable HTTP/SSE/stdio MCP transport support

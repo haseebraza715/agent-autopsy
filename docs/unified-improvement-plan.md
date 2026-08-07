@@ -1,31 +1,31 @@
-# Agent Autopsy — Unified Improvement Plan
+# Agent Autopsy: Unified Improvement Plan
 
 A consolidated, prioritized plan combining critical review findings with concrete, actionable fixes. Ordered by impact and sequenced so early work unblocks later work.
 
 ---
 
-## Phase 1 — Stop the Bleeding (Week 1)
+## Phase 1: Stop the Bleeding (Week 1)
 
 These are foundational issues. Fix before adding any new features.
 
 ### 1.1 Replace silent exception handling
 **Problem:** Bare `except Exception:` blocks scattered across the codebase swallow failures with no logging.
-- [src/preanalysis/patterns.py:98-102](../src/preanalysis/patterns.py) — plugin failures disappear
-- [src/ingestion/parser.py:38](../src/ingestion/parser.py) — format detection errors ignored
-- [src/cli.py:99](../src/cli.py) — CLI swallows root causes
-- [src/analysis/agent.py:238-246](../src/analysis/agent.py) — LLM errors leave state inconsistent
+- [src/preanalysis/patterns.py:98-102](../src/preanalysis/patterns.py): plugin failures disappear
+- [src/ingestion/parser.py:38](../src/ingestion/parser.py): format detection errors ignored
+- [src/cli.py:99](../src/cli.py): CLI swallows root causes
+- [src/analysis/agent.py:238-246](../src/analysis/agent.py): LLM errors leave state inconsistent
 
 **Fix:**
 - Define specific exception types: `ParseError`, `SchemaValidationError`, `PluginError`, `LLMError`.
 - Replace bare `except Exception` with targeted catches that log with traceback.
 - Surface parser errors with event context (e.g. `"Failed at event 12: missing 'type' field"`).
 
-**Effort:** 2–3 days. **Impact:** Critical. Unblocks all future debugging.
+**Effort:** 2-3 days. **Impact:** Critical. Unblocks all future debugging.
 
 ---
 
-### 1.2 Fix packaging — split `requirements.txt`
-**Problem:** `requirements.txt` bundles `langgraph`, `langchain-openai`, `mcp`, `streamlit`, `pytest` as hard deps. A CLI user installs 500 MB for no reason. `pyproject.toml` already has optional groups — `requirements.txt` ignores them.
+### 1.2 Fix packaging: split `requirements.txt`
+**Problem:** `requirements.txt` bundles `langgraph`, `langchain-openai`, `mcp`, `streamlit`, `pytest` as hard deps. A CLI user installs 500 MB for no reason. `pyproject.toml` already has optional groups: `requirements.txt` ignores them.
 
 **Fix:**
 - Delete `requirements.txt` and point users to `pip install "agent-autopsy[full]"` / `[cli]` / `[gui]` / `[mcp]`.
@@ -47,7 +47,7 @@ These are foundational issues. Fix before adding any new features.
 
 ---
 
-## Phase 2 — Architecture (Week 2)
+## Phase 2: Architecture (Week 2)
 
 ### 2.1 Extract a unified facade API
 **Problem:** [src/cli.py](../src/cli.py) imports from 7+ internal modules directly. Streamlit and MCP reach into internals independently. Any refactor ripples across all entry points.
@@ -57,7 +57,7 @@ These are foundational issues. Fix before adding any new features.
 - CLI, Streamlit, and MCP all import *only* from `src/api.py`.
 - Target: cli.py goes from 10+ imports → 1.
 
-**Effort:** 3–5 days. **Impact:** High. Enables isolated testing and decouples UI from core.
+**Effort:** 3-5 days. **Impact:** High. Enables isolated testing and decouples UI from core.
 
 ---
 
@@ -69,7 +69,7 @@ These are foundational issues. Fix before adding any new features.
 - Use Streamlit's native multi-page routing via `pages/` directory.
 - `app.py` becomes a ~50-line entry/router.
 
-**Effort:** 2–3 days. **Impact:** High. Makes UI maintainable and testable.
+**Effort:** 2-3 days. **Impact:** High. Makes UI maintainable and testable.
 
 ---
 
@@ -85,7 +85,7 @@ These are foundational issues. Fix before adding any new features.
 
 ---
 
-## Phase 3 — Testing (Week 3)
+## Phase 3: Testing (Week 3)
 
 ### 3.1 End-to-end integration tests
 **Problem:** 71 test functions for ~9500 LOC, all unit tests. No test runs the full `ingestion → pre-analysis → analysis → output` pipeline. A breaking change in chaining goes uncaught.
@@ -94,7 +94,7 @@ These are foundational issues. Fix before adding any new features.
 - Create `tests/test_e2e.py` that runs `autopsy analyze examples/<trace>.json` for each supported format (LangGraph, LangChain, OpenTelemetry, generic JSON).
 - Assert report contains expected sections and detected patterns.
 
-**Effort:** 1–2 days. **Impact:** High.
+**Effort:** 1-2 days. **Impact:** High.
 
 ---
 
@@ -103,7 +103,7 @@ These are foundational issues. Fix before adding any new features.
 
 **Fix:**
 - Add `tests/test_error_paths.py` covering: truncated JSON, wrong format detection, API key missing, LLM timeout mock, plugin raising.
-- Add tests for the LLM agent control flow in [src/analysis/agent.py](../src/analysis/agent.py) — budget enforcement, iteration caps, state transitions.
+- Add tests for the LLM agent control flow in [src/analysis/agent.py](../src/analysis/agent.py): budget enforcement, iteration caps, state transitions.
 
 **Effort:** 2 days. **Impact:** High.
 
@@ -120,10 +120,10 @@ These are foundational issues. Fix before adding any new features.
 
 ---
 
-## Phase 4 — User Experience (Week 4)
+## Phase 4: User Experience (Week 4)
 
 ### 4.1 Stream LLM output in the UI
-**Problem:** LLM analysis takes 30–90s. The UI blocks with a spinner — no token streaming, no live thinking, no partial results. Biggest UX complaint for LLM tools in 2026.
+**Problem:** LLM analysis takes 30-90s. The UI blocks with a spinner: no token streaming, no live thinking, no partial results. Biggest UX complaint for LLM tools in 2026.
 
 **Fix:**
 - Use `st.write_stream()` with LangChain's `astream_events()` to stream tokens live.
@@ -164,26 +164,26 @@ These are foundational issues. Fix before adding any new features.
 - Validate structurally with Pydantic.
 - Render markdown from the validated object.
 
-**Effort:** 1–2 days. **Impact:** Medium.
+**Effort:** 1-2 days. **Impact:** Medium.
 
 ---
 
-## Phase 5 — Documentation & Polish (Week 5)
+## Phase 5: Documentation & Polish (Week 5)
 
 ### 5.1 Align docs with reality
-**Problem:** [ARCHITECTURE.md](../ARCHITECTURE.md) is 38 lines and skips token budgeting, contract validation, embedding fallback, plugin loading — all present in the code. README undersells pattern detection (actually ~13 detectors, not 6).
+**Problem:** [ARCHITECTURE.md](../ARCHITECTURE.md) is 38 lines and skips token budgeting, contract validation, embedding fallback, plugin loading: all present in the code. README undersells pattern detection (actually ~13 detectors, not 6).
 
 **Fix:**
 - Expand [ARCHITECTURE.md](../ARCHITECTURE.md) with the real pipeline, including token budget math and quality thresholds.
 - Update README feature table to list all 13+ patterns.
 - Add `src/DESIGN.md` explaining *why* (deterministic-first, token estimation, contract validation).
 
-**Effort:** 1–2 days. **Impact:** Medium. Builds trust.
+**Effort:** 1-2 days. **Impact:** Medium. Builds trust.
 
 ---
 
 ### 5.2 README restructure + demo GIF
-**Problem:** README has 13 sections and buries the value prop. No demo GIF — the single biggest trust-builder for a dev tool.
+**Problem:** README has 13 sections and buries the value prop. No demo GIF: the single biggest trust-builder for a dev tool.
 
 **Fix:**
 - Restructure: hero (one-sentence value + demo GIF) → 30-second quickstart → feature table → rest.
@@ -206,7 +206,7 @@ These are foundational issues. Fix before adding any new features.
 
 ---
 
-## Quick Wins (Do Today — <2 hours total)
+## Quick Wins (Do Today: <2 hours total)
 
 | # | Fix | Effort | Impact |
 |---|-----|--------|--------|
@@ -221,9 +221,9 @@ These are foundational issues. Fix before adding any new features.
 ## What This Plan Deliberately Does NOT Do
 
 - **No new patterns before auditing existing ones.** The README undersells coverage; documentation may be the real gap.
-- **No AST + embedding-similarity quality scorer.** Overkill — structured LLM output is the cleaner fix.
+- **No AST + embedding-similarity quality scorer.** Overkill: structured LLM output is the cleaner fix.
 - **No big rewrite.** Each phase is sequenced so the app remains shippable throughout.
-- **No feature expansion in Phases 1–3.** Harden first.
+- **No feature expansion in Phases 1-3.** Harden first.
 
 ---
 
