@@ -438,21 +438,21 @@ def watch_traces(
     seen: set[str] = set()
 
     class Handler(FileSystemEventHandler):
-        def on_created(self, event):  # type: ignore[override]
-            if event.is_directory:
-                return
-            path = Path(str(event.src_path))
+        def _handle(self, path: Path) -> None:
             if not fnmatch.fnmatch(path.name, pattern):
                 return
             key = str(path.resolve())
             if key in seen:
                 return
-            seen.add(key)
             try:
                 trace = api.load_trace(path)
             except Exception as exc:
                 console.print(f"[red]watch:[/red] failed to load {path}: {exc}")
                 return
+            # Only mark as seen after a successful load so traces that were
+            # still being written when the create event fired get retried
+            # via the subsequent modify event.
+            seen.add(key)
             pre = api.run_preanalysis(trace)
             crit = any(s.severity == "critical" for s in pre.signals)
             if not quiet:
@@ -466,6 +466,16 @@ def watch_traces(
                 for s in pre.signals[:8]:
                     sev = "red" if s.severity == "critical" else "yellow"
                     console.print(f"  [{sev}]{s.severity}[/{sev}] {s.type}: {s.evidence[:120]}")
+
+        def on_created(self, event):  # type: ignore[override]
+            if event.is_directory:
+                return
+            self._handle(Path(str(event.src_path)))
+
+        def on_modified(self, event):  # type: ignore[override]
+            if event.is_directory:
+                return
+            self._handle(Path(str(event.src_path)))
 
     obs = Observer()
     obs.schedule(Handler(), str(directory), recursive=False)
