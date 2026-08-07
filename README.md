@@ -5,7 +5,9 @@
 
 **Debug AI agent traces locally: deterministic failure detection, fully offline, no API keys. Optional LLM root-cause analysis.**
 
-![Agent Autopsy demo](docs/demo.gif)
+<video controls autoplay muted loop playsinline width="100%" src="https://github.com/haseebraza715/agent-autopsy/raw/main/docs/demo.mp4"></video>
+
+Prefer a GIF? [docs/demo.gif](docs/demo.gif)
 
 ---
 
