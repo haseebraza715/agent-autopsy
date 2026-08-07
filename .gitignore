@@ -32,6 +32,7 @@ Thumbs.db
 
 # Reports and artifacts (optional - remove if you want to track these)
 reports/*.md
+reports/index.json
 patches/
 
 # Testing
