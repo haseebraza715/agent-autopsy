@@ -24,6 +24,8 @@ SECRET_KEYS_PATTERN = re.compile(
     r"(api_key|authorization|token|secret|password|credential|openrouter_api_key)",
     re.IGNORECASE
 )
+# Long whitespace-free tokens: JWTs, sk-/pk-/ghp_ keys, hashes, etc.
+_TOKEN_VALUE_PATTERN = re.compile(r"^[A-Za-z0-9_\-\.]{20,}$")
 
 logger = logging.getLogger(__name__)
 
@@ -76,8 +78,11 @@ def _redact_secrets(data: Any, visited: set | None = None) -> Any:
     elif isinstance(data, list):
         return [_redact_secrets(item, visited) for item in data]
     elif isinstance(data, str):
-        # Also redact inline secrets that look like API keys
-        if len(data) > 20 and SECRET_KEYS_PATTERN.search(data):
+        # Redact inline values that are shaped like secrets (long
+        # whitespace-free tokens or key-like strings), NOT prose that merely
+        # mentions a secret word — e.g. an error like "token budget exceeded"
+        # or an LLM output about "authorization" must survive intact.
+        if len(data) >= 20 and _TOKEN_VALUE_PATTERN.match(data):
             return "***"
         return data
     else:
