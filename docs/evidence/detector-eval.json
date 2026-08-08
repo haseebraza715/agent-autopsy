@@ -1,8 +1,9 @@
 {
   "command": "python scripts/eval_detectors.py --json-out docs/evidence/detector-eval.json",
-  "commit": "9416719cd5fb5bda22482a8995d902cf42c0cd62",
-  "corpus_sha256": "2cbae7756302104495183efdf1967ae700990e0358a30c73e0838d2f3effc995",
+  "commit": "2f59043da68f935823a849f1d5b3fddffed6b5ee",
+  "corpus_sha256": "6858d2c4518bdbf0948bbeb9ed6b9ac0f94167bb8fd6288ca4a5f85c5aa1fcfb",
   "embedding_backend": "lexical_overlap_deterministic",
+  "forbidden_detections": [],
   "metrics": {
     "precision": {
       "auth_permission_failure": {
@@ -18,12 +19,17 @@
       "empty_response": {
         "fp": 0,
         "rate": 1.0,
-        "tp": 14
+        "tp": 15
       },
       "error_cascade": {
         "fp": 0,
         "rate": 1.0,
-        "tp": 10
+        "tp": 12
+      },
+      "goal_drift": {
+        "fp": 0,
+        "rate": 1.0,
+        "tp": 1
       },
       "hallucinated_tool": {
         "fp": 0,
@@ -35,7 +41,22 @@
         "rate": 1.0,
         "tp": 2
       },
+      "inter_agent_failure": {
+        "fp": 0,
+        "rate": 1.0,
+        "tp": 1
+      },
       "redundant_tool_call": {
+        "fp": 0,
+        "rate": 1.0,
+        "tp": 2
+      },
+      "retry_storm": {
+        "fp": 0,
+        "rate": 1.0,
+        "tp": 1
+      },
+      "stale_context": {
         "fp": 0,
         "rate": 1.0,
         "tp": 1
@@ -53,55 +74,81 @@
     },
     "recall": {
       "auth_permission_failure": {
-        "hits": 4,
+        "fn": 0,
         "rate": 1.0,
-        "total": 4
+        "tp": 4
       },
       "context_overflow": {
-        "hits": 1,
+        "fn": 0,
         "rate": 1.0,
-        "total": 1
+        "tp": 1
       },
       "empty_response": {
-        "hits": 14,
+        "fn": 0,
         "rate": 1.0,
-        "total": 14
+        "tp": 15
       },
       "error_cascade": {
-        "hits": 10,
+        "fn": 0,
         "rate": 1.0,
-        "total": 10
+        "tp": 12
+      },
+      "goal_drift": {
+        "fn": 0,
+        "rate": 1.0,
+        "tp": 1
       },
       "hallucinated_tool": {
-        "hits": 1,
+        "fn": 0,
         "rate": 1.0,
-        "total": 1
+        "tp": 1
       },
       "infinite_loop": {
-        "hits": 2,
+        "fn": 0,
         "rate": 1.0,
-        "total": 2
+        "tp": 2
+      },
+      "inter_agent_failure": {
+        "fn": 0,
+        "rate": 1.0,
+        "tp": 1
       },
       "redundant_tool_call": {
-        "hits": 1,
+        "fn": 0,
         "rate": 1.0,
-        "total": 1
+        "tp": 2
+      },
+      "retry_storm": {
+        "fn": 0,
+        "rate": 1.0,
+        "tp": 1
+      },
+      "stale_context": {
+        "fn": 0,
+        "rate": 1.0,
+        "tp": 1
       },
       "timeout_pattern": {
-        "hits": 3,
+        "fn": 0,
         "rate": 1.0,
-        "total": 3
+        "tp": 3
       },
       "token_waste": {
-        "hits": 1,
+        "fn": 0,
         "rate": 1.0,
-        "total": 1
+        "tp": 1
       }
     }
   },
   "passed": true,
+  "scope": "corpus-relative regression results; not accuracy on unseen production traces",
   "thresholds": {
     "min_precision": 0.9,
     "min_recall": 0.8
+  },
+  "totals": {
+    "fn": 0,
+    "fp": 0,
+    "tp": 45
   }
 }
