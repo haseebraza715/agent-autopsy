@@ -17,7 +17,7 @@ from pathlib import Path
 
 from agent_autopsy.errors import PluginError
 from agent_autopsy.plugins import get_plugin_manager
-from agent_autopsy.schema import EventType, Trace, TraceEvent
+from agent_autopsy.schema import EventRole, EventType, Trace, TraceEvent, TraceStatus
 from agent_autopsy.utils.config import get_config
 
 logger = logging.getLogger(__name__)
@@ -109,6 +109,19 @@ class PatternDetector:
                 continue
         return results
 
+    def _has_failure_evidence(self, events: list[TraceEvent]) -> bool:
+        """True when the run is not a clean success (repeated-call failure gate).
+
+        A repeated identical sequence is only a *failure pattern* when the
+        underlying run is a failure; intentional idempotent repetitions in a
+        healthy run must not be flagged.
+        """
+        if any(e.is_error() for e in events):
+            return True
+        if self.trace.status != TraceStatus.SUCCESS:
+            return True
+        return bool(self.trace.error_summary)
+
     def detect_loops(self, threshold: int = 3) -> list[PatternResult]:
         """Detect infinite loops where the same tool+input is repeated consecutively."""
         results = []
@@ -119,40 +132,40 @@ class PatternDetector:
 
         consecutive_count = 1
         last_sig = None
-        sequence_event_ids: list[int] = []
+        sequence_events: list[TraceEvent] = []
 
         for event in tool_calls:
             sig = event.get_tool_signature()
 
             if sig == last_sig and sig is not None:
                 consecutive_count += 1
-                sequence_event_ids.append(event.event_id)
+                sequence_events.append(event)
             else:
-                if consecutive_count >= threshold and last_sig:
+                if consecutive_count >= threshold and last_sig and self._has_failure_evidence(sequence_events):
                     results.append(
                         PatternResult(
                             pattern_type=PatternType.INFINITE_LOOP,
                             severity=Severity.CRITICAL,
                             message=f"Identical tool call repeated {consecutive_count} times consecutively",
                             evidence=f"Same tool+input signature: {last_sig.split(':')[0]}",
-                            event_ids=sequence_event_ids.copy(),
+                            event_ids=[e.event_id for e in sequence_events],
                             metadata={"signature": last_sig, "count": consecutive_count},
                         )
                     )
 
                 consecutive_count = 1
-                sequence_event_ids = [event.event_id]
+                sequence_events = [event]
 
             last_sig = sig
 
-        if consecutive_count >= threshold and last_sig:
+        if consecutive_count >= threshold and last_sig and self._has_failure_evidence(sequence_events):
             results.append(
                 PatternResult(
                     pattern_type=PatternType.INFINITE_LOOP,
                     severity=Severity.CRITICAL,
                     message=f"Identical tool call repeated {consecutive_count} times consecutively",
                     evidence=f"Same tool+input signature: {last_sig.split(':')[0]}",
-                    event_ids=sequence_event_ids,
+                    event_ids=[e.event_id for e in sequence_events],
                     metadata={"signature": last_sig, "count": consecutive_count},
                 )
             )
@@ -201,21 +214,22 @@ class PatternDetector:
                     unique_inputs = len(set(inputs))
                     if unique_inputs <= len(cluster) // 2 + 1:
                         if not any(eid in loop_ids for eid in cluster_ids):
-                            results.append(
-                                PatternResult(
-                                    pattern_type=PatternType.RETRY_STORM,
-                                    severity=Severity.HIGH,
-                                    message=f"Tool '{tool_name}' called {len(cluster)} times within {config.retry_window_seconds}s",
-                                    evidence=f"Multiple calls with similar inputs ({unique_inputs} unique inputs)",
-                                    event_ids=cluster_ids,
-                                    metadata={
-                                        "tool_name": tool_name,
-                                        "count": len(cluster),
-                                        "unique_inputs": unique_inputs,
-                                        "window_seconds": config.retry_window_seconds,
-                                    },
+                            if self._has_failure_evidence(cluster):
+                                results.append(
+                                    PatternResult(
+                                        pattern_type=PatternType.RETRY_STORM,
+                                        severity=Severity.HIGH,
+                                        message=f"Tool '{tool_name}' called {len(cluster)} times within {config.retry_window_seconds}s",
+                                        evidence=f"Multiple calls with similar inputs ({unique_inputs} unique inputs)",
+                                        event_ids=cluster_ids,
+                                        metadata={
+                                            "tool_name": tool_name,
+                                            "count": len(cluster),
+                                            "unique_inputs": unique_inputs,
+                                            "window_seconds": config.retry_window_seconds,
+                                        },
+                                    )
                                 )
-                            )
                             i = i + len(cluster) - 1
                             break
 
@@ -236,12 +250,12 @@ class PatternDetector:
         for signature, events in calls_by_signature.items():
             if len(events) < 2:
                 continue
+            if not self._has_failure_evidence(events):
+                continue
 
             event_ids = [e.event_id for e in events]
             non_consecutive_ids = [
-                event_ids[i]
-                for i in range(1, len(event_ids))
-                if event_ids[i] - event_ids[i - 1] > 1
+                event_ids[i] for i in range(1, len(event_ids)) if event_ids[i] - event_ids[i - 1] > 1
             ]
             if non_consecutive_ids:
                 tool_name = signature.split(":")[0]
@@ -273,8 +287,19 @@ class PatternDetector:
                     or output == {}
                     or output == []
                 )
-                if is_empty:
-                    empty_events.append(event.event_id)
+                if not is_empty:
+                    continue
+                if event.type == EventType.TOOL_CALL:
+                    # A successful tool returning no payload (e.g. a DELETE
+                    # that answers `{}`) is legitimate. An errored call in an
+                    # otherwise successful run is a recovered failure, not an
+                    # empty model/tool response; failed runs still surface it.
+                    recovered_without_summary = (
+                        self.trace.status == TraceStatus.SUCCESS and not self.trace.error_summary
+                    )
+                    if not event.is_error() or recovered_without_summary:
+                        continue
+                empty_events.append(event.event_id)
 
         if empty_events:
             results.append(
@@ -386,16 +411,32 @@ class PatternDetector:
         timeout_ids: list[int] = []
         slow_call_ids: list[int] = []
 
-        for event in self.trace.events:
-            if event.latency_ms and event.latency_ms >= config.timeout_seconds * 1000:
-                slow_call_ids.append(event.event_id)
+        trace_failed = self.trace.status != TraceStatus.SUCCESS
 
+        for event in self.trace.events:
             text_parts = []
             if event.error and event.error.message:
                 text_parts.append(event.error.message)
             if event.output is not None:
                 text_parts.append(str(event.output))
-            if self._TIMEOUT_RE.search(" ".join(text_parts)):
+            text_hit = bool(self._TIMEOUT_RE.search(" ".join(text_parts)))
+
+            # A slow call is only a timeout signal when the event errored or
+            # the run itself failed; a healthy slow call is not a timeout.
+            if (
+                event.latency_ms
+                and event.latency_ms >= config.timeout_seconds * 1000
+                and (event.is_error() or trace_failed)
+            ):
+                slow_call_ids.append(event.event_id)
+            # Timeout language counts on an errored event, or in assistant/tool
+            # output when the run itself failed. User/system prompts that only
+            # discuss timeout handling remain negative controls.
+            failed_output_evidence = trace_failed and (
+                event.type in {EventType.LLM_CALL, EventType.TOOL_CALL, EventType.ERROR}
+                or event.role in {EventRole.ASSISTANT, EventRole.TOOL}
+            )
+            if text_hit and (event.is_error() or failed_output_evidence):
                 timeout_ids.append(event.event_id)
 
         all_ids = sorted(set(timeout_ids + slow_call_ids))
@@ -434,7 +475,10 @@ class PatternDetector:
         early_avg = sum(early_scores) / len(early_scores)
         late_avg = sum(late_scores) / len(late_scores)
 
-        if early_avg - late_avg >= config.semantic_drift_delta_threshold and late_avg <= config.semantic_drift_low_threshold:
+        if (
+            early_avg - late_avg >= config.semantic_drift_delta_threshold
+            and late_avg <= config.semantic_drift_low_threshold
+        ):
             late_ids = [eid for eid, _ in scored_events[-window:]]
             return [
                 PatternResult(
@@ -452,8 +496,7 @@ class PatternDetector:
                         "early_similarity": round(early_avg, 3),
                         "late_similarity": round(late_avg, 3),
                         "series": [
-                            {"event_id": event_id, "similarity": round(score, 3)}
-                            for event_id, score in scored_events
+                            {"event_id": event_id, "similarity": round(score, 3)} for event_id, score in scored_events
                         ],
                     },
                 )
@@ -597,9 +640,7 @@ class PatternDetector:
 
         if total_tokens >= limit:
             token_events = [
-                (e.event_id, e.token_count)
-                for e in self.trace.events
-                if e.token_count and e.token_count > 0
+                (e.event_id, e.token_count) for e in self.trace.events if e.token_count and e.token_count > 0
             ]
             token_events.sort(key=lambda x: x[1], reverse=True)
             top_events = [e[0] for e in token_events[:5]]
@@ -661,9 +702,7 @@ class PatternDetector:
                 if series:
                     return series
             except Exception:
-                logger.exception(
-                    "Sentence embedding similarity failed; falling back to lexical overlap for goal drift"
-                )
+                logger.exception("Sentence embedding similarity failed; falling back to lexical overlap for goal drift")
 
         # Lexical fallback.
         goal_tokens = set(self._tokenize_text(goal))
@@ -693,6 +732,7 @@ class PatternDetector:
             return False
         try:
             import sentence_transformers  # noqa: F401
+
             return True
         except ImportError:
             return False
