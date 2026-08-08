@@ -16,6 +16,11 @@
 #
 set -euo pipefail
 
+# Keep the offline demo offline even when optional embedding dependencies are
+# installed and no model cache is present. Callers may still override these.
+export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
+export TRANSFORMERS_OFFLINE="${TRANSFORMERS_OFFLINE:-1}"
+
 # --- resolve paths -------------------------------------------------------
 SCRIPT_SRC="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SRC")" && pwd)"
