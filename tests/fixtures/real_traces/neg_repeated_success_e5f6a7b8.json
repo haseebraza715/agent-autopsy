@@ -1,0 +1,70 @@
+{
+  "run_id": "e5f6a7b8-0000-4000-8000-000000000002",
+  "start_time": "2026-01-05T12:00:00.000Z",
+  "end_time": "2026-01-05T12:00:01.500Z",
+  "duration_ms": 1500,
+  "status": "success",
+  "goal": "Report user 42 account balance",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2026-01-05T12:00:00.000Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Query user 42 balance",
+      "output": "Fetching the balance.",
+      "token_count": 120,
+      "latency_ms": 300
+    },
+    {
+      "event_id": 1,
+      "ts": "2026-01-05T12:00:00.300Z",
+      "type": "tool_call",
+      "name": "balance_api",
+      "input": {
+        "user_id": 42
+      },
+      "output": {
+        "balance": 150.0
+      },
+      "latency_ms": 80
+    },
+    {
+      "event_id": 2,
+      "ts": "2026-01-05T12:00:00.500Z",
+      "type": "tool_call",
+      "name": "balance_api",
+      "input": {
+        "user_id": 42
+      },
+      "output": {
+        "balance": 150.0
+      },
+      "latency_ms": 80
+    },
+    {
+      "event_id": 3,
+      "ts": "2026-01-05T12:00:00.700Z",
+      "type": "tool_call",
+      "name": "balance_api",
+      "input": {
+        "user_id": 42
+      },
+      "output": {
+        "balance": 150.0
+      },
+      "latency_ms": 80
+    },
+    {
+      "event_id": 4,
+      "ts": "2026-01-05T12:00:01.000Z",
+      "type": "message",
+      "name": "assistant",
+      "role": "assistant",
+      "output": "User 42 balance is 150.0."
+    }
+  ],
+  "metadata": {
+    "scenario": "negative_control_repeated_successful_calls"
+  }
+}

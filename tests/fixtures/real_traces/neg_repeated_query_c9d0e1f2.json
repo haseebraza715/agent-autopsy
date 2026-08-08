@@ -1,0 +1,67 @@
+{
+  "run_id": "c9d0e1f2-0000-4000-8000-000000000003",
+  "start_time": "2026-01-05T12:00:00.000Z",
+  "end_time": "2026-01-05T12:00:03.000Z",
+  "duration_ms": 3000,
+  "status": "success",
+  "goal": "Find the current USD to EUR exchange rate",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2026-01-05T12:00:00.000Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Find the current USD to EUR rate",
+      "output": "Searching for the rate.",
+      "token_count": 100,
+      "latency_ms": 250
+    },
+    {
+      "event_id": 1,
+      "ts": "2026-01-05T12:00:00.400Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "q": "current USD to EUR rate"
+      },
+      "output": {
+        "rate": 0.92
+      },
+      "latency_ms": 300
+    },
+    {
+      "event_id": 2,
+      "ts": "2026-01-05T12:00:01.000Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Re-run the search to confirm the rate is current",
+      "output": "Confirming the rate with a second search.",
+      "token_count": 100,
+      "latency_ms": 250
+    },
+    {
+      "event_id": 3,
+      "ts": "2026-01-05T12:00:01.500Z",
+      "type": "tool_call",
+      "name": "web_search",
+      "input": {
+        "q": "current USD to EUR rate"
+      },
+      "output": {
+        "rate": 0.92
+      },
+      "latency_ms": 300
+    },
+    {
+      "event_id": 4,
+      "ts": "2026-01-05T12:00:02.000Z",
+      "type": "message",
+      "name": "assistant",
+      "role": "assistant",
+      "output": "The USD to EUR rate is 0.92."
+    }
+  ],
+  "metadata": {
+    "scenario": "negative_control_legitimate_repeated_query"
+  }
+}

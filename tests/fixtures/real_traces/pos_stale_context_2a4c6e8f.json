@@ -1,0 +1,70 @@
+{
+  "run_id": "2a4c6e8f-0000-4000-8000-000000000008",
+  "start_time": "2026-01-05T12:00:00.000Z",
+  "end_time": "2026-01-05T12:00:02.000Z",
+  "duration_ms": 2000,
+  "status": "success",
+  "goal": "Report the current temperature in NYC",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2026-01-05T12:00:00.000Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Report current NYC temperature",
+      "output": "Fetching the temperature.",
+      "token_count": 80,
+      "latency_ms": 200
+    },
+    {
+      "event_id": 1,
+      "ts": "2026-01-05T12:00:00.400Z",
+      "type": "tool_call",
+      "name": "weather_api",
+      "input": {
+        "city": "NYC"
+      },
+      "output": {
+        "temp": 22
+      },
+      "latency_ms": 100
+    },
+    {
+      "event_id": 2,
+      "ts": "2026-01-05T12:00:00.800Z",
+      "type": "tool_call",
+      "name": "weather_api",
+      "input": {
+        "city": "NYC"
+      },
+      "output": {
+        "temp": 24
+      },
+      "latency_ms": 100
+    },
+    {
+      "event_id": 3,
+      "ts": "2026-01-05T12:00:01.200Z",
+      "type": "tool_call",
+      "name": "weather_api",
+      "input": {
+        "city": "NYC"
+      },
+      "output": {
+        "temp": 25
+      },
+      "latency_ms": 100
+    },
+    {
+      "event_id": 4,
+      "ts": "2026-01-05T12:00:01.600Z",
+      "type": "message",
+      "name": "assistant",
+      "role": "assistant",
+      "output": "NYC is currently 25C."
+    }
+  ],
+  "metadata": {
+    "scenario": "stale_context"
+  }
+}

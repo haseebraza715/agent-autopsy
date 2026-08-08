@@ -1,0 +1,42 @@
+{
+  "run_id": "3a5b7c9d-0000-4000-8000-000000000004",
+  "start_time": "2026-01-05T12:00:00.000Z",
+  "end_time": "2026-01-05T12:00:01.000Z",
+  "duration_ms": 1000,
+  "status": "success",
+  "goal": "Delete stale record 42",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2026-01-05T12:00:00.000Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Delete stale record 42",
+      "output": "Deleting the stale record.",
+      "token_count": 80,
+      "latency_ms": 200
+    },
+    {
+      "event_id": 1,
+      "ts": "2026-01-05T12:00:00.400Z",
+      "type": "tool_call",
+      "name": "delete_api",
+      "input": {
+        "record_id": 42
+      },
+      "output": {},
+      "latency_ms": 60
+    },
+    {
+      "event_id": 2,
+      "ts": "2026-01-05T12:00:00.800Z",
+      "type": "message",
+      "name": "assistant",
+      "role": "assistant",
+      "output": "Record 42 deleted."
+    }
+  ],
+  "metadata": {
+    "scenario": "negative_control_successful_empty_delete_response"
+  }
+}

@@ -1,6 +1,11 @@
-# Full expected pattern sets per trace (from PatternDetector baseline).
-# clean: no patterns expected. skip_eval: excluded from metrics.
-version: 1
+# Labels: hand-specified per trace from the scenario each fixture intends,
+# NOT derived from detector output. Metrics are corpus-relative regression
+# results, not a measure of accuracy on unseen production traces.
+#   must_include: patterns that MUST be detected (positive control; recall / TP).
+#   must_not_include: patterns that MUST NOT be detected (negative control; FP).
+#   clean: no patterns expected; any detection is a false positive.
+#   skip_eval: excluded from metrics.
+version: 2
 entries:
   - file: 20251231_190027_dd128ae2-8e53-46b4-a4d9-316423d37e6d.json
     must_include: [auth_permission_failure, empty_response]
@@ -12,6 +17,7 @@ entries:
     must_include: [auth_permission_failure, empty_response, error_cascade]
   - file: fail_notfound_26b0052b.json
     skip_eval: true
+    note: failure class has no detector label yet; exclude it rather than score future generic findings as false positives
   - file: fail_permission_2fc2eb25.json
     must_include: [empty_response, error_cascade]
   - file: fail_ratelimit_dfc5faa7.json
@@ -44,3 +50,34 @@ entries:
     must_include: [empty_response, error_cascade, redundant_tool_call, timeout_pattern]
   - file: test_success_992945aa.json
     clean: true
+  # ---- negative controls (hand-specified; must produce NO detections) ----
+  - file: neg_slow_success_a1b2c3d4.json
+    must_not_include: [timeout_pattern]
+    note: successful 125s call with no error must not be a timeout
+  - file: neg_repeated_success_e5f6a7b8.json
+    must_not_include: [infinite_loop, retry_storm, redundant_tool_call]
+    note: three identical calls that all succeed are not a loop/storm
+  - file: neg_repeated_query_c9d0e1f2.json
+    must_not_include: [redundant_tool_call]
+    note: a legitimate repeated search is not redundancy
+  - file: neg_delete_empty_3a5b7c9d.json
+    must_not_include: [empty_response]
+    note: a successful DELETE returning an empty payload is not an empty response
+  - file: neg_timeout_language_4b6d8f0a.json
+    must_not_include: [timeout_pattern]
+    note: output text merely mentioning "request timeout" is not a timeout failure
+  # ---- positive controls for previously unrepresented detectors ----
+  - file: pos_retrystorm_7e9a1c3f.json
+    must_include: [retry_storm, empty_response, error_cascade, redundant_tool_call]
+    must_not_include: [infinite_loop]
+    note: four rapid failing calls with varied inputs are a storm, not a loop
+  - file: pos_goaldrift_1f3d5b7a.json
+    must_include: [goal_drift]
+    note: budget goal with movie-focused tail events drifts lexically
+  - file: pos_stale_context_2a4c6e8f.json
+    must_include: [stale_context]
+    must_not_include: [infinite_loop, redundant_tool_call]
+    note: identical calls returning different outputs are stale-context reuse
+  - file: pos_inter_agent_5c7e9a1b.json
+    must_include: [inter_agent_failure, error_cascade]
+    note: planner error followed by executor error within the handoff window

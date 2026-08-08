@@ -1,0 +1,31 @@
+{
+  "run_id": "4b6d8f0a-0000-4000-8000-000000000005",
+  "start_time": "2026-01-05T12:00:00.000Z",
+  "end_time": "2026-01-05T12:00:01.000Z",
+  "duration_ms": 1000,
+  "status": "success",
+  "goal": "Verify batch job health",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2026-01-05T12:00:00.000Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Confirm the batch job finished within budget",
+      "output": "Verified the request timeout handling: every job completed on time and no timeouts were observed.",
+      "token_count": 150,
+      "latency_ms": 200
+    },
+    {
+      "event_id": 1,
+      "ts": "2026-01-05T12:00:00.600Z",
+      "type": "message",
+      "name": "assistant",
+      "role": "assistant",
+      "output": "No issues found."
+    }
+  ],
+  "metadata": {
+    "scenario": "negative_control_benign_timeout_language"
+  }
+}

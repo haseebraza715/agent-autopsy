@@ -1,0 +1,45 @@
+{
+  "run_id": "5c7e9a1b-0000-4000-8000-000000000009",
+  "start_time": "2026-01-05T12:00:00.000Z",
+  "end_time": "2026-01-05T12:00:02.000Z",
+  "duration_ms": 2000,
+  "status": "failed",
+  "goal": "Route the refund request through planner then executor",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2026-01-05T12:00:00.000Z",
+      "type": "error",
+      "name": "planner",
+      "agent_id": "planner",
+      "error": "Handoff payload invalid",
+      "metadata": {
+        "error_type": "HandoffError"
+      }
+    },
+    {
+      "event_id": 1,
+      "ts": "2026-01-05T12:00:00.600Z",
+      "type": "message",
+      "name": "planner",
+      "agent_id": "planner",
+      "role": "assistant",
+      "output": "retrying handoff"
+    },
+    {
+      "event_id": 2,
+      "ts": "2026-01-05T12:00:01.200Z",
+      "type": "error",
+      "name": "executor",
+      "agent_id": "executor",
+      "error": "Invalid input from planner",
+      "metadata": {
+        "error_type": "SchemaError"
+      }
+    }
+  ],
+  "error_summary": "Planner handoff failed and executor rejected the input",
+  "metadata": {
+    "scenario": "inter_agent_failure"
+  }
+}

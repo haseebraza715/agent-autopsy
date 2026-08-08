@@ -1,0 +1,83 @@
+{
+  "run_id": "7e9a1c3f-0000-4000-8000-000000000006",
+  "start_time": "2026-01-05T12:00:00.000Z",
+  "end_time": "2026-01-05T12:00:02.000Z",
+  "duration_ms": 2000,
+  "status": "failed",
+  "goal": "Check payment service health",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2026-01-05T12:00:00.000Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Check payment service health",
+      "output": "Checking.",
+      "token_count": 60,
+      "latency_ms": 300
+    },
+    {
+      "event_id": 1,
+      "ts": "2026-01-05T12:00:00.400Z",
+      "type": "tool_call",
+      "name": "health_check",
+      "input": {
+        "service": "payment",
+        "attempt": 1
+      },
+      "error": "Connection refused",
+      "latency_ms": 150
+    },
+    {
+      "event_id": 2,
+      "ts": "2026-01-05T12:00:00.700Z",
+      "type": "tool_call",
+      "name": "health_check",
+      "input": {
+        "service": "payment",
+        "attempt": 2
+      },
+      "error": "Connection refused",
+      "latency_ms": 150
+    },
+    {
+      "event_id": 3,
+      "ts": "2026-01-05T12:00:01.000Z",
+      "type": "tool_call",
+      "name": "health_check",
+      "input": {
+        "service": "payment",
+        "attempt": 1
+      },
+      "error": "Connection refused",
+      "latency_ms": 150
+    },
+    {
+      "event_id": 4,
+      "ts": "2026-01-05T12:00:01.300Z",
+      "type": "tool_call",
+      "name": "health_check",
+      "input": {
+        "service": "payment",
+        "attempt": 2
+      },
+      "error": "Connection refused",
+      "latency_ms": 150
+    },
+    {
+      "event_id": 5,
+      "ts": "2026-01-05T12:00:01.600Z",
+      "type": "error",
+      "name": "retry_policy",
+      "error": "Max retries exceeded for health_check",
+      "metadata": {
+        "error_type": "MaxRetriesExceeded",
+        "attempts": 4
+      }
+    }
+  ],
+  "error_summary": "Retry storm: payment health checks failed 4 times",
+  "metadata": {
+    "scenario": "retry_storm"
+  }
+}

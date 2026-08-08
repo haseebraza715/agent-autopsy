@@ -1,0 +1,31 @@
+{
+  "run_id": "a1b2c3d4-0000-4000-8000-000000000001",
+  "start_time": "2026-01-05T12:00:00.000Z",
+  "end_time": "2026-01-05T12:02:10.000Z",
+  "duration_ms": 130000,
+  "status": "success",
+  "goal": "Summarize the quarterly report",
+  "events": [
+    {
+      "event_id": 0,
+      "ts": "2026-01-05T12:00:00.000Z",
+      "type": "llm_call",
+      "name": "gpt-4",
+      "input": "Summarize the quarterly report",
+      "output": "Revenue grew 15% quarter over quarter; operating margin held steady at 22%.",
+      "token_count": 300,
+      "latency_ms": 125000
+    },
+    {
+      "event_id": 1,
+      "ts": "2026-01-05T12:02:05.000Z",
+      "type": "message",
+      "name": "assistant",
+      "role": "assistant",
+      "output": "Done. Full summary attached to the ticket."
+    }
+  ],
+  "metadata": {
+    "scenario": "negative_control_slow_success_call"
+  }
+}
