@@ -26,6 +26,7 @@ from agent_autopsy.advanced.comparison import trace_diff_detail
 from agent_autopsy.errors import ParseError, PluginError, SchemaValidationError
 from agent_autopsy.ingestion import TraceNormalizer
 from agent_autopsy.output import ArtifactGenerator, FixSuggestionGenerator
+from agent_autopsy.schema import TraceStatus
 from agent_autopsy.utils.config import get_config
 
 logger = logging.getLogger(__name__)
@@ -39,10 +40,17 @@ console = Console()
 
 
 def _trace_has_findings(trace, preanalysis) -> bool:
-    """Whether the run should be treated as having actionable findings (non-zero exit)."""
-    if getattr(trace.stats, "num_errors", 0) > 0:
-        return True
+    """Whether the run should be treated as having actionable findings (non-zero exit).
+
+    A run with a recovered error but no detected signals exits cleanly; the
+    gate fires on detected signals, on a non-success status, or when a failed
+    run recorded an error summary.
+    """
     if preanalysis.signals:
+        return True
+    if trace.status != TraceStatus.SUCCESS:
+        return True
+    if getattr(trace.stats, "num_errors", 0) > 0 and trace.error_summary:
         return True
     return False
 
@@ -57,7 +65,8 @@ def analyze(
     ),
     output: Path | None = typer.Option(
         None,
-        "-o", "--output",
+        "-o",
+        "--output",
         help="Output file path for the report",
     ),
     artifacts: Path | None = typer.Option(
@@ -77,7 +86,8 @@ def analyze(
     ),
     verbose: bool = typer.Option(
         False,
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         help="Show detailed output including tool traces",
     ),
     no_llm: bool = typer.Option(
@@ -102,12 +112,14 @@ def analyze(
     ),
     quiet: bool = typer.Option(
         False,
-        "-q", "--quiet",
+        "-q",
+        "--quiet",
         help="Minimal output (no spinners/banners); faster for scripts",
     ),
     format: str = typer.Option(
         "text",
-        "-f", "--format",
+        "-f",
+        "--format",
         help="Output format: text | markdown | json",
     ),
 ):
@@ -132,11 +144,12 @@ def analyze(
     t0 = time.perf_counter()
     try:
         if not quiet:
-            console.print(Panel.fit(
-                "[bold blue]Agent Autopsy[/bold blue]\n"
-                "Analyzing agent execution trace...",
-                border_style="blue",
-            ))
+            console.print(
+                Panel.fit(
+                    "[bold blue]Agent Autopsy[/bold blue]\nAnalyzing agent execution trace...",
+                    border_style="blue",
+                )
+            )
 
         def _progress_ctx():
             if quiet:
@@ -433,7 +446,7 @@ def watch_traces(
 ):
     """Watch a directory and analyze new trace JSON files as they appear."""
     from watchdog.events import FileSystemEventHandler
-    from watchdog.observers import Observer
+    from watchdog.observers.polling import PollingObserver
 
     seen: set[str] = set()
 
@@ -477,7 +490,10 @@ def watch_traces(
                 return
             self._handle(Path(str(event.src_path)))
 
-    obs = Observer()
+    # The native macOS FSEvents observer can fail asynchronously in containers
+    # and restricted CI hosts, leaving the command alive but unable to observe
+    # anything. Polling is portable and, for a local trace directory, cheap.
+    obs = PollingObserver(timeout=0.25)
     obs.schedule(Handler(), str(directory), recursive=False)
     obs.start()
     console.print(f"[green]Watching[/green] {directory} for {pattern} (Ctrl+C to stop)")
@@ -603,15 +619,17 @@ def fixes(
         return
 
     for idx, suggestion in enumerate(suggestions, 1):
-        console.print(Panel.fit(
-            f"[bold]{suggestion['title']}[/bold]\n"
-            f"Category: {suggestion['category']}\n"
-            f"Events: {suggestion['event_ids']}\n\n"
-            f"Rationale: {suggestion['rationale']}\n\n"
-            f"Patch snippet:\n{suggestion['patch_snippet']}",
-            title=f"Fix Suggestion {idx}",
-            border_style="blue",
-        ))
+        console.print(
+            Panel.fit(
+                f"[bold]{suggestion['title']}[/bold]\n"
+                f"Category: {suggestion['category']}\n"
+                f"Events: {suggestion['event_ids']}\n\n"
+                f"Rationale: {suggestion['rationale']}\n\n"
+                f"Patch snippet:\n{suggestion['patch_snippet']}",
+                title=f"Fix Suggestion {idx}",
+                border_style="blue",
+            )
+        )
 
 
 @app.command("agent-flow")
@@ -685,8 +703,7 @@ def _print_preanalysis(preanalysis):
             }.get(signal.severity, "white")
 
             console.print(
-                f"  [{severity_color}]{signal.severity.upper()}[/{severity_color}] "
-                f"{signal.type}: {signal.evidence}"
+                f"  [{severity_color}]{signal.severity.upper()}[/{severity_color}] {signal.type}: {signal.evidence}"
             )
             console.print(f"    Events: {signal.event_ids}")
 
@@ -705,13 +722,15 @@ def _print_preanalysis_summary(preanalysis):
 def _print_result_summary(result, preanalysis):
     """Print analysis result summary."""
     status = "[green]SUCCESS[/green]" if result.success else "[red]FAILED[/red]"
-    console.print(Panel.fit(
-        f"Analysis Status: {status}\n"
-        f"Signals Found: {len(preanalysis.signals)}\n"
-        f"Hypotheses Generated: {len(preanalysis.hypotheses)}",
-        title="Analysis Complete",
-        border_style="green" if result.success else "red",
-    ))
+    console.print(
+        Panel.fit(
+            f"Analysis Status: {status}\n"
+            f"Signals Found: {len(preanalysis.signals)}\n"
+            f"Hypotheses Generated: {len(preanalysis.hypotheses)}",
+            title="Analysis Complete",
+            border_style="green" if result.success else "red",
+        )
+    )
 
 
 @app.command("autopsy-run")
@@ -724,7 +743,8 @@ def autopsy_run(
     ),
     output: Path | None = typer.Option(
         None,
-        "-o", "--output",
+        "-o",
+        "--output",
         help="Output file path for the report (default: ./reports/<trace_name>.md)",
     ),
     no_llm: bool = typer.Option(
@@ -739,7 +759,8 @@ def autopsy_run(
     ),
     verbose: bool = typer.Option(
         False,
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         help="Show detailed output",
     ),
 ):
@@ -760,11 +781,12 @@ def autopsy_run(
         config.skip_embeddings = True
 
     try:
-        console.print(Panel.fit(
-            "[bold blue]Agent Autopsy[/bold blue]\n"
-            "Running full analysis pipeline...",
-            border_style="blue",
-        ))
+        console.print(
+            Panel.fit(
+                "[bold blue]Agent Autopsy[/bold blue]\nRunning full analysis pipeline...",
+                border_style="blue",
+            )
+        )
 
         # Step 1: Parse and normalize trace
         with Progress(
@@ -867,7 +889,7 @@ def autopsy_run(
         _print_result_summary(result, preanalysis)
 
         # Exit codes: 1 = findings, 0 = clean (match `analyze`)
-        if trace.stats.num_errors > 0 or len(preanalysis.signals) > 0:
+        if _trace_has_findings(trace, preanalysis):
             console.print("\n[yellow]Issues detected in trace - review report for details[/yellow]")
             raise typer.Exit(1)
         console.print("\n[green]No issues detected in trace[/green]")
