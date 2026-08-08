@@ -2,7 +2,16 @@
 """
 Evaluate PatternDetector against tests/fixtures/real_traces/_manifest.yaml.
 
-Exit 1 if recall or precision falls below thresholds (defaults: 80% / 90%).
+The manifest is HAND-LABELED per scenario intent, not derived from detector
+output. Entries declare must_include (positive controls), must_not_include
+(negative controls), or clean (no patterns). The evaluator reports per-pattern
+TP/FP/FN, precision, and recall, and:
+
+- exits 1 if any must_not_include pattern is detected (forbidden detection), or
+- exits 1 if per-pattern precision or recall falls below thresholds.
+
+Reported numbers are corpus-relative regression results, not a measure of
+detector accuracy on unseen production traces.
 """
 
 from __future__ import annotations
@@ -59,14 +68,14 @@ def main() -> int:
     entries = manifest.get("entries", [])
 
     # The labeled evaluator intentionally uses the deterministic lexical drift
-    # fallback. Detector corpus metrics must never depend on a remote model.
+    # fallback. Corpus metrics must never depend on a remote model.
     get_config().skip_embeddings = True
 
-    # Per-pattern recall: expected hits vs satisfied
-    recall_hits: dict[str, list[bool]] = defaultdict(list)
-    # Per-pattern precision: (tp, fp) counts
-    precision_tp: dict[str, int] = defaultdict(int)
-    precision_fp: dict[str, int] = defaultdict(int)
+    # Per-pattern counts across all labeled entries.
+    tp: dict[str, int] = defaultdict(int)
+    fp: dict[str, int] = defaultdict(int)
+    fn: dict[str, int] = defaultdict(int)
+    forbidden: list[tuple[str, str]] = []  # (filename, pattern) violations
 
     for entry in entries:
         if entry.get("skip_eval"):
@@ -74,46 +83,94 @@ def main() -> int:
         fname = entry["file"]
         detected = detect_patterns_for_file(args.corpus, fname)
         must = set(entry.get("must_include") or [])
+        must_not = set(entry.get("must_not_include") or [])
         clean = bool(entry.get("clean"))
 
         if clean:
             for p in detected:
-                precision_fp[p] += 1
+                fp[p] += 1
+            continue
+
+        if not must and not must_not:
+            # Unlabeled failure entry (e.g. a failure class with no detector):
+            # any detection is a false positive.
+            for p in detected:
+                fp[p] += 1
             continue
 
         for p in must:
-            recall_hits[p].append(p in detected)
+            if p in detected:
+                tp[p] += 1
+            else:
+                fn[p] += 1
 
         for p in detected:
             if p in must:
-                precision_tp[p] += 1
-            else:
-                precision_fp[p] += 1
+                continue
+            fp[p] += 1
+            if p in must_not:
+                forbidden.append((fname, p))
 
     failures: list[str] = []
-    lines: list[str] = ["Pattern detector eval", "=====================", ""]
-    metrics: dict[str, dict[str, float | int]] = {"recall": {}, "precision": {}}
+    lines: list[str] = [
+        "Pattern detector eval (hand-labeled corpus)",
+        "===========================================",
+        "",
+    ]
+    metrics: dict[str, dict[str, object]] = {"recall": {}, "precision": {}}
 
-    for p in sorted(recall_hits.keys()):
-        hits = recall_hits[p]
-        rec = sum(hits) / len(hits) if hits else 1.0
-        lines.append(f"Recall {p}: {rec:.1%} ({sum(hits)}/{len(hits)})")
-        metrics["recall"][p] = {"rate": rec, "hits": sum(hits), "total": len(hits)}
-        if hits and rec < args.min_recall:
+    all_patterns = sorted(set(tp.keys()) | set(fp.keys()) | set(fn.keys()))
+    total_tp = total_fp = total_fn = 0
+
+    lines.append("Per-pattern recall (positive controls)")
+    for p in sorted({x for m in (tp, fp, fn) for x in m}):
+        t, f = tp[p], fn[p]
+        total_tp += t
+        total_fn += f
+        if t + f == 0:
+            lines.append(f"  Recall {p}: n/a (0 positive cases)")
+            metrics["recall"][p] = {"rate": None, "tp": t, "fn": f}
+            continue
+        rec = t / (t + f)
+        lines.append(f"  Recall {p}: {rec:.1%} (tp={t}, fn={f})")
+        metrics["recall"][p] = {"rate": rec, "tp": t, "fn": f}
+        if rec < args.min_recall:
             failures.append(f"Recall {p} {rec:.1%} < {args.min_recall:.0%}")
 
     lines.append("")
-
-    all_patterns = sorted(set(precision_tp.keys()) | set(precision_fp.keys()))
+    lines.append("Per-pattern precision (positive + negative controls)")
     for p in all_patterns:
-        tp = precision_tp[p]
-        fp = precision_fp[p]
-        denom = tp + fp
-        prec = tp / denom if denom else 1.0
-        lines.append(f"Precision {p}: {prec:.1%} (tp={tp}, fp={fp})")
-        metrics["precision"][p] = {"rate": prec, "tp": tp, "fp": fp}
-        if denom and prec < args.min_precision:
+        t, f = tp[p], fp[p]
+        total_fp += f
+        denom = t + f
+        if denom == 0:
+            lines.append(f"  Precision {p}: n/a (0 cases)")
+            metrics["precision"][p] = {"rate": None, "tp": t, "fp": f}
+            continue
+        prec = t / denom
+        lines.append(f"  Precision {p}: {prec:.1%} (tp={t}, fp={f})")
+        metrics["precision"][p] = {"rate": prec, "tp": t, "fp": f}
+        if prec < args.min_precision:
             failures.append(f"Precision {p} {prec:.1%} < {args.min_precision:.0%}")
+
+    lines.append("")
+    overall_rec = total_tp / (total_tp + total_fn) if total_tp + total_fn else None
+    overall_prec = total_tp / (total_tp + total_fp) if total_tp + total_fp else None
+    lines.append(
+        "Overall: "
+        + (
+            f"recall={overall_rec:.1%} precision={overall_prec:.1%} (tp={total_tp}, fp={total_fp}, fn={total_fn})"
+            if overall_prec is not None
+            else "no labeled cases"
+        )
+    )
+
+    if forbidden:
+        lines.append("")
+        lines.append("FORBIDDEN DETECTIONS (must_not_include violated):")
+        for fname, p in forbidden:
+            lines.append(f"  - {fname}: detected {p}")
+            failures.append(f"Forbidden detection {p} in {fname}")
 
     print("\n".join(lines))
 
@@ -124,8 +181,11 @@ def main() -> int:
             digest.update(path.read_bytes())
         try:
             commit = subprocess.run(
-                ["git", "rev-parse", "HEAD"], cwd=ROOT, check=True,
-                capture_output=True, text=True,
+                ["git", "rev-parse", "HEAD"],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
             ).stdout.strip()
         except (OSError, subprocess.SubprocessError):
             commit = "unknown"
@@ -134,8 +194,11 @@ def main() -> int:
             "corpus_sha256": digest.hexdigest(),
             "commit": commit,
             "embedding_backend": "lexical_overlap_deterministic",
+            "scope": "corpus-relative regression results; not accuracy on unseen production traces",
             "thresholds": {"min_recall": args.min_recall, "min_precision": args.min_precision},
             "metrics": metrics,
+            "totals": {"tp": total_tp, "fp": total_fp, "fn": total_fn},
+            "forbidden_detections": forbidden,
             "passed": not failures,
         }
         args.json_out.parent.mkdir(parents=True, exist_ok=True)
@@ -146,7 +209,7 @@ def main() -> int:
         for f in failures:
             print(f"  - {f}", file=sys.stderr)
         return 1
-    print("\nOK — all per-pattern metrics meet thresholds.")
+    print("\nOK — no forbidden detections; all per-pattern metrics meet thresholds.")
     return 0
 
 
