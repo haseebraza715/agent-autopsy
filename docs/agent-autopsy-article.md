@@ -58,9 +58,9 @@ The UI is backed by the real parser and pre-analysis functions. Its visible “E
 
 I ran the suite after the current package reorganization: 122 tests passed with one dependency deprecation warning. Ruff passed. Coverage includes all four ingestion fixtures, normalization, positive and clean detector cases, malformed input, reports, citation validation, trace capture and redaction, plugins, MCP services, comparison, monitoring, and the focused demo.
 
-I also ran deterministic batch analysis over all 21 JSON traces in the labeled corpus. All 21 analyses completed and produced 38 signals in total. The three public example traces also completed, producing nine signals. The corpus evaluator met its configured precision and recall thresholds for the nine patterns represented in its manifest.
+I also ran deterministic batch analysis over all 21 JSON traces in the labeled corpus. All 21 analyses completed and produced 38 signals in total. The three public example traces also completed, producing nine signals. The corpus evaluator met its configured precision and recall thresholds across the represented patterns. The corpus is hand-labeled per scenario with `must_not_include` negative controls (healthy slow calls, repeated successes, legitimate repeated queries, empty delete responses, benign timeout language), plus positive controls for retry storms, goal drift, stale context, and inter-agent failures.
 
-Those numbers are regression results, not a scientific evaluation. The manifest records the detector baseline, includes four clean traces, excludes one trace from evaluation, and is not an independently labeled external dataset. I did not test live provider calls in this pass.
+Those numbers are regression results, not a scientific evaluation. The manifest is hand-specified per scenario, includes five `must_not_include` negative controls, four clean traces, and one excluded unlabeled failure entry (`skip_eval: true`), and is not an independently labeled external dataset. I did not test live provider calls in this pass.
 
 ## what it can and cannot do today
 

@@ -8,6 +8,14 @@ The format follows Keep a Changelog and semantic versioning intent.
 
 ### Added
 
+- Hand-labeled negative-control trace fixtures (`neg_*`) and positive-control fixtures for previously unrepresented detectors (`pos_*`: retry storm, goal drift, stale context, inter-agent failure)
+- `must_not_include` support in the detector manifest and evaluator; per-pattern TP/FP/FN reporting with forbidden-detection enforcement
+
+### Changed
+
+- Deterministic detectors now require failure evidence: timeouts flag slow calls only on errored or failed runs and also recognize timeout language in failed assistant/tool evidence; loops and redundant-tool-call patterns require a failed run or errored events; empty-response skips successful tool outputs, including recovered calls with no remaining error summary
+- CLI exit gate treats a recovered error with zero signals as a clean run
+- Detector corpus metrics reframed as corpus-relative regression results (not external accuracy)
 - Real-trace corpus under `tests/fixtures/real_traces/` with `scripts/eval_detectors.py` (CI gate)
 - `autopsy watch`, `autopsy replay`, `autopsy diff` (alias of `compare`), richer trace diff output
 - Deterministic report sections (what / where / evidence / likely cause) and `text` report format

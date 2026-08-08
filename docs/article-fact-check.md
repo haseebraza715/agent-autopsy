@@ -25,8 +25,8 @@ This file maps the article's important technical claims to the current repositor
 | Ruff passed | `python3 -m ruff check src scripts tests` → `All checks passed!` |
 | All 21 corpus JSON traces completed deterministic batch analysis with 38 total signals | `OPENROUTER_API_KEY= OPENAI_API_KEY= ANTHROPIC_API_KEY= PROVIDER=openrouter AUTOPSY_NO_EMBEDDINGS=1 .venv/bin/python scripts/analyze_traces.py --traces-dir tests/fixtures/real_traces --reports-dir /tmp/agent-autopsy-article-reports-migrated --quiet`; summary reported 21 analyzed, 21 successful analyses, 38 signals |
 | All three public examples completed deterministic batch analysis with nine total signals | Same batch command with `--traces-dir examples/traces --reports-dir /tmp/agent-autopsy-example-reports-migrated`; summary reported 3 analyzed, 3 successful analyses, 9 signals |
-| Detector evaluator met thresholds for the nine represented patterns | `.venv/bin/python scripts/eval_detectors.py --json-out /tmp/agent-autopsy-detector-eval-migrated.json`; all reported precision/recall values were 100% on the manifest baseline; evaluator implementation in `scripts/eval_detectors.py` |
-| Corpus results are regression checks, not an external benchmark | Manifest says “PatternDetector baseline” at `tests/fixtures/real_traces/_manifest.yaml:1`; four entries are `clean`, one is `skip_eval`; no external benchmark dataset is present |
+| Detector evaluator met thresholds across the represented patterns | `.venv/bin/python scripts/eval_detectors.py --json-out docs/evidence/detector-eval.json`; per-pattern TP/FP/FN with 100% precision/recall on the hand-labeled corpus; evaluator implementation in `scripts/eval_detectors.py` |
+| Corpus results are regression checks, not an external benchmark | Manifest is hand-specified per scenario (`tests/fixtures/real_traces/_manifest.yaml`), includes five `must_not_include` negative controls, four `clean` traces, and one excluded unlabeled failure entry (`fail_notfound`, `skip_eval: true`); no external benchmark dataset is present |
 | Screenshot is from the working focused demo after clicking Analyze Run | `pages/demo.py`, `src/agent_autopsy/ui/demo_page.py`; browser verification showed the selected retry trace, 10 loaded events, critical finding, rendered events 1-10, root-cause text, and three fixes |
 
 ## verification notes and limits
@@ -34,7 +34,7 @@ This file maps the article's important technical claims to the current repositor
 - The virtual environment used Python 3.12.13 and `pip check` reported no broken requirements.
 - The test warning is a LangChain pending deprecation warning originating from the installed `langgraph` dependency.
 - The CLI retry analysis exits with code 1 by design because actionable findings were detected. Parse or tool errors use exit code 2.
-- The detector evaluator's perfect fixture result must not be described as detector accuracy on unseen data.
+- The detector evaluator's perfect fixture result must not be described as detector accuracy on unseen data; it is a corpus-relative regression check over a hand-labeled, repo-local corpus.
 - No remote OpenRouter, OpenAI, Anthropic, or Ollama model call was exercised in this verification pass.
 - No production usage, user count, prevention rate, or independent detector-accuracy claim was found or made.
 - The exact X demo URL was not present, so the article retains `Demo: [insert X demo link]`.

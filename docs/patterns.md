@@ -21,6 +21,10 @@ All detectors live in `src/preanalysis/patterns.py` (`PatternDetector.detect_all
 
 Plugin detectors registered on the plugin manager are invoked after the built-in list; failures are logged and skipped.
 
+## Evaluation
+
+`scripts/eval_detectors.py` reports per-pattern TP/FP/FN against the hand-labeled corpus in `tests/fixtures/real_traces/_manifest.yaml`. Labels are hand-specified per scenario (not derived from detector output): `must_include` marks positive controls, `must_not_include` marks negative controls that must produce no detection, and `clean` traces must be silent. These are corpus-relative regression results, not a measure of accuracy on unseen production traces; a forbidden detection on a `must_not_include` trace fails CI.
+
 ## Per-pattern reference
 
 For each detector: **what it catches**, **false-positive risk**, **tuning**.

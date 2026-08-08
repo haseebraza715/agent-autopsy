@@ -59,9 +59,9 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 
 | Item | Status | Evidence |
 |------|--------|----------|
-| Real trace corpus + manifest | ✅ | [tests/fixtures/](../tests/fixtures), [examples/traces/](../examples/traces) |
-| Detector accuracy harness | ✅ | [scripts/eval_detectors.py](../scripts/eval_detectors.py) |
-| Precision/recall threshold in CI | ✅ | `tests.yml` runs the hermetic lexical evaluator on every supported Python version and fails on regression |
+| Real trace corpus + manifest | ✅ | [tests/fixtures/](../tests/fixtures), [examples/traces/](../examples/traces); labels are hand-specified per scenario, with `must_not_include` negative controls |
+| Detector regression harness | ✅ | [scripts/eval_detectors.py](../scripts/eval_detectors.py) reports per-pattern TP/FP/FN on the hand-labeled corpus; these are corpus-relative regression metrics, not external accuracy |
+| Precision/recall threshold + forbidden-detection gate in CI | ✅ | `tests.yml` runs the hermetic lexical evaluator on every supported Python version; fails on regression or on any `must_not_include` violation |
 
 ### Week 2: Deterministic fast path
 
@@ -119,7 +119,7 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 
 1. **Publish to PyPI.** Use the existing tag-driven workflow, then verify `pip install agent-autopsy` from the registry in a clean venv. (maintainer action)
 2. **Tighten MCP auth test coverage.** Add a test that SSE without a token is rejected and with the correct token is accepted. (2 hrs)
-3. **Detector evaluator:** CI enforcement is complete; preserve its hermetic lexical backend and evidence artifact.
+3. **Detector evaluator:** CI enforcement is complete. The corpus is hand-labeled with negative controls (`must_not_include`), and the evaluator reports corpus-relative TP/FP/FN. Keep the hermetic lexical backend and evidence artifact; do not present corpus numbers as accuracy on unseen data.
 4. **Collapse [ARCHITECTURE.md](../ARCHITECTURE.md) duplication.** Either expand the top-level file or make it a pointer to [docs/architecture.md](architecture.md). (30 min)
 5. **Ship the launch post.** Everything else is ready. This is now a marketing task, not an engineering one.
 
