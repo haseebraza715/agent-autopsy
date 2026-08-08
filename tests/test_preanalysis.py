@@ -15,6 +15,7 @@ from agent_autopsy.preanalysis import (
 from agent_autopsy.schema import (
     EnvironmentInfo,
     EventError,
+    EventRole,
     EventType,
     TaskContext,
     Trace,
@@ -56,11 +57,32 @@ class TestPatternDetector:
     def test_detect_loops(self):
         """Detect repeated identical tool calls as an infinite loop."""
         events = [
-            TraceEvent(event_id=0, type=EventType.TOOL_CALL, name="search", input={"q": "x"}, output={"v": 1}),
-            TraceEvent(event_id=1, type=EventType.TOOL_CALL, name="search", input={"q": "x"}, output={"v": 1}),
-            TraceEvent(event_id=2, type=EventType.TOOL_CALL, name="search", input={"q": "x"}, output={"v": 1}),
+            TraceEvent(
+                event_id=0,
+                type=EventType.TOOL_CALL,
+                name="search",
+                input={"q": "x"},
+                output=None,
+                error=EventError(message="failed"),
+            ),
+            TraceEvent(
+                event_id=1,
+                type=EventType.TOOL_CALL,
+                name="search",
+                input={"q": "x"},
+                output=None,
+                error=EventError(message="failed"),
+            ),
+            TraceEvent(
+                event_id=2,
+                type=EventType.TOOL_CALL,
+                name="search",
+                input={"q": "x"},
+                output=None,
+                error=EventError(message="failed"),
+            ),
         ]
-        detector = PatternDetector(_build_trace(events, tools_available=["search"]))
+        detector = PatternDetector(_build_trace(events, tools_available=["search"], status=TraceStatus.FAILED))
 
         loops = detector.detect_loops()
 
@@ -102,21 +124,27 @@ class TestPatternDetector:
         assert cascades[0].metadata["cascade_length"] == 2
 
     def test_detect_empty_responses(self):
-        """Detect empty outputs only for LLM/tool events."""
+        """Detect empty outputs for LLM calls and errored tool calls only."""
         events = [
             TraceEvent(event_id=0, type=EventType.LLM_CALL, name="gpt-4", output=""),
-            TraceEvent(event_id=1, type=EventType.TOOL_CALL, name="search", output=None),
+            TraceEvent(
+                event_id=1,
+                type=EventType.TOOL_CALL,
+                name="search",
+                output=None,
+                error=EventError(message="tool failed"),
+            ),
             TraceEvent(event_id=2, type=EventType.TOOL_CALL, name="search", output={}),
             TraceEvent(event_id=3, type=EventType.MESSAGE, output=None),  # ignored
             TraceEvent(event_id=4, type=EventType.LLM_CALL, name="gpt-4", output="non-empty"),
         ]
-        detector = PatternDetector(_build_trace(events, tools_available=["search"]))
+        detector = PatternDetector(_build_trace(events, tools_available=["search"], status=TraceStatus.FAILED))
 
         empty = detector.detect_empty_responses()
 
         assert len(empty) == 1
         assert empty[0].pattern_type == PatternType.EMPTY_RESPONSE
-        assert empty[0].event_ids == [0, 1, 2]
+        assert empty[0].event_ids == [0, 1]
 
     def test_no_patterns_in_clean_trace(self):
         """A clean trace should not trigger pattern detections."""
@@ -211,11 +239,18 @@ class TestPatternDetector:
 
     def test_detect_redundant_tool_calls(self):
         events = [
-            TraceEvent(event_id=0, type=EventType.TOOL_CALL, name="search", input={"q": "budget"}, output={"ok": 1}),
+            TraceEvent(
+                event_id=0,
+                type=EventType.TOOL_CALL,
+                name="search",
+                input={"q": "budget"},
+                output=None,
+                error=EventError(message="failed"),
+            ),
             TraceEvent(event_id=1, type=EventType.MESSAGE, output="thinking"),
             TraceEvent(event_id=2, type=EventType.TOOL_CALL, name="search", input={"q": "budget"}, output={"ok": 2}),
         ]
-        detector = PatternDetector(_build_trace(events, tools_available=["search"]))
+        detector = PatternDetector(_build_trace(events, tools_available=["search"], status=TraceStatus.FAILED))
         patterns = detector.detect_redundant_tool_calls()
         assert len(patterns) == 1
         assert patterns[0].pattern_type == PatternType.REDUNDANT_TOOL_CALL
@@ -224,7 +259,9 @@ class TestPatternDetector:
     def test_detect_goal_drift(self):
         events = [
             TraceEvent(event_id=0, type=EventType.LLM_CALL, input="build quarterly budget", output="planning budget"),
-            TraceEvent(event_id=1, type=EventType.TOOL_CALL, name="search", input="quarterly budget template", output="data"),
+            TraceEvent(
+                event_id=1, type=EventType.TOOL_CALL, name="search", input="quarterly budget template", output="data"
+            ),
             TraceEvent(event_id=2, type=EventType.DECISION, input="budget plan"),
             TraceEvent(event_id=3, type=EventType.LLM_CALL, input="favorite movies list", output="movie ranking"),
             TraceEvent(event_id=4, type=EventType.TOOL_CALL, name="search", input="movie awards", output="awards"),
@@ -242,9 +279,15 @@ class TestPatternDetector:
 
     def test_detect_stale_context(self):
         events = [
-            TraceEvent(event_id=0, type=EventType.TOOL_CALL, name="search", input={"q": "weather"}, output={"temp": 22}),
-            TraceEvent(event_id=1, type=EventType.TOOL_CALL, name="search", input={"q": "weather"}, output={"temp": 24}),
-            TraceEvent(event_id=2, type=EventType.TOOL_CALL, name="search", input={"q": "weather"}, output={"temp": 25}),
+            TraceEvent(
+                event_id=0, type=EventType.TOOL_CALL, name="search", input={"q": "weather"}, output={"temp": 22}
+            ),
+            TraceEvent(
+                event_id=1, type=EventType.TOOL_CALL, name="search", input={"q": "weather"}, output={"temp": 24}
+            ),
+            TraceEvent(
+                event_id=2, type=EventType.TOOL_CALL, name="search", input={"q": "weather"}, output={"temp": 25}
+            ),
         ]
         detector = PatternDetector(_build_trace(events, tools_available=["search"]))
         patterns = detector.detect_stale_context()
@@ -268,7 +311,9 @@ class TestPatternDetector:
         events = [
             TraceEvent(event_id=0, type=EventType.ERROR, agent_id="planner", error=EventError(message="bad handoff")),
             TraceEvent(event_id=1, type=EventType.MESSAGE, agent_id="planner", output="retry"),
-            TraceEvent(event_id=2, type=EventType.ERROR, agent_id="executor", error=EventError(message="invalid input")),
+            TraceEvent(
+                event_id=2, type=EventType.ERROR, agent_id="executor", error=EventError(message="invalid input")
+            ),
         ]
         detector = PatternDetector(_build_trace(events, status=TraceStatus.FAILED))
         patterns = detector.detect_inter_agent_failures()
@@ -328,9 +373,7 @@ class TestContractValidator:
 
         result = validator.validate_all()
 
-        unknown_tool_violations = [
-            v for v in result.violations if v.violation_type == "unknown_tool"
-        ]
+        unknown_tool_violations = [v for v in result.violations if v.violation_type == "unknown_tool"]
         assert unknown_tool_violations == []
 
     def test_detect_unknown_tools(self):
@@ -404,3 +447,101 @@ class TestRootCauseBuilder:
         assert "summary" in data
         assert len(data["signals"]) > 0
         assert len(data["top_suspects"]) > 0
+
+
+class TestPatternDetectorNegativeControls:
+    """Healthy traces must not trigger failure patterns (false-positive guards)."""
+
+    def test_slow_successful_call_is_not_a_timeout(self):
+        events = [
+            TraceEvent(event_id=0, type=EventType.LLM_CALL, name="gpt-4", output="ok", latency_ms=125000),
+        ]
+        detector = PatternDetector(_build_trace(events))
+        assert detector.detect_timeout_patterns() == []
+
+    def test_benign_timeout_language_is_not_a_timeout(self):
+        events = [
+            TraceEvent(event_id=0, type=EventType.LLM_CALL, name="gpt-4", output="request timeout handling verified"),
+        ]
+        detector = PatternDetector(_build_trace(events))
+        assert detector.detect_timeout_patterns() == []
+
+    def test_failed_assistant_timeout_language_is_detected(self):
+        trace = _build_trace(
+            [
+                TraceEvent(
+                    event_id=0,
+                    type=EventType.MESSAGE,
+                    role=EventRole.ASSISTANT,
+                    output="The downstream request timed out after 60 seconds.",
+                )
+            ],
+            status=TraceStatus.FAILED,
+        )
+        patterns = PatternDetector(trace).detect_timeout_patterns()
+        assert len(patterns) == 1
+        assert patterns[0].event_ids == [0]
+
+    def test_repeated_successful_calls_are_not_a_loop(self):
+        events = [
+            TraceEvent(event_id=i, type=EventType.TOOL_CALL, name="search", input={"q": "x"}, output={"v": 1})
+            for i in range(3)
+        ]
+        detector = PatternDetector(_build_trace(events, tools_available=["search"]))
+        assert detector.detect_loops() == []
+
+    def test_repeated_successful_calls_are_not_a_retry_storm(self):
+        events = [
+            TraceEvent(event_id=i, type=EventType.TOOL_CALL, name="search", input={"q": "x"}, output={"v": 1})
+            for i in range(3)
+        ]
+        detector = PatternDetector(_build_trace(events, tools_available=["search"]))
+        assert detector.detect_retry_storms() == []
+
+    def test_legitimate_repeated_query_is_not_redundant(self):
+        events = [
+            TraceEvent(event_id=0, type=EventType.TOOL_CALL, name="search", input={"q": "rate"}, output={"r": 1}),
+            TraceEvent(event_id=1, type=EventType.MESSAGE, output="thinking"),
+            TraceEvent(event_id=2, type=EventType.TOOL_CALL, name="search", input={"q": "rate"}, output={"r": 1}),
+        ]
+        detector = PatternDetector(_build_trace(events, tools_available=["search"]))
+        assert detector.detect_redundant_tool_calls() == []
+
+    def test_successful_empty_tool_output_is_not_an_empty_response(self):
+        events = [
+            TraceEvent(event_id=0, type=EventType.TOOL_CALL, name="delete_api", input={"id": 5}, output={}),
+        ]
+        detector = PatternDetector(_build_trace(events, tools_available=["delete_api"]))
+        assert detector.detect_empty_responses() == []
+
+    def test_recovered_error_with_empty_output_is_not_an_empty_response(self):
+        trace = _build_trace(
+            [
+                TraceEvent(
+                    event_id=0,
+                    type=EventType.TOOL_CALL,
+                    name="api",
+                    output=None,
+                    error=EventError(message="retried and recovered"),
+                )
+            ],
+            status=TraceStatus.SUCCESS,
+        )
+        assert PatternDetector(trace).detect_empty_responses() == []
+
+    def test_errored_empty_tool_output_still_detected(self):
+        events = [
+            TraceEvent(
+                event_id=0,
+                type=EventType.TOOL_CALL,
+                name="delete_api",
+                input={"id": 5},
+                output=None,
+                error=EventError(message="backend unavailable"),
+            ),
+        ]
+        detector = PatternDetector(_build_trace(events, tools_available=["delete_api"], status=TraceStatus.FAILED))
+        patterns = detector.detect_empty_responses()
+        assert len(patterns) == 1
+        assert patterns[0].pattern_type == PatternType.EMPTY_RESPONSE
+        assert patterns[0].event_ids == [0]
