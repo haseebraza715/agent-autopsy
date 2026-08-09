@@ -1,6 +1,6 @@
-# Launch post draft: Agent Autopsy
+# Launch post draft: TraceAutopsy
 
-**Title:** Agent Autopsy: a local-first CLI for debugging LangGraph and LangChain traces
+**Title:** TraceAutopsy: a local-first CLI for debugging LangGraph and LangChain traces
 
 **Audience:** Engineers shipping agents who hit weird failures at night and do not want another hosted dashboard.
 
@@ -8,7 +8,7 @@
 
 Debugging agents is painful. You get a JSON trace dump, a failing run ID, and a vague sense that “something looped” or “the tool blew up.” Hosted observability tools help teams that already bought in, but they want accounts, network round-trips, and often a credit card. Your trace is on disk anyway.
 
-**Agent Autopsy** is a small Python CLI that stays **local-first**: deterministic pattern detectors run first, optional LLM analysis runs second, and you never need a vendor login to see why a run failed.
+**TraceAutopsy** is a small Python CLI that stays **local-first**: deterministic pattern detectors run first, optional LLM analysis runs second, and you never need a vendor login to see why a run failed.
 
 ## The approach
 

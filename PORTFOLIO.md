@@ -1,4 +1,4 @@
-# Agent Autopsy — Portfolio Summary
+# TraceAutopsy — Portfolio Summary
 
 Deterministic, fully offline forensics for AI-agent traces: find loops, retry storms, and hallucinations without an LLM.
 
@@ -10,11 +10,11 @@ Deterministic, fully offline forensics for AI-agent traces: find loops, retry st
 
 ## 15-second explanation
 
-Agent traces are messy JSON dumps; when a run fails, you usually read logs by hand or upload them to a hosted dashboard. Agent Autopsy is a CLI that takes the trace file and, fully offline with no API keys, normalizes it into one event model, runs deterministic pattern detectors (loops, retry storms, error cascades, hallucinated tools), and prints a report with evidence and a health score. It exits `0` on clean runs and `1` when findings are detected, so CI can gate on it.
+Agent traces are messy JSON dumps; when a run fails, you usually read logs by hand or upload them to a hosted dashboard. TraceAutopsy is a CLI that takes the trace file and, fully offline with no API keys, normalizes it into one event model, runs deterministic pattern detectors (loops, retry storms, error cascades, hallucinated tools), and prints a report with evidence and a health score. It exits `0` on clean runs and `1` when findings are detected, so CI can gate on it.
 
 ## 45-second explanation
 
-The core problem: LLM-agent failures are non-deterministic and traces are format-heterogeneous, so debugging is ad-hoc and hard to automate. Agent Autopsy is engineered to make failure analysis deterministic and local. Ingestion auto-detects four trace formats and normalizes everything into a single event schema, so all downstream logic — detectors, reports, diffs — sees the same model. The detection layer is 13+ pure-function pattern detectors plus static tool-contract validation (allow-list checking for hallucinated tool calls), each emitting findings with cited event IDs and trace excerpts. The report layer adds a health score and fix suggestions. The CLI gate (exit 1 on findings) makes it usable as a CI step; `autopsy diff` isolates exactly which patterns a fix removed by comparing failing vs. fixed runs. The default path never touches the network — LLM root-cause narratives are opt-in and fall back to deterministic mode without a key. The whole thing is verified by 278 tests and a labeled detector corpus that runs in CI with ruff.
+The core problem: LLM-agent failures are non-deterministic and traces are format-heterogeneous, so debugging is ad-hoc and hard to automate. TraceAutopsy is engineered to make failure analysis deterministic and local. Ingestion auto-detects four trace formats and normalizes everything into a single event schema, so all downstream logic — detectors, reports, diffs — sees the same model. The detection layer is 13+ pure-function pattern detectors plus static tool-contract validation (allow-list checking for hallucinated tool calls), each emitting findings with cited event IDs and trace excerpts. The report layer adds a health score and fix suggestions. The CLI gate (exit 1 on findings) makes it usable as a CI step; `autopsy diff` isolates exactly which patterns a fix removed by comparing failing vs. fixed runs. The default path never touches the network — LLM root-cause narratives are opt-in and fall back to deterministic mode without a key. The whole thing is verified by 278 tests and a labeled detector corpus that runs in CI with ruff.
 
 ## Five questions a staff engineer might ask
 

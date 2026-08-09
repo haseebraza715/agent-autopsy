@@ -1,30 +1,30 @@
 ## title options
 
-- inside Agent Autopsy: from raw traces to failure diagnosis
-- building Agent Autopsy: debugging the decisions behind agent failures
-- Agent Autopsy: finding where an agent run actually broke
+- inside TraceAutopsy: from raw traces to failure diagnosis
+- building TraceAutopsy: debugging the decisions behind agent failures
+- TraceAutopsy: finding where an agent run actually broke
 - from execution logs to an agent failure timeline
 - what i learned building a deterministic debugger for AI agents
 
-selected: **inside Agent Autopsy: from raw traces to failure diagnosis**
+selected: **inside TraceAutopsy: from raw traces to failure diagnosis**
 
 ---
 
-# inside Agent Autopsy: from raw traces to failure diagnosis
+# inside TraceAutopsy: from raw traces to failure diagnosis
 
-![Agent Autopsy: find the decision that broke the run](article-assets/agent-autopsy-article-hero.png)
+![TraceAutopsy: find the decision that broke the run](article-assets/agent-autopsy-article-hero.png)
 
 A service outage should have produced one clear failure. Instead, this agent turned it into a broken trajectory.
 
 The job was small: check the payment service. Event 0 makes the plan. Event 1 calls `health_check` and gets `Service unavailable: Connection refused`. The agent repeats the same call seven more times with the same arguments and the same result. Event 9 finally stops the run. Nothing changed except the retry count.
 
-The trace recorded all of that, but a list of events is not an explanation. Agent Autopsy turns the list into a story: the first error is the trigger, the unchanged retries are the damaging behavior, and the final retry error is the symptom. It reconstructs a stable timeline, detects structural failure patterns, and produces evidence-linked causes and fixes. The default path is deterministic and local; an LLM is optional.
+The trace recorded all of that, but a list of events is not an explanation. TraceAutopsy turns the list into a story: the first error is the trigger, the unchanged retries are the damaging behavior, and the final retry error is the symptom. It reconstructs a stable timeline, detects structural failure patterns, and produces evidence-linked causes and fixes. The default path is deterministic and local; an LLM is optional.
 
 ## the basic idea
 
-Agent Autopsy treats diagnosis as a chain, not a dashboard. It first turns framework-specific logs into a stable timeline. It then finds structural failures, links them to the events that prove them, and turns that evidence into a likely cause and a concrete action.
+TraceAutopsy treats diagnosis as a chain, not a dashboard. It first turns framework-specific logs into a stable timeline. It then finds structural failures, links them to the events that prove them, and turns that evidence into a likely cause and a concrete action.
 
-![Agent Autopsy turns framework logs into an evidence-linked diagnosis and fix](article-assets/agent-autopsy-architecture-mermaid.png)
+![TraceAutopsy turns framework logs into an evidence-linked diagnosis and fix](article-assets/agent-autopsy-architecture-mermaid.png)
 
 ## how the system is designed
 
@@ -52,7 +52,7 @@ The deterministic CLI ranks “Missing exit condition in graph/router logic” f
 
 The UI is backed by the real parser and pre-analysis functions. Its visible “Event 2” is a one-based display label for internal `event_id` 1, the first failing tool call.
 
-![Agent Autopsy retry-storm demo](article-assets/agent-autopsy-demo.png)
+![TraceAutopsy retry-storm demo](article-assets/agent-autopsy-demo.png)
 
 ## what i tested
 
@@ -74,6 +74,6 @@ The next technical question is how much of this evidence can move into the execu
 
 The takeaway is simple. Collecting every event is not the same as explaining a failed run. A useful debugger has to connect the trigger, the agent’s response, the repeated behavior, and the terminal symptom without hiding the underlying trace.
 
-GitHub: https://github.com/haseebraza715/agent-autopsy
+GitHub: https://github.com/haseebraza715/trace-autopsy
 
 Demo: [insert X demo link]

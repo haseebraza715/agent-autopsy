@@ -1,6 +1,6 @@
 # Curated Examples
 
-This folder contains starter traces and walkthroughs for evaluating Agent Autopsy quickly.
+This folder contains starter traces and walkthroughs for evaluating TraceAutopsy quickly.
 
 ## Traces
 

@@ -1,6 +1,6 @@
 # Architecture Overview
 
-Agent Autopsy analyzes agent execution traces to identify failures, loops, and issues.
+TraceAutopsy analyzes agent execution traces to identify failures, loops, and issues.
 
 ## High-Level Architecture
 

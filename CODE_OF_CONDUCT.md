@@ -2,7 +2,7 @@
 
 ## Our Pledge
 
-We want Agent Autopsy to be a welcoming, inclusive project for everyone.
+We want TraceAutopsy to be a welcoming, inclusive project for everyone.
 Contributors and maintainers commit to a harassment-free experience regardless of age, body size, disability, ethnicity, sex characteristics, gender identity and expression, experience level, education, socioeconomic status, nationality, personal appearance, race, religion, or sexual identity and orientation.
 
 ## Our Standards

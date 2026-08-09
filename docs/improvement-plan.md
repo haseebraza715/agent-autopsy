@@ -1,6 +1,6 @@
-# Agent Autopsy - Improvement Plan
+# TraceAutopsy - Improvement Plan
 
-> A detailed roadmap to take Agent Autopsy from a working prototype to a best-in-class open source agent debugging tool.
+> A detailed roadmap to take TraceAutopsy from a working prototype to a best-in-class open source agent debugging tool.
 
 ---
 
@@ -158,19 +158,19 @@ The hardcoded dictionary of model context limits in patterns.py is already stale
 
 ## Phase 3 - MCP Server Integration
 
-**Goal:** Turn Agent Autopsy into an MCP (Model Context Protocol) server so any MCP-compatible client (Claude Code, Claude Desktop, Cursor, VS Code extensions, etc.) can use it as a live debugging tool.
+**Goal:** Turn TraceAutopsy into an MCP (Model Context Protocol) server so any MCP-compatible client (Claude Code, Claude Desktop, Cursor, VS Code extensions, etc.) can use it as a live debugging tool.
 
 ### 3.1 Why MCP?
 
 MCP is the right integration path because:
-- It allows any AI assistant to use Agent Autopsy as a tool during development
+- It allows any AI assistant to use TraceAutopsy as a tool during development
 - Developers could say "analyze this trace" or "debug my agent" directly in their IDE or chat
-- It positions Agent Autopsy as infrastructure, not just a standalone app
+- It positions TraceAutopsy as infrastructure, not just a standalone app
 - It creates a much larger surface area for adoption because every MCP client becomes a potential user
 
 ### 3.2 MCP Server Design
 
-The MCP server should expose Agent Autopsy's capabilities as tools that an LLM can call.
+The MCP server should expose TraceAutopsy's capabilities as tools that an LLM can call.
 
 **Core Tools to Expose:**
 
@@ -267,11 +267,11 @@ This is dramatically more powerful than a standalone web app because the debuggi
 
 ## Phase 4 - Open Source Growth
 
-**Goal:** Build the community and ecosystem around Agent Autopsy.
+**Goal:** Build the community and ecosystem around TraceAutopsy.
 
 ### 4.1 Project Identity and Positioning
 
-Agent Autopsy should position itself clearly in the ecosystem. The tagline should make it instantly clear what it does and why someone should care.
+TraceAutopsy should position itself clearly in the ecosystem. The tagline should make it instantly clear what it does and why someone should care.
 
 **Positioning options:**
 - "The debugger for AI agents" - simple, clear, broad
@@ -299,7 +299,7 @@ The current docs are internal-facing (they describe the system). They need to be
 - A "How to capture traces from your agent" guide for each supported framework
 - A "How to write a custom parser" guide for users who want to add their own format
 - A "How to write a custom pattern detector" guide for users who want to detect new failure modes
-- API documentation for the Python library (for users who want to embed Agent Autopsy in their own tools)
+- API documentation for the Python library (for users who want to embed TraceAutopsy in their own tools)
 - A gallery of example traces with explanations: "Here's what a loop looks like. Here's what a hallucinated tool call looks like." This is hugely educational and helps users understand what the tool detects
 
 ### 4.4 Packaging and Distribution
@@ -327,7 +327,7 @@ Each example should come with a written explanation of what happened and what th
 ### 4.6 Branding and Visibility
 
 - A simple landing page or GitHub Pages site with the example workflow
-- A blog post or article explaining the problem Agent Autopsy solves (agent debugging is painful, here's how we fix it)
+- A blog post or article explaining the problem TraceAutopsy solves (agent debugging is painful, here's how we fix it)
 - Submit to awesome-langchain, awesome-llm-tools, and similar curated lists
 - Consider submitting to MCP registries once the MCP server is built
 - A short demo video (2-3 minutes) showing the full workflow: capture trace, upload to GUI, get diagnosis, apply fix
@@ -385,7 +385,7 @@ These generated fixes should be presented as suggestions that the user can revie
 
 ### 5.5 Multi-Agent Trace Support
 
-Modern agent systems often involve multiple agents collaborating. Agent Autopsy should handle this.
+Modern agent systems often involve multiple agents collaborating. TraceAutopsy should handle this.
 
 **What to build:**
 - Parse traces that contain multiple agent identifiers
@@ -405,7 +405,7 @@ Help users understand not just if their agent failed, but how well it's performi
 
 ### 5.7 Plugin System
 
-Let the community extend Agent Autopsy without modifying the core.
+Let the community extend TraceAutopsy without modifying the core.
 
 **Plugin types:**
 - Custom parsers (new trace formats)
@@ -420,7 +420,7 @@ Each plugin type should have a simple interface (abstract base class) and a regi
 
 ## Vision Statement
 
-Agent Autopsy should become the standard tool that every AI agent developer reaches for when something goes wrong. Not just a trace viewer, but an intelligent debugging companion that understands agent behavior, detects patterns human eyes would miss, and provides actionable fixes.
+TraceAutopsy should become the standard tool that every AI agent developer reaches for when something goes wrong. Not just a trace viewer, but an intelligent debugging companion that understands agent behavior, detects patterns human eyes would miss, and provides actionable fixes.
 
 The path there is:
 1. **Be honest** about what works and what doesn't (Phase 1)
@@ -429,7 +429,7 @@ The path there is:
 4. **Be community-driven** through open source best practices (Phase 4)
 5. **Be intelligent** through advanced analysis features (Phase 5)
 
-The MCP server is the most important strategic move. It transforms Agent Autopsy from "a tool you have to go to" into "a tool that's always available where you work." When a developer can say "debug my agent" inside their IDE and get a full autopsy report, that's when the tool becomes indispensable.
+The MCP server is the most important strategic move. It transforms TraceAutopsy from "a tool you have to go to" into "a tool that's always available where you work." When a developer can say "debug my agent" inside their IDE and get a full autopsy report, that's when the tool becomes indispensable.
 
 ---
 

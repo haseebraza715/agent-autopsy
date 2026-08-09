@@ -1,6 +1,6 @@
 # Demo Playbook
 
-Use this script to demo Agent Autopsy in under 5 minutes.
+Use this script to demo TraceAutopsy in under 5 minutes.
 
 For the README hero asset (video + GIF) and how to regenerate it, see the [README](../README.md) demo section.
 

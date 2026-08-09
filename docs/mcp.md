@@ -1,4 +1,4 @@
-# Agent Autopsy MCP server
+# TraceAutopsy MCP server
 
 ## Running
 

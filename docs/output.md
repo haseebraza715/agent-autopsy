@@ -1,6 +1,6 @@
 # Output Generation
 
-Agent Autopsy generates structured reports and actionable code artifacts to help fix identified issues.
+TraceAutopsy generates structured reports and actionable code artifacts to help fix identified issues.
 
 ## Output Types
 

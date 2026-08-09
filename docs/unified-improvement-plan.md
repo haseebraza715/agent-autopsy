@@ -1,4 +1,4 @@
-# Agent Autopsy: Unified Improvement Plan
+# TraceAutopsy: Unified Improvement Plan
 
 A consolidated, prioritized plan combining critical review findings with concrete, actionable fixes. Ordered by impact and sequenced so early work unblocks later work.
 

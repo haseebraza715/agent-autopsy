@@ -1,6 +1,6 @@
 # Plugin System
 
-Agent Autopsy supports extension plugins for advanced customization without modifying core code.
+TraceAutopsy supports extension plugins for advanced customization without modifying core code.
 
 ## Plugin Types
 

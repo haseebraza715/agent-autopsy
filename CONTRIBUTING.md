@@ -1,4 +1,4 @@
-# Contributing to Agent Autopsy
+# Contributing to TraceAutopsy
 
 Thanks for your interest in contributing.
 

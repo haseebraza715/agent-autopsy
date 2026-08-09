@@ -1,6 +1,6 @@
 # Trace Ingestion
 
-Agent Autopsy supports multiple trace formats with automatic detection and normalization.
+TraceAutopsy supports multiple trace formats with automatic detection and normalization.
 
 ## Format Detection
 

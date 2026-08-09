@@ -1,4 +1,4 @@
-# Agent Autopsy
+# TraceAutopsy
 
 > Deterministic, fully offline forensics for AI-agent traces: detects loops, retry storms, and hallucinations without an LLM.
 
@@ -8,7 +8,7 @@ Watch the full demo: [demo.mp4](assets/demo/demo.mp4)
 
 ## Why this exists
 
-Agent traces are huge, unstructured JSON blobs, and debugging a failed run means reading logs by hand or uploading the trace to a hosted dashboard. Agent Autopsy is a CLI that turns any trace file into a deterministic failure report with trace-backed evidence, and exits with a code CI can gate on.
+Agent traces are huge, unstructured JSON blobs, and debugging a failed run means reading logs by hand or uploading the trace to a hosted dashboard. TraceAutopsy is a CLI that turns any trace file into a deterministic failure report with trace-backed evidence, and exits with a code CI can gate on.
 
 ## What it does
 
@@ -57,7 +57,7 @@ The demo walks a broken trace through the pipeline: `validate` proves it is well
 
 ## Validation
 
-278 tests pass (`pytest`), and the same suite plus ruff and a labeled detector-corpus eval run in CI: ![tests](https://github.com/haseebraza715/agent-autopsy/actions/workflows/tests.yml/badge.svg)
+278 tests pass (`pytest`), and the same suite plus ruff and a labeled detector-corpus eval run in CI: ![tests](https://github.com/haseebraza715/trace-autopsy/actions/workflows/tests.yml/badge.svg)
 
 ## Limitations
 

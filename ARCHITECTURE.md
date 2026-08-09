@@ -1,6 +1,6 @@
 # Architecture
 
-Agent Autopsy analyzes agent traces through a modular pipeline: ingest traces, detect deterministic failures, optionally run LLM synthesis, then output reports and fixes.
+TraceAutopsy analyzes agent traces through a modular pipeline: ingest traces, detect deterministic failures, optionally run LLM synthesis, then output reports and fixes.
 
 ## System Diagram
 

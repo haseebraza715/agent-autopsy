@@ -1,6 +1,6 @@
-# GUI Plan for Agent Autopsy
+# GUI Plan for TraceAutopsy
 
-This document describes a practical plan to build a GUI for Agent Autopsy without implementing anything yet. It focuses on architecture, workflows, data flow, and milestones so the UI can be built later with minimal surprises.
+This document describes a practical plan to build a GUI for TraceAutopsy without implementing anything yet. It focuses on architecture, workflows, data flow, and milestones so the UI can be built later with minimal surprises.
 
 ---
 

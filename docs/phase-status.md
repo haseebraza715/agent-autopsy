@@ -70,7 +70,7 @@ Goal: Improve analysis quality, parser depth, and deterministic report quality.
 ## Phase 3 - MCP Server Integration
 
 Status: Completed
-Goal: Expose Agent Autopsy as MCP tools/resources/prompts.
+Goal: Expose TraceAutopsy as MCP tools/resources/prompts.
 
 ### TODO
 

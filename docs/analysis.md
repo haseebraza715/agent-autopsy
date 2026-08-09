@@ -1,6 +1,6 @@
 # Analysis Pipeline
 
-Agent Autopsy uses deterministic pattern detection combined with LLM reasoning.
+TraceAutopsy uses deterministic pattern detection combined with LLM reasoning.
 
 ## Analysis Flow
 

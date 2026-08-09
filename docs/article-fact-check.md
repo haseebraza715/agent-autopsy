@@ -1,4 +1,4 @@
-# Agent Autopsy article fact-check
+# TraceAutopsy article fact-check
 
 This file maps the article's important technical claims to the current repository state and the verification run performed on 2026-07-16.
 

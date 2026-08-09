@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-Get started with Agent Autopsy in minutes.
+Get started with TraceAutopsy in minutes.
 
 ## Installation
 

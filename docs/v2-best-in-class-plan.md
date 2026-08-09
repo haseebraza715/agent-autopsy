@@ -1,4 +1,4 @@
-# Agent Autopsy v2: Best-in-Class Local CLI Plan
+# TraceAutopsy v2: Best-in-Class Local CLI Plan
 
 **Prerequisite:** [unified-improvement-plan.md](unified-improvement-plan.md) is complete. That plan hardens the codebase; this plan makes it the tool people actually reach for.
 
@@ -174,7 +174,7 @@ Order:
 **Goal:** Get the tool in front of the audience who needs it.
 
 ### 6.1 Write the launch post
-- Title: "Agent Autopsy: a local-first CLI for debugging LangGraph/LangChain traces"
+- Title: "TraceAutopsy: a local-first CLI for debugging LangGraph/LangChain traces"
 - Structure: the problem (debugging agents is painful), the approach (deterministic-first), one real bug the tool caught with screenshots, install command.
 - 600-900 words. Include the GIF.
 

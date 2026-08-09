@@ -1,6 +1,6 @@
 # Diagrams
 
-This directory contains architecture and workflow diagrams for Agent Autopsy.
+This directory contains architecture and workflow diagrams for TraceAutopsy.
 
 ## Diagram Files
 

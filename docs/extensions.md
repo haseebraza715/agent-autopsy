@@ -1,6 +1,6 @@
 # Extension Guide
 
-This guide covers how to extend Agent Autopsy safely.
+This guide covers how to extend TraceAutopsy safely.
 
 ## Add a New Trace Parser
 
@@ -61,7 +61,7 @@ Checklist:
 
 ## Build Plugins (Phase 5)
 
-Use the plugin interfaces in [`src/plugins/base.py`](../src/plugins/base.py) to extend Agent Autopsy without editing core modules.
+Use the plugin interfaces in [`src/plugins/base.py`](../src/plugins/base.py) to extend TraceAutopsy without editing core modules.
 
 Supported plugin categories:
 
