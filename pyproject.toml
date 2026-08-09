@@ -88,3 +88,14 @@ select = ["E4", "E7", "E9", "F", "I", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/**/*.py" = ["E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+filterwarnings = [
+  "ignore::DeprecationWarning:pydantic.v1.*",
+  # langchain's warn_deprecated(pending=True) creates a
+  # LangChainPendingDeprecationWarning instance; CPython filters on the
+  # instance's class even though a base category is passed to warnings.warn.
+  "ignore::langchain_core._api.deprecation.LangChainPendingDeprecationWarning",
+]
