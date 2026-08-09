@@ -2,7 +2,7 @@
 
 Use this script to demo Agent Autopsy in under 5 minutes.
 
-For a **GIF / asciinema** workflow (README hero asset), see [demo-gif.md](demo-gif.md).
+For the README hero asset (video + GIF) and how to regenerate it, see the [README](../README.md) demo section.
 
 ## 1) Quick Summary
 
