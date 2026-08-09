@@ -1,63 +1,76 @@
 # Agent Autopsy
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](pyproject.toml)
+> Deterministic, fully offline forensics for AI-agent traces: find loops, retry storms, and hallucinations without an LLM.
 
-**Debug AI agent traces locally: deterministic failure detection, fully offline, no API keys. Optional LLM root-cause analysis.**
+<p align="center"><img src="assets/demo/demo.gif" alt="Demo preview" width="720"></p>
+<details><summary><b>▶ Watch the full demo (~30s)</b></summary>
+<video src="assets/demo/demo.mp4" controls width="720"></video></details>
 
-<video controls autoplay muted loop playsinline width="100%" src="https://github.com/haseebraza715/agent-autopsy/raw/main/docs/demo.mp4"></video>
+## Why this exists
 
-Prefer a GIF? [docs/demo.gif](docs/demo.gif)
-
----
-
-## Try it in 60 seconds
-
-```bash
-git clone https://github.com/haseebraza715/agent-autopsy.git
-cd agent-autopsy
-./scripts/demo.sh
-```
-
-One command, fully offline: no API keys, no network, no setup beyond a bootstrapped `.venv` on first run. The demo walks a real failing trace through the whole pipeline: analyze, fix, diff.
-
-**What you'll see:**
-
-- Root cause pinned deterministically: `CRITICAL infinite_loop: Same tool+input signature: web_search`
-- A ready-to-apply `LoopGuard` patch, plus a failing-vs-fixed diff isolating every failure pattern to the bad run
-- The verdict flips: health `23/100 → 100/100`, CLI exit `1 → 0`. A gate your CI can enforce
-
----
+Agent traces are huge, unstructured JSON blobs. When a multi-step run fails, teams debug by reading logs by hand or by uploading the trace to a hosted dashboard — both slow, and the second one moves private traces off your machine. Agent Autopsy is a CLI that turns any trace file into a deterministic failure report in seconds: it finds the loops, retry storms, and hallucinated tool calls, shows the exact events as evidence, and exits with a code CI can gate on.
 
 ## What it does
 
-- **Ingests** LangGraph, LangChain, OpenTelemetry, and generic JSON traces into one schema
-- **Detects** failure patterns deterministically: infinite loops, retry storms, empty responses, error cascades, hallucinated tools, timeouts, and more
-- **Reports** findings with evidence and a health score, as rich text or JSON
-- **Fixes**: generates patch artifacts (loop guards, error boundaries) from findings
+- **Ingests** LangGraph, LangChain, OpenTelemetry, and generic JSON traces into one event schema
+- **Detects** failure patterns deterministically, offline: infinite loops, retry storms, empty responses, error cascades, hallucinated tools, timeouts, goal drift, stale context, and more
+- **Reports** every finding with trace-backed evidence and a health score, as text, markdown, or JSON
+- **Gates** with exit codes — `0` clean, `1` findings detected, `2` tool/parse error — so CI can fail a run
+- **Fixes**: generates patch suggestions (error boundaries, prompt hardening) from the findings
 - **Compares** any two runs with `autopsy diff` to prove a fix changed behavior
-- **Surfaces** the same engine as a CLI, Streamlit UI, MCP server, and trace-capture helpers
 
-## How it works
+## Architecture
 
-Normalize any trace into a common event schema → run deterministic pattern detectors over the event stream → emit a report with evidence and a gatable exit code. Point an LLM at the normalized trace for a deeper root-cause narrative, but the default path is fully offline.
+```
+trace file ──▶ ingestion ──▶ normalization ──▶ detection ──▶ report
+              format sniff    one event model   12+ pattern    health score,
+              (4 parsers)     (Trace schema)    detectors      evidence, fixes
+```
 
-## Quick facts
+- `ingestion/parser.py` auto-detects the format and picks a parser (LangGraph, LangChain, OpenTelemetry, generic)
+- `ingestion/normalizer.py` + `schema/trace_v2.py` map every format onto a single event model
+- `preanalysis/patterns.py` runs the deterministic detectors (loops, retry storms, cascades, hallucinated tools, ...)
+- `preanalysis/contracts.py` validates tool calls against the declared tool allow-list
+- `output/` renders the report and generates fix suggestions
+- `api.py` is the facade shared by the CLI, Streamlit UI, and MCP server
 
-| | |
-|---|---|
-| Language | Python 3.10+ |
-| Dependencies | `pydantic`, `typer`, `rich`, `watchdog`, `pyyaml` |
-| Offline | Yes: deterministic mode needs no network, no keys |
-| Interfaces | CLI (`autopsy`), Streamlit UI, MCP server |
-| License | MIT |
+## Quick start
 
----
+```bash
+pip install -e ".[dev]"
 
-## Links
+autopsy validate examples/traces/hallucinated_tool.json
+autopsy analyze examples/traces/hallucinated_tool.json
+autopsy fixes examples/traces/hallucinated_tool.json
+```
 
-[Quick start](docs/quickstart.md) · [Architecture](ARCHITECTURE.md) · [Contributing](CONTRIBUTING.md) · [Good first issues](docs/good-first-issues.md)
+No API keys, no network, no model downloads. `examples/traces/` ships four traces: a clean run, a loop failure, the same loop after a fix, and a hallucinated-tool failure.
 
-Contributions are welcome: new trace parsers, deterministic detectors, UI polish, real-world fixtures.
+## Demo
 
-Built by [Haseeb Raza](https://github.com/haseebraza715) · MIT licensed
+```bash
+bash scripts/demo/demo_body.sh    # run the live demo (takes ~30s, fully offline)
+bash scripts/demo/record.sh       # regenerate the video/GIF assets (needs asciinema, agg, MEDIA_VENV)
+```
+
+The demo walks a broken trace through the pipeline: `validate` proves it is well-formed, `summary` shows the run stats, `analyze` emits a deterministic diagnosis — health score `24/100`, five findings including `hallucinated_tool` — and exits `1`, which is the CI gate. `fixes` then prints concrete patch suggestions. The whole thing runs offline in seconds.
+
+## Technical decisions
+
+- **Deterministic-first, LLM optional.** All detectors are pure functions over the event stream (`preanalysis/patterns.py`), so the core path needs no network and is reproducible. LLM root-cause narratives are an opt-in extra: the CLI falls back to deterministic mode when no API key is configured, so the tool never silently depends on a paid service.
+- **One normalized event model for four formats.** Every parser emits the same `Trace`/`Event` schema, so all detectors, reports, and the diff engine work identically on traces from LangGraph, LangChain, OpenTelemetry, or arbitrary JSON — and a plugin can extend the set.
+- **Retry-storm clustering uses a chained time window.** Rather than a naive sliding window, each candidate event must fall within the window of the last event already in the cluster, so a long chain of retries spaced within the window is caught as one storm instead of being split below the detection threshold.
+- **Atomic LLM-cache writes.** Cached analysis results are written to a `.tmp` file and renamed into place, so a crashed run never leaves a half-written cache entry that poisons later analyses.
+
+## Validation
+
+278 tests pass (`pytest`), and the same suite plus ruff and a labeled detector-corpus eval run in CI: ![tests](https://github.com/haseebraza715/agent-autopsy/actions/workflows/tests.yml/badge.svg)
+
+## Limitations
+
+- Deterministic detectors are heuristics, not proofs: they can produce false positives, and quiet failures can slip through. A labeled corpus (`scripts/eval_detectors.py`) guards against regressions in CI.
+- Goal-drift detection with semantic embeddings requires `sentence-transformers`, which downloads a model on first use; without it the same detector falls back to lexical overlap only.
+- LLM-assisted analysis needs a provider API key and sends the normalized trace (not the raw file) to the model. The deterministic path never does.
+- Built-in parsers cover the four common formats; anything else needs a plugin parser or the generic fallback, which may lose fidelity.
+- Fix suggestions are templates and rationale, not auto-applied patches.
+- Reports describe what the trace contains; they cannot catch bugs that left no trace behind.
