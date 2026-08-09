@@ -14,6 +14,7 @@ from datetime import timedelta
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from agent_autopsy.errors import PluginError
 from agent_autopsy.plugins import get_plugin_manager
@@ -60,7 +61,7 @@ class PatternResult:
     message: str
     evidence: str
     event_ids: list[int] = field(default_factory=list)
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class PatternDetector:
@@ -122,9 +123,11 @@ class PatternDetector:
             return True
         return bool(self.trace.error_summary)
 
-    def detect_loops(self, threshold: int = 3) -> list[PatternResult]:
+    def detect_loops(self, threshold: int | None = None) -> list[PatternResult]:
         """Detect infinite loops where the same tool+input is repeated consecutively."""
         results = []
+        config = get_config()
+        threshold = threshold or config.loop_threshold
         tool_calls = self.trace.get_tool_calls()
 
         if len(tool_calls) < threshold:
@@ -194,20 +197,33 @@ class PatternDetector:
             if len(events) < threshold:
                 continue
 
+            # Greedy clustering with a *chained* window: each candidate event
+            # must fall within the window of the last event already in the
+            # cluster (not of the cluster head). A chain of calls spaced just
+            # inside the window would otherwise be split into sub-threshold
+            # clusters and missed entirely.
             i = 0
             while i < len(events):
                 cluster = [events[i]]
                 cluster_ids = [events[i].event_id]
-
-                for j in range(i + 1, len(events)):
-                    if events[i].timestamp and events[j].timestamp:
-                        delta = events[j].timestamp - events[i].timestamp
-                        if delta <= window:
-                            cluster.append(events[j])
-                            cluster_ids.append(events[j].event_id)
-                    elif events[j].event_id - events[i].event_id <= 10:
-                        cluster.append(events[j])
-                        cluster_ids.append(events[j].event_id)
+                last_index = i
+                j = i + 1
+                while j < len(events):
+                    try:
+                        if events[last_index].timestamp and events[j].timestamp:
+                            delta = events[j].timestamp - events[last_index].timestamp
+                            within_window = delta <= window
+                        else:
+                            within_window = events[j].event_id - events[last_index].event_id <= 10
+                    except TypeError:
+                        # Mixed naive/aware timestamps: fall back to ID spacing.
+                        within_window = events[j].event_id - events[last_index].event_id <= 10
+                    if not within_window:
+                        break
+                    cluster.append(events[j])
+                    cluster_ids.append(events[j].event_id)
+                    last_index = j
+                    j += 1
 
                 if len(cluster) >= threshold:
                     inputs = [str(e.input) for e in cluster]
@@ -230,9 +246,8 @@ class PatternDetector:
                                         },
                                     )
                                 )
-                            i = i + len(cluster) - 1
-                            break
-
+                        i = i + len(cluster) - 1
+                        break
                 i += 1
 
         return results

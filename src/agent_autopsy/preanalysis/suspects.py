@@ -6,10 +6,11 @@ to generate root cause hypotheses with confidence scores.
 """
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from agent_autopsy.schema import Trace
 
-from .contracts import ContractValidator
+from .contracts import ContractValidator, ContractViolation
 from .patterns import PatternDetector, PatternResult
 
 
@@ -20,7 +21,7 @@ class Signal:
     severity: str
     evidence: str
     event_ids: list[int] = field(default_factory=list)
-    metadata: dict = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -40,7 +41,7 @@ class PreAnalysisBundle:
     hypotheses: list[Hypothesis] = field(default_factory=list)
     summary: str = ""
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
             "signals": [
@@ -105,7 +106,7 @@ class RootCauseBuilder:
 
     def _patterns_to_signals(self, patterns: list[PatternResult]) -> list[Signal]:
         """Convert pattern results to signals."""
-        signals = []
+        signals: list[Signal] = []
 
         for pattern in patterns:
             signals.append(
@@ -120,9 +121,9 @@ class RootCauseBuilder:
 
         return signals
 
-    def _violations_to_signals(self, violations: list) -> list[Signal]:
+    def _violations_to_signals(self, violations: list[ContractViolation]) -> list[Signal]:
         """Convert contract violations to signals."""
-        signals = []
+        signals: list[Signal] = []
 
         for violation in violations:
             signals.append(
@@ -141,10 +142,10 @@ class RootCauseBuilder:
         self,
         signals: list[Signal],
         patterns: list[PatternResult],
-        violations: list,
+        violations: list[ContractViolation],
     ) -> list[Hypothesis]:
         """Generate root cause hypotheses from signals."""
-        hypotheses = []
+        hypotheses: list[Hypothesis] = []
 
         # Hypothesis: Loop due to missing exit condition
         loop_signals = [s for s in signals if "loop" in s.type.lower()]
@@ -468,6 +469,7 @@ class RootCauseBuilder:
         critical = sum(1 for s in signals if s.severity == "critical")
         high = sum(1 for s in signals if s.severity == "high")
         medium = sum(1 for s in signals if s.severity == "medium")
+        low = sum(1 for s in signals if s.severity == "low")
 
         if critical > 0:
             parts.append(f"{critical} critical issue(s)")
@@ -475,6 +477,8 @@ class RootCauseBuilder:
             parts.append(f"{high} high severity issue(s)")
         if medium > 0:
             parts.append(f"{medium} medium severity issue(s)")
+        if low > 0:
+            parts.append(f"{low} low severity issue(s)")
 
         summary = f"Found {', '.join(parts)}. "
 
