@@ -91,16 +91,19 @@ class GenericJSONParser(TraceParser):
         return start, end
 
     def _parse_timestamp(self, value: Any) -> datetime | None:
-        """Parse various timestamp formats."""
+        """Parse various timestamp formats; never raises on malformed values."""
         if value is None:
             return None
         if isinstance(value, datetime):
             return value
         if isinstance(value, (int, float)):
             # Handle both seconds and milliseconds
-            if value > 1e12:  # milliseconds
-                return datetime.fromtimestamp(value / 1000)
-            return datetime.fromtimestamp(value)
+            try:
+                if value > 1e12:  # milliseconds
+                    return datetime.fromtimestamp(value / 1000)
+                return datetime.fromtimestamp(value)
+            except (OSError, ValueError, OverflowError):
+                return None
         if isinstance(value, str):
             for fmt in [
                 "%Y-%m-%dT%H:%M:%S.%fZ",
@@ -116,7 +119,18 @@ class GenericJSONParser(TraceParser):
         return None
 
     def _extract_status(self, data: dict[str, Any]) -> TraceStatus:
-        """Extract status with flexible detection."""
+        """Extract status with flexible detection.
+
+        Precedence: an actual error payload (string/dict/list) marks the run
+        failed even when a conflicting ``status`` field says otherwise; a
+        numeric count field like ``errors: 0`` is not an error payload.
+        """
+        for error_key in ["error", "exception"]:
+            if data.get(error_key):
+                return TraceStatus.FAILED
+        if isinstance(data.get("errors"), list) and data["errors"]:
+            return TraceStatus.FAILED
+
         for key in ["status", "state", "result"]:
             if key in data:
                 status = str(data[key]).lower()
@@ -130,10 +144,6 @@ class GenericJSONParser(TraceParser):
                     return TraceStatus.LOOP_DETECTED
                 if status in ["cancelled", "canceled", "aborted", "interrupted"]:
                     return TraceStatus.CANCELLED
-
-        # Check for error indicators
-        if any(k in data for k in ["error", "exception", "errors"]):
-            return TraceStatus.FAILED
 
         return TraceStatus.SUCCESS
 
@@ -325,9 +335,18 @@ class GenericJSONParser(TraceParser):
                         )
                     break
 
+            raw_metadata = raw.get("metadata")
+            if not isinstance(raw_metadata, dict):
+                raw_metadata = {}
+
+            # ``or`` chains would treat a valid parent id of 0 as missing.
+            raw_parent = raw.get("parent_id")
+            if raw_parent is None:
+                raw_parent = raw.get("parentId")
+
             event = TraceEvent(
                 event_id=event_id,
-                parent_event_id=self._safe_parent_event_id(raw.get("parent_id") or raw.get("parentId")),
+                parent_event_id=self._safe_parent_event_id(raw_parent),
                 span_id=raw.get("span_id") or raw.get("spanId"),
                 agent_id=(
                     raw.get("agent_id")
@@ -345,7 +364,7 @@ class GenericJSONParser(TraceParser):
                 latency_ms=raw.get("latency_ms") or raw.get("duration_ms") or raw.get("latency"),
                 timestamp=self._parse_timestamp(raw.get("timestamp") or raw.get("time") or raw.get("ts")),
                 error=error,
-                metadata=raw.get("metadata", {}),
+                metadata=raw_metadata,
             )
             events.append(event)
             event_id += 1

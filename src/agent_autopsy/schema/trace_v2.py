@@ -51,6 +51,20 @@ class EventError(BaseModel):
     category: str | None = None
 
 
+def _convert_latency_to_int(v: Any) -> int | None:
+    """Convert float/str latency values to int (rounding); None on garbage."""
+    if v is None:
+        return None
+    if isinstance(v, bool):
+        return int(v)
+    if isinstance(v, int):
+        return v
+    try:
+        return int(round(float(v)))
+    except (ValueError, TypeError, OverflowError):
+        return None
+
+
 class TraceEvent(BaseModel):
     """
     A single event in the trace.
@@ -81,17 +95,7 @@ class TraceEvent(BaseModel):
     @classmethod
     def convert_latency_to_int(cls, v: Any) -> int | None:
         """Convert float latency values to int (rounding)."""
-        if v is None:
-            return None
-        if isinstance(v, float):
-            return int(round(v))
-        if isinstance(v, int):
-            return v
-        # Try to convert string or other types
-        try:
-            return int(round(float(v)))
-        except (ValueError, TypeError):
-            return None
+        return _convert_latency_to_int(v)
 
     def is_error(self) -> bool:
         """Check if this event is an error or contains an error."""
@@ -99,7 +103,7 @@ class TraceEvent(BaseModel):
 
     def get_tool_signature(self) -> str | None:
         """Get a signature for tool calls (name + input digest) for loop detection."""
-        if self.type != EventType.TOOL_CALL:
+        if self.type != EventType.TOOL_CALL or not self.name:
             return None
         try:
             payload = json.dumps(self.input, sort_keys=True, default=str)
@@ -146,17 +150,7 @@ class TraceStats(BaseModel):
     @classmethod
     def convert_latency_to_int(cls, v: Any) -> int | None:
         """Convert float latency values to int (rounding)."""
-        if v is None:
-            return None
-        if isinstance(v, float):
-            return int(round(v))
-        if isinstance(v, int):
-            return v
-        # Try to convert string or other types
-        try:
-            return int(round(float(v)))
-        except (ValueError, TypeError):
-            return None
+        return _convert_latency_to_int(v)
 
 
 class Trace(BaseModel):

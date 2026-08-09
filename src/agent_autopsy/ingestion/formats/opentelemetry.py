@@ -156,20 +156,23 @@ class OpenTelemetryParser(TraceParser):
         return start, end
 
     def _parse_otel_timestamp(self, value: Any) -> datetime | None:
-        """Parse OTEL nanosecond timestamp."""
+        """Parse OTEL nanosecond timestamp; never raises on bad values."""
         if value is None:
             return None
 
         if isinstance(value, (int, float)):
-            # OTEL uses nanoseconds
-            if value > 1e18:  # Nanoseconds
-                return datetime.fromtimestamp(value / 1e9)
-            elif value > 1e15:  # Microseconds
-                return datetime.fromtimestamp(value / 1e6)
-            elif value > 1e12:  # Milliseconds
-                return datetime.fromtimestamp(value / 1e3)
-            else:  # Seconds
-                return datetime.fromtimestamp(value)
+            try:
+                # OTEL uses nanoseconds
+                if value > 1e18:  # Nanoseconds
+                    return datetime.fromtimestamp(value / 1e9)
+                elif value > 1e15:  # Microseconds
+                    return datetime.fromtimestamp(value / 1e6)
+                elif value > 1e12:  # Milliseconds
+                    return datetime.fromtimestamp(value / 1e3)
+                else:  # Seconds
+                    return datetime.fromtimestamp(value)
+            except (OSError, ValueError, OverflowError):
+                return None
 
         if isinstance(value, str):
             try:
@@ -177,7 +180,7 @@ class OpenTelemetryParser(TraceParser):
             except ValueError:
                 try:
                     return datetime.fromtimestamp(int(value) / 1e9)
-                except (ValueError, TypeError):
+                except (ValueError, TypeError, OSError, OverflowError):
                     pass
 
         return None
@@ -223,8 +226,11 @@ class OpenTelemetryParser(TraceParser):
                     value = self._get_attr_value(attr)
                     key_lower = key.lower()
 
-                    if "service.name" in key_lower:
-                        framework = value or framework
+                    # service.name is the application name, not a framework;
+                    # only a real semantic-convention framework marker (e.g.
+                    # gen_ai.system, telemetry.sdk.name) may replace the default.
+                    if "gen_ai.system" in key_lower:
+                        framework = str(value) or framework
                     if "model" in key_lower:
                         model = value
                     if context_window_tokens is None and any(
@@ -246,7 +252,7 @@ class OpenTelemetryParser(TraceParser):
                         tools.extend(str(v) for v in value if v is not None)
                     else:
                         tools.append(str(value))
-                if "gen_ai.system" in key_lower and not framework:
+                if "gen_ai.system" in key_lower:
                     framework = str(value)
                 if "model" in key_lower and not model and value:
                     model = str(value)

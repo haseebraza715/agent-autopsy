@@ -96,8 +96,8 @@ def parse_trace_file(file_path: str | Path) -> Trace:
 
     try:
         raw = path.read_text(encoding="utf-8")
-    except OSError as exc:
-        raise ParseError(f"Could not read trace file {path}: {exc}") from exc
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ParseError(f"Could not read trace file {path} as UTF-8 text: {exc}") from exc
 
     try:
         data = json.loads(raw)

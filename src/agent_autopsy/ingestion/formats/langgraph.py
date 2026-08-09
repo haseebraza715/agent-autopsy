@@ -132,14 +132,19 @@ class LangGraphParser(TraceParser):
         return start, end
 
     def _parse_timestamp(self, value: Any) -> datetime | None:
-        """Parse a timestamp value into datetime."""
+        """Parse a timestamp value into datetime; never raises on bad values."""
         if value is None:
             return None
         if isinstance(value, datetime):
             return value
         if isinstance(value, (int, float)):
-            # Assume Unix timestamp
-            return datetime.fromtimestamp(value)
+            # Assume Unix timestamp (seconds or milliseconds)
+            try:
+                if value > 1e12:
+                    return datetime.fromtimestamp(value / 1000)
+                return datetime.fromtimestamp(value)
+            except (OSError, ValueError, OverflowError):
+                return None
         if isinstance(value, str):
             # Try ISO format
             try:
@@ -167,9 +172,12 @@ class LangGraphParser(TraceParser):
         if "error" in data or "exception" in data:
             return TraceStatus.FAILED
 
-        # Check events for errors
+        # Check events for errors (ignore non-dict entries)
         events = data.get("events", [])
-        if any(e.get("type") == "error" or "error" in e for e in events):
+        if any(
+            isinstance(e, dict) and (e.get("type") == "error" or "error" in e)
+            for e in events
+        ):
             return TraceStatus.FAILED
 
         return TraceStatus.SUCCESS
@@ -245,21 +253,26 @@ class LangGraphParser(TraceParser):
         event_id = 0
 
         # Get raw events from various locations
-        raw_events = data.get("events", [])
+        raw_events = data.get("events") or []
+        if not isinstance(raw_events, list):
+            raw_events = [raw_events] if isinstance(raw_events, dict) else []
         if not raw_events and "runs" in data:
             # Handle runs-based format
             for run in data["runs"]:
-                raw_events.extend(run.get("events", []))
+                if isinstance(run, dict):
+                    raw_events.extend(run.get("events", []))
+                else:
+                    raw_events.append(run)
 
         if not raw_events and "steps" in data:
-            # Handle steps-based format
-            raw_events = data["steps"]
+            raw_events = data["steps"] if isinstance(data["steps"], list) else []
 
         if not raw_events and "messages" in data:
-            # Handle messages-based format
-            raw_events = data["messages"]
+            raw_events = data["messages"] if isinstance(data["messages"], list) else []
 
         for raw_event in raw_events:
+            if not isinstance(raw_event, dict):
+                continue
             parsed_events = self._parse_event(raw_event, event_id)
             events.extend(parsed_events)
             event_id += len(parsed_events)

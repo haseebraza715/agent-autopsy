@@ -5,6 +5,9 @@ Provides utilities for normalizing and validating traces,
 as well as calculating derived statistics.
 """
 
+from datetime import timezone
+from typing import Any
+
 from agent_autopsy.schema import EventType, Trace, TraceStats
 
 
@@ -40,10 +43,30 @@ class TraceNormalizer:
         # Infer missing timestamps
         TraceNormalizer._infer_missing_timestamps(trace)
 
+        # Make timestamps comparable: parsers may mix timezone-aware ISO values
+        # with naive fallbacks (e.g. datetime.now()); subtracting mixed
+        # naive/aware datetimes raises TypeError deep inside detectors.
+        TraceNormalizer._harmonize_timestamps(trace)
+
         # Recalculate stats
         trace.stats = TraceNormalizer.calculate_stats(trace)
 
         return trace
+
+    @staticmethod
+    def _harmonize_timestamps(trace: Trace) -> None:
+        """Attach UTC to naive timestamps when any timestamp in the trace is aware."""
+        timestamps = [trace.timestamp_start, trace.timestamp_end]
+        timestamps.extend(e.timestamp for e in trace.events)
+        any_aware = any(t is not None and t.tzinfo is not None for t in timestamps)
+        if not any_aware:
+            return
+        for idx, ts in enumerate(timestamps):
+            if ts is not None and ts.tzinfo is None:
+                timestamps[idx] = ts.replace(tzinfo=timezone.utc)
+        trace.timestamp_start, trace.timestamp_end = timestamps[0], timestamps[1]
+        for event, ts in zip(trace.events, timestamps[2:]):
+            event.timestamp = ts
 
     @staticmethod
     def _infer_missing_timestamps(trace: Trace) -> None:
@@ -61,10 +84,16 @@ class TraceNormalizer:
         issues = []
         last_ts = None
         for event in trace.events:
-            if event.timestamp and last_ts and event.timestamp < last_ts:
-                issues.append(
-                    f"Event {event.event_id} timestamp precedes previous event"
-                )
+            if event.timestamp and last_ts:
+                try:
+                    out_of_order = event.timestamp < last_ts
+                except TypeError:
+                    # Mixed naive/aware timestamps: cannot compare reliably.
+                    out_of_order = False
+                if out_of_order:
+                    issues.append(
+                        f"Event {event.event_id} timestamp precedes previous event"
+                    )
             if event.timestamp:
                 last_ts = event.timestamp
         return issues
@@ -118,10 +147,12 @@ class TraceNormalizer:
             if event.parent_event_id is not None and event.parent_event_id not in id_set:
                 issues.append(f"Event {event.event_id} references non-existent parent {event.parent_event_id}")
 
+        issues.extend(TraceNormalizer._validate_chronological_order(trace))
+
         return issues
 
     @staticmethod
-    def get_summary(trace: Trace) -> dict:
+    def get_summary(trace: Trace) -> dict[str, Any]:
         """Get a human-readable summary of the trace."""
         agent_ids = trace.get_agent_ids()
         return {

@@ -133,16 +133,19 @@ class LangChainParser(TraceParser):
         return start, end
 
     def _parse_timestamp(self, value: Any) -> datetime | None:
-        """Parse a timestamp value into datetime."""
+        """Parse a timestamp value into datetime; never raises on bad values."""
         if value is None:
             return None
         if isinstance(value, datetime):
             return value
         if isinstance(value, (int, float)):
             # Handle both seconds and milliseconds
-            if value > 1e12:
-                return datetime.fromtimestamp(value / 1000)
-            return datetime.fromtimestamp(value)
+            try:
+                if value > 1e12:
+                    return datetime.fromtimestamp(value / 1000)
+                return datetime.fromtimestamp(value)
+            except (OSError, ValueError, OverflowError):
+                return None
         if isinstance(value, str):
             # Try ISO format
             for fmt in [
