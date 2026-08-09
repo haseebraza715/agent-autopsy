@@ -63,4 +63,8 @@ def save_cached(trace: Trace, model: str, result: AnalysisResult) -> None:
         "success": result.success,
         "error": result.error,
     }
-    path.write_text(json.dumps(payload, default=str, indent=2))
+    # Atomic write: a crashed or concurrent writer must never leave a
+    # truncated cache file behind (loaders treat corrupt files as a miss).
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    tmp_path.write_text(json.dumps(payload, default=str, indent=2))
+    tmp_path.replace(path)

@@ -96,39 +96,31 @@ class ReportGenerator:
         )
 
     def _extract_timeline(self) -> list[str]:
-        """Extract timeline from report or generate from trace."""
+        """Generate a deterministic timeline from the trace (headline events)."""
         timeline = []
         evidence = set(self._extract_evidence_events())
 
-        # Try to extract from report
-        report = self.result.report
-        if "## Timeline" in report or "## What happened" in report:
-            # Parse timeline section
-            pass
-
-        # Generate deterministic timeline from trace
-        if not timeline:
-            max_events = 20
-            for event in self.trace.events[:max_events]:
+        max_events = 20
+        for event in self.trace.events[:max_events]:
+            marker = "!"
+            if event.is_error():
+                marker = "X"
+            elif event.event_id in evidence:
                 marker = "!"
-                if event.is_error():
-                    marker = "X"
-                elif event.event_id in evidence:
-                    marker = "!"
-                elif event.type.value in {"tool_call", "decision"}:
-                    marker = ">"
-                else:
-                    marker = "."
+            elif event.type.value in {"tool_call", "decision"}:
+                marker = ">"
+            else:
+                marker = "."
 
-                label = event.type.value
-                if event.name:
-                    label += f" ({event.name})"
-                if event.agent_id:
-                    label += f" @{event.agent_id}"
-                timeline.append(f"[{event.event_id:03d}] {marker} {label}")
+            label = event.type.value
+            if event.name:
+                label += f" ({event.name})"
+            if event.agent_id:
+                label += f" @{event.agent_id}"
+            timeline.append(f"[{event.event_id:03d}] {marker} {label}")
 
-            if len(self.trace.events) > max_events:
-                timeline.append(f"... ({len(self.trace.events) - max_events} more events)")
+        if len(self.trace.events) > max_events:
+            timeline.append(f"... ({len(self.trace.events) - max_events} more events)")
 
         return timeline
 

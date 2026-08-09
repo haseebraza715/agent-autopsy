@@ -149,7 +149,11 @@ def trace_diff_detail(trace_a: Trace, trace_b: Trace) -> dict[str, Any]:
         db = eb.timestamp
         delta_ms = None
         if da is not None and db is not None:
-            delta_ms = (db - da).total_seconds() * 1000.0
+            try:
+                delta_ms = (db - da).total_seconds() * 1000.0
+            except TypeError:
+                # Mixed naive/aware timestamps cannot be subtracted.
+                delta_ms = None
         timing_rows.append(
             {
                 "index": idx,

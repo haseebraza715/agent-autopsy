@@ -52,7 +52,11 @@ class LiveTraceMonitor:
 
         for trace_file in sorted(self.trace_dir.glob("*.json")):
             key = str(trace_file)
-            mtime = trace_file.stat().st_mtime
+            try:
+                mtime = trace_file.stat().st_mtime
+            except OSError:
+                # File vanished between glob and stat (writer moved it away).
+                continue
             if key in self._last_seen_mtime and self._last_seen_mtime[key] >= mtime:
                 continue
 

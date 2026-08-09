@@ -1,4 +1,4 @@
-"""Run the Agent Autopsy MCP server via `python -m src.mcp`."""
+"""Run the Agent Autopsy MCP server via `python -m agent_autopsy.mcp`."""
 
 from .server import main
 

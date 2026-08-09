@@ -138,6 +138,12 @@ def analyze(
     if provider:
         config.llm_provider = provider.strip().lower()
 
+    # Validate options before touching the trace file so bad flags fail fast.
+    fmt = format.lower().strip()
+    if fmt not in ("text", "markdown", "json"):
+        console.print(f"[red]Unknown format:[/red] {format} (use text, markdown, or json)")
+        raise typer.Exit(2)
+
     exit_code = 0
     trace = None
     preanalysis = None
@@ -193,12 +199,6 @@ def analyze(
 
         if verbose and not quiet:
             _print_preanalysis(preanalysis)
-
-        fmt = format.lower().strip()
-        if fmt not in ("text", "markdown", "json"):
-            console.print(f"[red]Unknown format:[/red] {format} (use text, markdown, or json)")
-            exit_code = 2
-            raise typer.Exit(exit_code)
 
         if no_llm or not api.llm_credentials_configured(config):
             if not no_llm and not quiet:

@@ -253,7 +253,7 @@ class AnalysisAgent:
             tool_messages.append(
                 ToolMessage(
                     content=rendered,
-                    tool_call_id=tool_call["id"],
+                    tool_call_id=tool_call.get("id", ""),
                 )
             )
 

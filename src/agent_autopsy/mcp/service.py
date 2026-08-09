@@ -45,9 +45,18 @@ def resolve_trace(
     raw_data: dict[str, Any] | None = None
     source = "inline_json"
 
+    def _loads(payload: str, what: str) -> dict[str, Any]:
+        try:
+            loaded = json.loads(payload)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid JSON for {what}: {exc}") from exc
+        if not isinstance(loaded, dict):
+            raise ValueError(f"{what} must be a JSON object, got {type(loaded).__name__}")
+        return loaded
+
     if trace_json is not None:
         if isinstance(trace_json, str):
-            raw_data = json.loads(trace_json)
+            raw_data = _loads(trace_json, "trace_json")
         elif isinstance(trace_json, dict):
             raw_data = trace_json
         else:
@@ -60,7 +69,7 @@ def resolve_trace(
         source = str(path)
         if not path.exists():
             raise FileNotFoundError(f"Trace file not found: {path}")
-        raw_data = json.loads(path.read_text())
+        raw_data = _loads(path.read_text(), f"trace file {path}")
         detected_format = TraceParser.detect_format(raw_data)
         trace = api.load_trace(path)
     else:
@@ -652,5 +661,9 @@ def _parse_datetime(value: Any) -> datetime | None:
 
 
 def _parse_date(value: str) -> date:
-    parsed = datetime.fromisoformat(value).date()
-    return parsed
+    try:
+        return datetime.fromisoformat(value).date()
+    except ValueError as exc:
+        raise ValueError(
+            f"Invalid date {value!r}; expected an ISO-8601 date (e.g. 2026-01-15)"
+        ) from exc

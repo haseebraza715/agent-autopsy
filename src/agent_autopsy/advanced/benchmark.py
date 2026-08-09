@@ -123,7 +123,7 @@ def _derive_degradation_alerts(
     # Compare first half vs second half for simple trend alerts.
     ordered = sorted(
         traces,
-        key=lambda t: t.timestamp_start or datetime.min,
+        key=lambda t: (t.timestamp_start or datetime.min).timestamp(),
     )
     if len(ordered) >= 6:
         mid = len(ordered) // 2
