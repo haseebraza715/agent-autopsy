@@ -11,11 +11,11 @@ scripts/
 │   ├── trace_analyzer.py       # Analyze traces
 │   ├── trace_verifier.py       # Verify traces
 │   └── report_generator.py     # Generate summary reports
+├── demo/
+│   ├── demo_body.sh            # Drives the recorded README demo (offline)
+│   └── record.sh               # Regenerate assets/demo/* (cast, mp4, gif)
 ├── eval_detectors.py           # Corpus precision/recall (CI)
 ├── benchmark_no_llm.py         # Cold-path timing (no LLM)
-├── record_demo.sh              # Instructions for asciinema README GIF
-├── render_demo_gif.py          # HD README GIF: deterministic CLI + LLM (live or sample)
-├── demo_gif_llm_sample.txt     # Representative LLM excerpt when API unavailable
 ├── generate_traces.py          # Main script for trace generation
 ├── analyze_traces.py           # Main script for trace analysis
 └── verify_traces.py            # Main script for trace verification
@@ -26,9 +26,7 @@ scripts/
 ```bash
 python scripts/eval_detectors.py
 python scripts/benchmark_no_llm.py examples/traces/loop_failure.json --repeat 5
-./scripts/record_demo.sh
-python scripts/render_demo_gif.py              # live LLM if OPENROUTER_API_KEY set
-python scripts/render_demo_gif.py --force-sample-llm   # CI / no key
+MEDIA_VENV=/path/to/media-venv bash scripts/demo/record.sh   # regenerate README demo assets
 ```
 
 ## Usage

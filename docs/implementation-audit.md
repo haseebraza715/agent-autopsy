@@ -95,7 +95,7 @@ Legend: ✅ shipped · 🟡 partial · ❌ missing
 
 | Item | Status | Evidence |
 |------|--------|----------|
-| Demo GIF | ✅ | [docs/images/autopsy-demo.gif](images/autopsy-demo.gif): regenerated with bigger type |
+| Demo video + GIF | ✅ | [assets/demo/](../assets/demo/): regenerated via `scripts/demo/record.sh` |
 | README restructured | ✅ | Rewritten today |
 | Per-pattern docs | ✅ | [docs/patterns.md](patterns.md) |
 | Contributor on-ramp | ✅ | [docs/good-first-issues.md](good-first-issues.md), [CONTRIBUTING.md](../CONTRIBUTING.md) |

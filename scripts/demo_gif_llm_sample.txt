@@ -1,5 +1,0 @@
-LLM: retry storm on web_search (Events 3–7).
-
-Fix: cap retries + backoff; treat empty tool output as error.
-
-Confidence 0.82

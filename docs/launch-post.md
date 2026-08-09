@@ -53,4 +53,4 @@ If this sounds useful, star the repo, file an issue with a redacted trace snippe
 
 ---
 
-Demo GIF (regenerate with `python scripts/render_demo_gif.py`): see [docs/images/autopsy-demo.gif](../docs/images/autopsy-demo.gif) and [demo-gif.md](demo-gif.md).
+Demo video + GIF (regenerate with `bash scripts/demo/record.sh`): see the [README](../README.md) demo section.
