@@ -207,3 +207,31 @@ class TestLangChainNullRunType:
         }
         trace = parse_trace_data(doc)
         assert len(trace.events) == 2
+
+    def test_falsy_error_values_do_not_fail_status(self) -> None:
+        for falsy in (None, False, ""):
+            doc = {
+                "thread_id": "t5",
+                "error": falsy,
+                "events": [
+                    {
+                        "type": "llm_call",
+                        "name": "chat",
+                        "timestamp": "2026-01-01T00:00:00Z",
+                        "error": falsy,
+                    }
+                ],
+            }
+            trace = parse_trace_data(doc)
+            assert trace.status == TraceStatus.SUCCESS, f"error={falsy!r}"
+
+    def test_final_output_skips_list_valued_attrs(self) -> None:
+        doc = _otel_doc(8192)
+        doc["resourceSpans"][0]["scopeSpans"][0]["spans"][0]["attributes"].append(
+            {"key": "llm.result.parts", "value": {"arrayValue": {"values": [
+                {"stringValue": "part-1"}, {"intValue": "2"},
+            ]}}}
+        )
+        trace = parse_trace_data(doc)
+        assert trace.final_output == "hi there"
+        assert trace.events[0].output == "hi there"

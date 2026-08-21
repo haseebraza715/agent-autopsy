@@ -304,10 +304,11 @@ class TestRetryStormTimestampOrderingAndBursts:
 
 class TestRetryStormSubClusterRecovery:
     def test_gate_rejected_cluster_still_yields_qualifying_tail(self) -> None:
-        """A cluster rejected by the loop-overlap gate must not consume the
-        rest of the scan window; a later qualifying burst is still found."""
+        """A same-tool cluster rejected by the loop-overlap gate must not
+        consume the rest of the scan window; a later qualifying burst of the
+        same tool is still found."""
         t0 = datetime(2026, 1, 1, 0, 0, 0)
-        loop_part = [_tool_event(i, "search", t0 + timedelta(seconds=i), query="same") for i in range(3)]
+        loop_part = [_tool_event(i, "fetch", t0 + timedelta(seconds=i), query="same") for i in range(3)]
         storm_part = [
             _tool_event(3, "fetch", t0 + timedelta(seconds=3), query="alpha"),
             _tool_event(4, "fetch", t0 + timedelta(seconds=4), query="alpha"),
