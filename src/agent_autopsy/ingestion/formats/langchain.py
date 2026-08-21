@@ -178,7 +178,7 @@ class LangChainParser(TraceParser):
             return TraceStatus.TIMEOUT
 
         # Check for error indicators
-        if "error" in data or "exception" in data:
+        if data.get("error") or data.get("exception"):
             return TraceStatus.FAILED
 
         # Check runs for errors
@@ -405,8 +405,9 @@ class LangChainParser(TraceParser):
         """Parse a LangChain run into TraceEvents."""
         events = []
 
-        run_type = run.get("run_type", "").lower()
-        name = run.get("name") or run.get("serialized", {}).get("name")
+        run_type = (run.get("run_type") or "").lower()
+        serialized = run.get("serialized") or {}
+        name = run.get("name") or serialized.get("name")
 
         # Determine event type from run_type
         if run_type in ["llm", "chat_model"]:
@@ -447,8 +448,8 @@ class LangChainParser(TraceParser):
         token_usage = (
             run.get("token_usage")
             or run.get("usage_metadata")
-            or run.get("llm_output", {}).get("token_usage", {})
-            or run.get("response_metadata", {}).get("token_usage", {})
+            or (run.get("llm_output") or {}).get("token_usage")
+            or (run.get("response_metadata") or {}).get("token_usage")
         )
         if isinstance(token_usage, dict):
             token_count = (

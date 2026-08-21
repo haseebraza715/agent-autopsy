@@ -155,7 +155,7 @@ class LangGraphParser(TraceParser):
 
     def _extract_status(self, data: dict[str, Any]) -> TraceStatus:
         """Extract trace status."""
-        status = data.get("status", "").lower()
+        status = (data.get("status") or "").lower()
 
         if status in ["success", "completed", "done"]:
             return TraceStatus.SUCCESS
@@ -169,13 +169,13 @@ class LangGraphParser(TraceParser):
             return TraceStatus.CANCELLED
 
         # Infer from error presence
-        if "error" in data or "exception" in data:
+        if data.get("error") or data.get("exception"):
             return TraceStatus.FAILED
 
         # Check events for errors (ignore non-dict entries)
         events = data.get("events", [])
         if any(
-            isinstance(e, dict) and (e.get("type") == "error" or "error" in e)
+            isinstance(e, dict) and (e.get("type") == "error" or e.get("error"))
             for e in events
         ):
             return TraceStatus.FAILED
@@ -199,7 +199,7 @@ class LangGraphParser(TraceParser):
                 tools_available = list(tools.keys())
 
         # Try to get from config
-        config = data.get("config", {})
+        config = data.get("config") or {}
         if "tools" in config:
             tools = config["tools"]
             if isinstance(tools, list):
@@ -229,8 +229,8 @@ class LangGraphParser(TraceParser):
 
     def _extract_task_context(self, data: dict[str, Any]) -> TaskContext | None:
         """Extract task context for drift analysis."""
-        task_data = data.get("task", {})
-        input_data = data.get("input", {})
+        task_data = data.get("task") or {}
+        input_data = data.get("input") or {}
 
         goal = task_data.get("goal") or input_data.get("goal") or input_data.get("query")
 
@@ -351,7 +351,7 @@ class LangGraphParser(TraceParser):
 
     def _determine_event_type(self, raw: dict[str, Any]) -> EventType:
         """Determine the event type from raw data."""
-        explicit_type = raw.get("type", "").lower()
+        explicit_type = (raw.get("type") or "").lower()
 
         if explicit_type in ["llm", "llm_call", "model", "chat"]:
             return EventType.LLM_CALL
@@ -369,7 +369,7 @@ class LangGraphParser(TraceParser):
             return EventType.ERROR
         if "tool" in raw or "function" in raw:
             return EventType.TOOL_CALL
-        if "model" in raw or "llm" in raw.get("name", "").lower():
+        if "model" in raw or "llm" in (raw.get("name") or "").lower():
             return EventType.LLM_CALL
         if raw.get("role") in ["user", "assistant", "system"]:
             return EventType.MESSAGE
@@ -378,7 +378,7 @@ class LangGraphParser(TraceParser):
 
     def _determine_role(self, raw: dict[str, Any]) -> EventRole | None:
         """Determine the role from raw data."""
-        role = raw.get("role", "").lower()
+        role = (raw.get("role") or "").lower()
 
         if role == "system":
             return EventRole.SYSTEM
