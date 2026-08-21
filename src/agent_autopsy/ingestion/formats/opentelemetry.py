@@ -362,7 +362,7 @@ class OpenTelemetryParser(TraceParser):
                 ):
                     output_data = value
                 if token_count is None and "token" in key_lower:
-                    if isinstance(value, (int, float, str)):
+                    if isinstance(value, (int, float, str)) and not isinstance(value, bool):
                         try:
                             token_count = int(float(value))
                         except (TypeError, ValueError):

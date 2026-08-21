@@ -301,3 +301,21 @@ class TestRetryStormTimestampOrderingAndBursts:
         storms = PatternDetector(trace).detect_retry_storms()
         assert len(storms) == 1
         assert storms[0].event_ids == [0, 1, 2, 3]
+
+
+class TestRetryStormSubClusterRecovery:
+    def test_gate_rejected_cluster_still_yields_qualifying_tail(self) -> None:
+        """A cluster rejected by the loop-overlap gate must not consume the
+        rest of the scan window; a later qualifying burst is still found."""
+        t0 = datetime(2026, 1, 1, 0, 0, 0)
+        loop_part = [_tool_event(i, "search", t0 + timedelta(seconds=i),
+                                 query="same") for i in range(3)]
+        storm_part = [
+            _tool_event(3, "fetch", t0 + timedelta(seconds=3), query="alpha"),
+            _tool_event(4, "fetch", t0 + timedelta(seconds=4), query="alpha"),
+            _tool_event(5, "fetch", t0 + timedelta(seconds=5), query="beta"),
+        ]
+        trace = _build_trace(loop_part + storm_part, status=TraceStatus.FAILED)
+        storms = PatternDetector(trace).detect_retry_storms()
+        assert len(storms) == 1
+        assert storms[0].event_ids == [3, 4, 5]

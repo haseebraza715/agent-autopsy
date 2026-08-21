@@ -157,3 +157,53 @@ class TestLangChainNullFields:
         }
         trace = parse_trace_data(doc)
         assert trace.status == TraceStatus.SUCCESS
+
+    def test_boolean_token_attr_does_not_become_token_count(self) -> None:
+        doc = _otel_doc(8192)
+        attrs = doc["resourceSpans"][0]["scopeSpans"][0]["spans"][0]["attributes"]
+        del attrs[0]
+        attrs.insert(0, {"key": "token.streaming", "value": {"boolValue": True}})
+        trace = parse_trace_data(doc)
+        assert trace.events[0].token_count is None
+        assert trace.events[0].input == "hello"
+
+
+class TestLangGraphNullMessageFields:
+    def test_null_type_name_role_message_event_parses(self) -> None:
+        doc = {
+            "thread_id": "t4",
+            "events": [
+                {"type": None, "name": None, "role": None, "content": "hello"},
+                {"type": "tool_call", "name": "fetch", "timestamp": "2026-01-01T00:00:00Z"},
+            ],
+        }
+        trace = parse_trace_data(doc)
+        assert len(trace.events) == 2
+
+
+class TestLangChainNullRunType:
+    def test_null_run_type_alside_truthy_runs_parse(self) -> None:
+        doc = {
+            "runs": [
+                {
+                    "run_id": "r5",
+                    "run_type": None,
+                    "name": "step",
+                    "start_time": 1767225600000,
+                    "end_time": 1767225601000,
+                    "inputs": {},
+                    "outputs": {},
+                },
+                {
+                    "run_id": "r6",
+                    "run_type": "chain",
+                    "name": "root",
+                    "start_time": 1767225600000,
+                    "end_time": 1767225602000,
+                    "inputs": {},
+                    "outputs": {"done": True},
+                },
+            ]
+        }
+        trace = parse_trace_data(doc)
+        assert len(trace.events) == 2
