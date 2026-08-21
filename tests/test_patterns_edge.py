@@ -272,8 +272,10 @@ class TestRetryStormTimestampOrderingAndBursts:
     def test_descending_timestamps_do_not_chain_into_one_storm(self) -> None:
         """Out-of-order exporters must not glue distant calls into one storm."""
         base = datetime(2026, 1, 1, 12, 10, 0)
-        events = [_tool_event(i, "fetch", base - timedelta(seconds=300 * i),
-                              query=f"attempt variant {i % 2}") for i in range(4)]
+        events = [
+            _tool_event(i, "fetch", base - timedelta(seconds=300 * i), query=f"attempt variant {i % 2}")
+            for i in range(4)
+        ]
         trace = _build_trace(events, status=TraceStatus.FAILED)
         storms = PatternDetector(trace).detect_retry_storms()
         assert storms == []
@@ -284,9 +286,7 @@ class TestRetryStormTimestampOrderingAndBursts:
         eid = 0
         for burst in range(2):
             for k, query in enumerate(["alpha", "alpha", "beta"]):
-                events.append(
-                    _tool_event(eid, "fetch", t0 + timedelta(seconds=600 * burst + k), query=query)
-                )
+                events.append(_tool_event(eid, "fetch", t0 + timedelta(seconds=600 * burst + k), query=query))
                 eid += 1
         trace = _build_trace(events, status=TraceStatus.FAILED)
         storms = PatternDetector(trace).detect_retry_storms()
@@ -295,8 +295,7 @@ class TestRetryStormTimestampOrderingAndBursts:
         assert reported_ids == sorted(e.event_id for e in events)
 
     def test_positive_delta_chained_retries_still_form_one_storm(self) -> None:
-        events = [_tool_event(i, "fetch", T0 + timedelta(seconds=30 * i),
-                              query=f"variant {i % 2}") for i in range(4)]
+        events = [_tool_event(i, "fetch", T0 + timedelta(seconds=30 * i), query=f"variant {i % 2}") for i in range(4)]
         trace = _build_trace(events, status=TraceStatus.FAILED)
         storms = PatternDetector(trace).detect_retry_storms()
         assert len(storms) == 1
@@ -308,8 +307,7 @@ class TestRetryStormSubClusterRecovery:
         """A cluster rejected by the loop-overlap gate must not consume the
         rest of the scan window; a later qualifying burst is still found."""
         t0 = datetime(2026, 1, 1, 0, 0, 0)
-        loop_part = [_tool_event(i, "search", t0 + timedelta(seconds=i),
-                                 query="same") for i in range(3)]
+        loop_part = [_tool_event(i, "search", t0 + timedelta(seconds=i), query="same") for i in range(3)]
         storm_part = [
             _tool_event(3, "fetch", t0 + timedelta(seconds=3), query="alpha"),
             _tool_event(4, "fetch", t0 + timedelta(seconds=4), query="alpha"),

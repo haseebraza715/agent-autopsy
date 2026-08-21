@@ -174,10 +174,7 @@ class LangGraphParser(TraceParser):
 
         # Check events for errors (ignore non-dict entries)
         events = data.get("events", [])
-        if any(
-            isinstance(e, dict) and (e.get("type") == "error" or e.get("error"))
-            for e in events
-        ):
+        if any(isinstance(e, dict) and (e.get("type") == "error" or e.get("error")) for e in events):
             return TraceStatus.FAILED
 
         return TraceStatus.SUCCESS
