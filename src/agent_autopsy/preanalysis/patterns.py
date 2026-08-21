@@ -399,7 +399,6 @@ class PatternDetector:
 
     def detect_auth_permission_failures(self) -> list[PatternResult]:
         """Detect repeated auth/permission failures that should trigger escalation."""
-        matches: list[int] = []
         matched_events: list[TraceEvent] = []
         for event in self.trace.events:
             text_parts = []
@@ -411,19 +410,18 @@ class PatternDetector:
                 text_parts.append(str(event.input))
             combined = " ".join(text_parts)
             if self._AUTH_PERMISSION_RE.search(combined) or self._AUTH_STATUS_CODE_RE.search(combined):
-                matches.append(event.event_id)
                 matched_events.append(event)
 
         # Auth language inside prompt/output prose on an otherwise healthy
         # run is discussion, not failure evidence.
-        if len(matches) >= 2 and self._has_failure_evidence(matched_events):
+        if len(matched_events) >= 2 and self._has_failure_evidence(matched_events):
             return [
                 PatternResult(
                     pattern_type=PatternType.AUTH_PERMISSION_FAILURE,
                     severity=Severity.HIGH,
-                    message=f"Detected repeated authentication/permission failures ({len(matches)} events)",
+                    message=f"Detected repeated authentication/permission failures ({len(matched_events)} events)",
                     evidence="Auth/permission-related error signatures were repeated",
-                    event_ids=matches,
+                    event_ids=[e.event_id for e in matched_events],
                 )
             ]
         return []

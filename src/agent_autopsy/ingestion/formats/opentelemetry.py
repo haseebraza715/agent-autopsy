@@ -346,9 +346,8 @@ class OpenTelemetryParser(TraceParser):
 
             for key, value in attrs.items():
                 key_lower = key.lower()
-                # Event input/output accept str|dict|list only; numeric
-                # telemetry attributes (gen_ai.request.max_tokens etc.) share
-                # these keywords and must never become payloads.
+                # Numeric telemetry attrs (gen_ai.request.max_tokens etc.)
+                # share these keywords and must never become payloads.
                 if (
                     input_data is None
                     and isinstance(value, (str, dict, list))

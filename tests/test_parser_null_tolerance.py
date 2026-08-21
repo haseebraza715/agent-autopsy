@@ -1,8 +1,8 @@
 """Parser tolerance for explicit-null fields and non-textual attribute values.
 
-Mirrors .audit/baseline/repro_baseline.py fixtures: valid exports from real
-instrumentation carry ``null`` for optional fields and numeric OTLP attr
-encodings; neither may reject the trace or invent failure status.
+Real exports carry ``null`` for optional fields (status, config, role,
+llm_output, ...) and encode OTLP attrs numerically; neither may reject the
+trace or invent failure status.
 """
 
 from __future__ import annotations
@@ -182,7 +182,7 @@ class TestLangGraphNullMessageFields:
 
 
 class TestLangChainNullRunType:
-    def test_null_run_type_alside_truthy_runs_parse(self) -> None:
+    def test_null_run_type_alongside_truthy_runs_parse(self) -> None:
         doc = {
             "runs": [
                 {
