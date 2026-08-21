@@ -244,3 +244,60 @@ class TestSeverityGates:
         # infinite_loop runs first in detect_all
         assert kinds[0] == PatternType.INFINITE_LOOP
         assert Severity.CRITICAL in {p.severity for p in patterns}
+
+
+class TestAuthDetectorFailureGate:
+    def test_auth_language_in_clean_run_inputs_is_ignored(self) -> None:
+        """Prompt text mentioning auth on a healthy run is not a failure signal."""
+        events = [
+            _tool_event(i, "docs", T0 + timedelta(seconds=i), query=f"explain oauth authorization flow {i}")
+            for i in range(2)
+        ]
+        trace = _build_trace(events, status=TraceStatus.SUCCESS)
+        results = PatternDetector(trace).detect_auth_permission_failures()
+        assert results == []
+
+    def test_auth_language_on_failed_run_still_fires(self) -> None:
+        events = [
+            _tool_event(i, "api", T0 + timedelta(seconds=i), query=f"request returned 401 unauthorized {i}")
+            for i in range(2)
+        ]
+        trace = _build_trace(events, status=TraceStatus.FAILED)
+        results = PatternDetector(trace).detect_auth_permission_failures()
+        assert len(results) == 1
+        assert results[0].pattern_type == PatternType.AUTH_PERMISSION_FAILURE
+
+
+class TestRetryStormTimestampOrderingAndBursts:
+    def test_descending_timestamps_do_not_chain_into_one_storm(self) -> None:
+        """Out-of-order exporters must not glue distant calls into one storm."""
+        base = datetime(2026, 1, 1, 12, 10, 0)
+        events = [_tool_event(i, "fetch", base - timedelta(seconds=300 * i),
+                              query=f"attempt variant {i % 2}") for i in range(4)]
+        trace = _build_trace(events, status=TraceStatus.FAILED)
+        storms = PatternDetector(trace).detect_retry_storms()
+        assert storms == []
+
+    def test_two_disjoint_bursts_are_both_reported(self) -> None:
+        t0 = datetime(2026, 1, 1, 0, 0, 0)
+        events = []
+        eid = 0
+        for burst in range(2):
+            for k, query in enumerate(["alpha", "alpha", "beta"]):
+                events.append(
+                    _tool_event(eid, "fetch", t0 + timedelta(seconds=600 * burst + k), query=query)
+                )
+                eid += 1
+        trace = _build_trace(events, status=TraceStatus.FAILED)
+        storms = PatternDetector(trace).detect_retry_storms()
+        assert len(storms) == 2
+        reported_ids = sorted(eid for s in storms for eid in s.event_ids)
+        assert reported_ids == sorted(e.event_id for e in events)
+
+    def test_positive_delta_chained_retries_still_form_one_storm(self) -> None:
+        events = [_tool_event(i, "fetch", T0 + timedelta(seconds=30 * i),
+                              query=f"variant {i % 2}") for i in range(4)]
+        trace = _build_trace(events, status=TraceStatus.FAILED)
+        storms = PatternDetector(trace).detect_retry_storms()
+        assert len(storms) == 1
+        assert storms[0].event_ids == [0, 1, 2, 3]

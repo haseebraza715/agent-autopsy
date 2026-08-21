@@ -212,7 +212,9 @@ class PatternDetector:
                     try:
                         if events[last_index].timestamp and events[j].timestamp:
                             delta = events[j].timestamp - events[last_index].timestamp
-                            within_window = delta <= window
+                            # Descending timestamps are exporter disorder, not
+                            # retries; only forward motion may chain.
+                            within_window = timedelta(0) <= delta <= window
                         else:
                             within_window = events[j].event_id - events[last_index].event_id <= 10
                     except TypeError:
@@ -228,26 +230,28 @@ class PatternDetector:
                 if len(cluster) >= threshold:
                     inputs = [str(e.input) for e in cluster]
                     unique_inputs = len(set(inputs))
-                    if unique_inputs <= len(cluster) // 2 + 1:
-                        if not any(eid in loop_ids for eid in cluster_ids):
-                            if self._has_failure_evidence(cluster):
-                                results.append(
-                                    PatternResult(
-                                        pattern_type=PatternType.RETRY_STORM,
-                                        severity=Severity.HIGH,
-                                        message=f"Tool '{tool_name}' called {len(cluster)} times within {config.retry_window_seconds}s",
-                                        evidence=f"Multiple calls with similar inputs ({unique_inputs} unique inputs)",
-                                        event_ids=cluster_ids,
-                                        metadata={
-                                            "tool_name": tool_name,
-                                            "count": len(cluster),
-                                            "unique_inputs": unique_inputs,
-                                            "window_seconds": config.retry_window_seconds,
-                                        },
-                                    )
-                                )
-                        i = i + len(cluster) - 1
-                        break
+                    if (
+                        unique_inputs <= len(cluster) // 2 + 1
+                        and not any(eid in loop_ids for eid in cluster_ids)
+                        and self._has_failure_evidence(cluster)
+                    ):
+                        results.append(
+                            PatternResult(
+                                pattern_type=PatternType.RETRY_STORM,
+                                severity=Severity.HIGH,
+                                message=f"Tool '{tool_name}' called {len(cluster)} times within {config.retry_window_seconds}s",
+                                evidence=f"Multiple calls with similar inputs ({unique_inputs} unique inputs)",
+                                event_ids=cluster_ids,
+                                metadata={
+                                    "tool_name": tool_name,
+                                    "count": len(cluster),
+                                    "unique_inputs": unique_inputs,
+                                    "window_seconds": config.retry_window_seconds,
+                                },
+                            )
+                        )
+                        i = last_index + 1
+                        continue
                 i += 1
 
         return results
@@ -396,6 +400,7 @@ class PatternDetector:
     def detect_auth_permission_failures(self) -> list[PatternResult]:
         """Detect repeated auth/permission failures that should trigger escalation."""
         matches: list[int] = []
+        matched_events: list[TraceEvent] = []
         for event in self.trace.events:
             text_parts = []
             if event.error and event.error.message:
@@ -407,8 +412,11 @@ class PatternDetector:
             combined = " ".join(text_parts)
             if self._AUTH_PERMISSION_RE.search(combined) or self._AUTH_STATUS_CODE_RE.search(combined):
                 matches.append(event.event_id)
+                matched_events.append(event)
 
-        if len(matches) >= 2:
+        # Auth language inside prompt/output prose on an otherwise healthy
+        # run is discussion, not failure evidence.
+        if len(matches) >= 2 and self._has_failure_evidence(matched_events):
             return [
                 PatternResult(
                     pattern_type=PatternType.AUTH_PERMISSION_FAILURE,
